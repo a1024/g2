@@ -1,0 +1,311 @@
+mag( 1/(1-1/(x+iy)
+mag( 1+1/(x+iy)+1/(x+iy)^2+1/(x+iy)^3+1/(x+iy)^4+1/(x+iy)^5+1/(x+iy)^6+1/(x+iy)^7+1/(x+iy)^8+1/(x+iy)^9+1/(x+iy)^10+1/(x+iy)^11+1/(x+iy)^12+1/(x+iy)^13+1/(x+iy)^14+1/(x+iy)^15+1/(x+iy)^16+1/(x+iy)^17+1/(x+iy)^18+1/(x+iy)^19+1/(x+iy)^20+1/(x+iy)^21+1/(x+iy)^22+1/(x+iy)^23+1/(x+iy)^24+1/(x+iy)^25+1/(x+iy)^26+1/(x+iy)^27+1/(x+iy)^28+1/(x+iy)^29+1/(x+iy)^30+1/(x+iy)^31+1/(x+iy)^32+1/(x+iy)^33+1/(x+iy)^34+1/(x+iy)^35+1/(x+iy)^36+1/(x+iy)^37+1/(x+iy)^38+1/(x+iy)^39
+
+(1-exp(-cos(pi/3)x)(cos(sin(pi/3)x)+cot(pi/3)sin(cos(pi/3)x))
+//(1-exp(-cos(tpi/3)x)(cos(sin(tpi/3)x)+cot(tpi/3)sin(cos(tpi/3)x))
+(1-exp(-cos(0.01t)*x)(cos(sin(0.01t)*x)+cot(0.01t)*sin(cos(0.01t)*x))
+
+resqrt(5+xx+yy)		//hyperbolic reflector (RCT)
+4.5-resqrt(5-xx-yy)	//spherical reflector
+
+1-re((1-0.5(cosx+1))^1000)	//gamma
+1-re((1-0.5(cosx+1))^0.1)
+
+xx		//naive polynomial multiplication
+re(x^(ln3/ln2))	//Karatsuba
+x+3xrelogx	//NTT
+
+1e16(1-1.81873+0.81873)		//base conversion error
+
+xxcostcost+yycos(2t)cos(2t)==9+cos(7t)
+
+re(Z%sqrtZ)>
+(x#y)>((-0.9)^(yfloorx)
+(x#y)<(cos(t)x)
+(x#y)<(x%y)
+
+(-1)^x==y
+0x+-1==y^(1/x)
+
+x^y==cos(x<<y)
+x^y==cos(y<<x)
+cosxcosy==0.5	//zoom out!
+
+relog(x!)
+re(lngamma(x+1)/ln10
+
+(1(1-tent(x/1))+1i(1-tent(x/1)))step(x/1)*step(1-x/1)	//1, 1, 1
+(0(1-tent(x/-1))+2i(1-tent(x/-1)))step(x/-1)*step(1-x/-1)	//-1, 0, 2
+5(1-tent(x/3))+6i(1-tent(x/3)))step(x/3)*step(1-x/3)	//3, 5, 6
+
+(xx+yy)^3==(xx-yy)^2	//quadrifolium
+(xx+yy)^3==4xxyy
+(xx+yy)^4+837(xx+yy)^2+108xxyy==16(xx+7yy)(yy+7xx)(xx+yy)+729(xx+yy)
+re((xx+yy-5x)^2)==4(xx+yy)	//limacon
+x^t+y^t==1	//superellipse
+x^t+y	//DFT, wait
+(xx+yy)(xx+yy)==5xx+yy	//hippopede
+
+cosxcosy+rand(x)/t
+gauss(x+icost
+Z^t
+(cosx)^cosx^x
+cosx
+cosx^cosx
+cosx^cosx^cosx
+cosx^cosx^cosx^cosx
+cosx^cosx^cosx^cosx^cosx
+cosx^cosx^cosx^cosx^cosx^cosx
+cosx^cosx^cosx^cosx^cosx^cosx^cosx
+gaussx
+gaussx^gaussx
+gaussx^gaussx^gaussx
+gaussx^gaussx^gaussx^gaussx
+gaussx^gaussx^gaussx^gaussx^gaussx
+gaussx^gaussx^gaussx^gaussx^gaussx^gaussx
+
+x-sawx+0.5	//mid-riser
+x-saw(x-0.5)+0.5	//mid-tread
+
+isprime(x)
+{
+	if(x!=floor(x))return -1;
+	x=abs(x);
+	if(x<2)return false;
+	if(x<4)return true;
+	b=floor(re(sqrt(x)));
+	for(a=2;a<=b;++a)
+		if(!(x%a))
+			return false;
+	return true;
+}
+
+erfx
+tanhx
+atanx
+gaussx
+1/(1+xx)
+1/chx
+
+mag(1.49exp(ix/0.365256363004)-2.27exp(ix/0.686971))	//earth to mars
+sin(x/0.365256363004)	//earth
+sin(x/0.686971)		//mars
+
+cos(xx+yy)+cosxy>-1
+cos(xx+yy)+cosxy>
+cos(xx+yy)+cosxy>1
+
+cos(xx+yy)+cosxy+ixy>
+
+cos(resqrt(xx+yy+5)-t)exp(-(xx+yy)/100)
+cos(resqrt(xx+yy+5)-t	//90's water
+
+Z^(2^(i.2cost2))
+
+floor'N*(re2^(1/floor'N)-1	//"worst case CPU utilization for scheduling N processes" OS Concepts 9th
+
+
+mandelbrot(x)
+{
+	xx=re(x), yy=im(x);
+	xop=0, yop=0;
+	ti=0;
+	for(;ti<100&&xop*xop+yop*yop<4.0;++ti)
+	{
+		temp=xop*xop-yop*yop+xx;	//z*z+c
+		yop=2*xop*yop+yy;
+		xop=temp;
+	}
+	return ti;
+}
+i0.01mandelbrot(x+iy)
+
+
+1-xx/2
+1-xx/2+xxxx/4!
+1-xx/2+xxxx/4!-xxxxxx/6!
+1-xx/2+xxxx/4!-xxxxxx/6!+xxxxxxxx/8!
+1-xx/2+xxxx/4!-xxxxxx/6!+xxxxxxxx/8!-xxxxxxxxxx/10!
+1-xx/2+xxxx/4!-xxxxxx/6!+xxxxxxxx/8!-xxxxxxxxxx/10!+xxxxxxxxxxxx/12!
+cosx
+
+
+cosx+randx+randy
+cosxcosy==cost
+
+floor(x-cos1t)==
+floor(x-cos2t)==
+floor(x-cos3t)==
+floor(x-cos4t)==
+floor(x-cos5t)==
+floor(x-cos6t)==
+floor(x-cos7t)==
+floor(x-cos8t)==
+
+(sin((x/15)^2.5)+exp((.5xx+x+4)/(15x+38.5)))/(x+5+logx)	//zoom in y scale
+
+cosx<tanxy+randx
+
+gaussx
+/cosh(2x
+
+atanx/(.5pi
+tanhx
+
+tan(.5pix
+reatanhx
+
+cosx
+1-xx/2!+xxxx/4!-xxxxxx/6!+xxxxxxxx/8!-xxxxxxxxxx/10!+xxxxxxxxxxxx/12!
+(x+pi)%(2pi)-pi
+
+sawx-cos/x
+exp(i/x)
+
+//x*tanx=cosx
+tanx		//multiplication domain
+xy		//multiplication
+tanx>y?xy:0	//multiplication curve
+xtanx		//L
+cosx		//R
+
+tansechx
+fib(x+.2i
+gamma((1+i-j+k)x
+
+
+floor(t  6000  /60	//mini-gun
+
+0x+1500//grades
+1217rect(.02x-.5)+1138rect(.02(x-200)-.5)+1247rect(.02(x-400)-.5)+1337rect(.02(x-600)-.5)+1344rect(.02(x-800)-.5)
+
+.5-cosxcosycosz	//contour
+fibxfiby
+kx+jy+.1ixy/t-.1xy
+
+0i+sqwvx+0y
+0i+sqwvmag(x+iy)
+
+re0.01(expi2pix+expi2pi2x+expi2pi3x+expi2pi4x+expi2pi5x+expi2pi6x+expi2pi7x+expi2pi8x+expi2pi9x+expi2pi10x+expi2pi11x+expi2pi12x+expi2pi13x+expi2pi14x+expi2pi15x+expi2pi16x+expi2pi17x+expi2pi18x+expi2pi19x+expi2pi20x
+t^x^(0.2t
+
+1*reZ+cost*imZ+i(sint*reZ+1*imZ)	//bilinear transform
+
+exp(xexpit
+
+4*exp(-.05x)*cos(10x-10t)+1.5exp(x-20)cos(10x+10t)	//Source at 0, mirror at 20, attenuation
+4(exp(-.05x)*cos(10x-10t)+exp(-.05*20+x-20)cos(10x+10t))
+4*e^(-.05x)*cos(10x-10t)+1.5e^(x-20)*cos(10x+10t)	//Source at 0, mirror at 20, attenuation
+4(e^(-.05x)*cos(10x-10t)+e^(-.05*20+x-20)*cos(10x+10t))
+
+e^-(x+5-t)^2-e^-(x-5+t)^2				//Two pulses
+
+cos(10*x-10*t)+1/(1+t)*cos(11*x+10*t)
+cos(10*x-1*t)+1/(1+.1*t)*cos(10*x+1*t)
+
+(cosx)^sinx^tanx^cott
+cos(10x-t+cotx/tant)
+cos(10x-4.9t)cos(x)
+expitx			//differentiate!
+Z&Zexpitx
+Z&Zexpit
+Z/t &10expit
+Z^-t
+
+
+
+-exp/(1-xx-yy	//discontinuity example
+
+2/3 4	//not cool	is this right?
+2/3*4
+2^2 3
+2^2*3
+cos2 3
+cos2*3
+
+1		//all modes so far
+x
+sqrtx
+sqrtkx+1
+xy
+x+iy
+Z
+y^asinhkx
+xyz
+
+2+2		//all modes so far
+sqwvx
+sqrtx
+sqrt((k+1)x
+cosxcosy
+cos(ix)gamma(iy)
+tanZ
+cos(kx)gamma(jy)
+cos.5xcos.5ycos.5z
+
+
+
+
+isqwvxy	//zoom out!
+
+.1cos(50x+40cosx
+
+cos(y+icosy
+
+(((x+iy)(x+iy)+(x+iy))((x+iy)(x+iy)+(x+iy))+(x+iy))(((x+iy)(x+iy)+(x+iy))((x+iy)(x+iy)+(x+iy))+(x+iy))+(x+iy)
+(((ZZ+Z)(ZZ+Z)+Z)((ZZ+Z)(ZZ+Z)+Z)+Z)(((ZZ+Z)(ZZ+Z)+Z)((ZZ+Z)(ZZ+Z)+Z)+Z)+Z
+
+Z<<Z	//zoom out!
+
+Z%cosZ
+
+(x^^y)*(x^^y)
+
+exp(3ifloorx
+
+Z#sqrtZ	//serpinski triangle
+Z&Z
+
+sawcosx
+
+sqrt(1-xx
+-sqrt(1-xx
+
+exp((.01i_pi)x
+exp((.03i_pi)x
+exp((.05i_pi)x
+exp((.07i_pi)x
+exp((.09i_pi)x
+exp((.11i_pi)x
+exp((.13i_pi)x
+exp((.15i_pi)x
+exp((.17i_pi)x
+exp((.19i_pi)x
+exp((.21i_pi)x
+exp((.23i_pi)x
+exp((.25i_pi)x
+exp((.27i_pi)x
+exp((.29i_pi)x
+exp((.31i_pi)x
+exp((.33i_pi)x
+
+sqrtx
+-sqrtx
+
+cbrtx
+(-.5+i.5sqrt3)cbrtx
+(-.5-i.5sqrt3)cbrtx
+
+-acosx-2_pi
+acosx-2_pi
+-acosx
+acosx
+-acosx+2_pi
+acosx+2_pi
+
+-asechx-2_pii
+asechx-2_pii
+-asechx
+asechx
+-asechx+2_pii
+asechx+2_pii
