@@ -23,7 +23,7 @@
 #include	<string>
 #include	<algorithm>
 #include	<boost/range/adaptor/reversed.hpp>
-#include	<emmintrin.h>//SSE2
+#include	<smmintrin.h>//SSE4.1
 #ifdef _DEBUG
 #pragma warning(pop)
 #endif
@@ -262,7 +262,7 @@ namespace	G2
 }
 void		render();
 bool		_2d_drag_graph_not_window=false, _dangerous_code=false, _3d_stretch_move_cam=true, _3d_shift_move_cam=false, _3d_zoom_move_cam=false;
-bool		commasInNumbers=false, commentIncompleteScope=true, nestedComments=false, colorComments=false;
+bool		commasInNumbers=false, commentIncompleteScope=true, nestedComments=false, colorComments=false, SSE4_1=false;
 bool		fullscreen=false, showBenchmark=false, showLastModeOnIdle=true, function_timeout=true;
 int			w, h, oldMouse, cursorB, cursorEx, prevCursorEx=0;
 RECT		oldWindowSize;
@@ -10198,6 +10198,14 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 		//	term[result]=CompileTerm(constant, mathSet, false);
 		//	new_repositry=true;
 		}
+		for(auto &arg:args)
+		{
+			if(!term[arg].constant)
+			{
+				term[result].constant=false;
+				break;
+			}
+		}
 	}
 	else
 	{
@@ -10885,16 +10893,16 @@ void Compile::compile_expression_local(int _i, int _f)
 			else//user function call level
 			{
 				int name_id=expr->m[i-2]._1, d_match=-1;
-				for(int d=0, dEnd=userFunctionDefinitions.size();d<dEnd&&expr->lineNo>=userFunctionDefinitions[d].lineNo;++d)
-			//	for(int d=0, dEnd=userFunctionDefinitions.size();d<dEnd&&expr->lineNo>userFunctionDefinitions[d].lineNo;++d)//linearly through all user definitions		sorted by lineNo
+				for(int d=0, dEnd=userFunctionDefinitions.size();d<dEnd&&expr->lineNo>=userFunctionDefinitions[d].lineNo;++d)//linearly through all user definitions		sorted by lineNo
+			//	for(int d=0, dEnd=userFunctionDefinitions.size();d<dEnd&&expr->lineNo>userFunctionDefinitions[d].lineNo;++d)
 				{
 					auto &definition=userFunctionDefinitions[d];
-					if(definition.valid&&definition.valid&&name_id==definition.name_id&&exprNArgs==definition.nArgs)//find overload instance
+					if(definition.valid&&name_id==definition.name_id&&exprNArgs==definition.nArgs)//find overload instance
 						d_match=d;
 				}
 				if(d_match!=-1)
 				{
-					std::vector<int> args(commas.size()+notVoidCall);
+					std::vector<int> args(exprNArgs);
 					if(notVoidCall)//compile args
 					{
 						int start=i;
@@ -11479,6 +11487,8 @@ void Compile::compile_statement(int &k, int mEnd)
 			//	char mathSet=expr->n[expr->m[k+1]._1].mathSet;//X not updated
 				if(predictedMathSet>mathSet)
 					expr->resultMathSet=predictedMathSet=mathSet;
+				else
+					expr->resultMathSet=predictedMathSet;//just to initialize?
 			}//else syntax error: marked & ignored
 			k=k2;
 
@@ -12901,89 +12911,95 @@ namespace	modes
 					double t=(Xcp2-Xcp1)*Zcp1-Xcp1*(Zcp2-Zcp1);
 					a=(Zcp1-Zcp2)*tanfov/(X0*t), b=((Zcp2-Zcp1)*tanfov+Xcp2-Xcp1)/t;
 				}*/
-				int xEnd=int(xb-xa)-(int(xb-xa)&7);
-				for(int x=0;x<xEnd;x+=4)
+				if(SSE4_1)
 				{
-					__m128 xf=_mm_set_ps(float(x+3), float(x+2), float(x+1), (float)x);
-					xf=_mm_add_ps(xf, _mm_set1_ps((float)xa));
-					__m128 yf=_mm_sub_ps(xf, _mm_set1_ps((float)x1));
-					yf=_mm_mul_ps(yf, _mm_set1_ps((float)dy_dx));
-					yf=_mm_add_ps(yf, _mm_set1_ps((float)y1));
-					__m128i m_y=_mm_cvtps_epi32(yf);
-					__m128i c1=_mm_cmpgt_epi32(m_y, _mm_set1_epi32(by1));//
-					__m128i c2=_mm_cmplt_epi32(m_y, _mm_set1_epi32(by2));
-					c1=_mm_and_si128(c1, c2);
+					int xEnd=int(xb-xa)-(int(xb-xa)&7);
+					for(int x=0;x<xEnd;x+=4)
+					{
+						__m128 xf=_mm_set_ps(float(x+3), float(x+2), float(x+1), (float)x);
+						xf=_mm_add_ps(xf, _mm_set1_ps((float)xa));
+						__m128 yf=_mm_sub_ps(xf, _mm_set1_ps((float)x1));
+						yf=_mm_mul_ps(yf, _mm_set1_ps((float)dy_dx));
+						yf=_mm_add_ps(yf, _mm_set1_ps((float)y1));
+						__m128i m_y=_mm_cvtps_epi32(yf);
+						__m128i c1=_mm_cmpgt_epi32(m_y, _mm_set1_epi32(by1));//
+						__m128i c2=_mm_cmplt_epi32(m_y, _mm_set1_epi32(by2));
+						c1=_mm_and_si128(c1, c2);
 
-					c2=_mm_srli_si128(c1, 8);
-					c2=_mm_or_si128(c2, c1);
-					__m128i c3=_mm_srli_si128(c2, 4);
-					c2=_mm_or_si128(c2, c3);
-					if(c2.m128i_i32[0])
-					{
-						__m128i m_x=_mm_cvtps_epi32(xf);
-						__m128i pos=_mm_mullo_epi32(m_y, _mm_set1_epi32(w));
-						pos=_mm_add_epi32(pos, m_x);
-						__m128 A=_mm_mul_ps(xf, _mm_set1_ps((float)a));
-						A=_mm_add_ps(A, _mm_set1_ps((float)b));
-					//	__m128 wbk=_mm_set_ps(wbuffer+pos.m128i_i32[0], wbuffer+pos.m128i_i32[0]
-						if(c1.m128i_i32[0]&&A.m128_f32[0]>wbuffer[pos.m128i_i32[0]])
-							rgb[pos.m128i_i32[0]]=lineColor, wbuffer[pos.m128i_i32[0]]=A.m128_f32[0];
-						if(c1.m128i_i32[1]&&A.m128_f32[1]>wbuffer[pos.m128i_i32[1]])
-							rgb[pos.m128i_i32[1]]=lineColor, wbuffer[pos.m128i_i32[1]]=A.m128_f32[1];
-						if(c1.m128i_i32[2]&&A.m128_f32[2]>wbuffer[pos.m128i_i32[2]])
-							rgb[pos.m128i_i32[2]]=lineColor, wbuffer[pos.m128i_i32[2]]=A.m128_f32[2];
-						if(c1.m128i_i32[3]&&A.m128_f32[3]>wbuffer[pos.m128i_i32[3]])
-							rgb[pos.m128i_i32[3]]=lineColor, wbuffer[pos.m128i_i32[3]]=A.m128_f32[3];
-					}
-				}
-				for(int x=xEnd<0?0:xEnd, xEnd2=int(xb-xa);x<=xEnd2;++x)//horizontal
-				{
-					int xx=x+(int)xa;
-					int y=int(std::floor(y1+dy_dx*(xx-x1)));//-0.5 truncated as 0
-					if(y>=by1&&y<by2)
-					{
-						int pos=w*y+xx;
-						double A=a*xx+b;
-						if(A>wbuffer[pos])
-							rgb[pos]=lineColor, wbuffer[pos]=A;
-						else if(A==wbuffer[pos])
+						c2=_mm_srli_si128(c1, 8);
+						c2=_mm_or_si128(c2, c1);
+						__m128i c3=_mm_srli_si128(c2, 4);
+						c2=_mm_or_si128(c2, c3);
+						if(c2.m128i_i32[0])
 						{
-							auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;//little endian
-							p[0]=(p[0]+c[0])>>1;//b
-							p[1]=(p[1]+c[1])>>1;//g
-							p[2]=(p[2]+c[2])>>1;//r
+							__m128i m_x=_mm_cvtps_epi32(xf);
+							__m128i pos=_mm_mullo_epi32(m_y, _mm_set1_epi32(w));//SSE4.1
+							pos=_mm_add_epi32(pos, m_x);
+							__m128 A=_mm_mul_ps(xf, _mm_set1_ps((float)a));
+							A=_mm_add_ps(A, _mm_set1_ps((float)b));
+						//	__m128 wbk=_mm_set_ps(wbuffer+pos.m128i_i32[0], wbuffer+pos.m128i_i32[0]
+							if(c1.m128i_i32[0]&&A.m128_f32[0]>wbuffer[pos.m128i_i32[0]])
+								rgb[pos.m128i_i32[0]]=lineColor, wbuffer[pos.m128i_i32[0]]=A.m128_f32[0];
+							if(c1.m128i_i32[1]&&A.m128_f32[1]>wbuffer[pos.m128i_i32[1]])
+								rgb[pos.m128i_i32[1]]=lineColor, wbuffer[pos.m128i_i32[1]]=A.m128_f32[1];
+							if(c1.m128i_i32[2]&&A.m128_f32[2]>wbuffer[pos.m128i_i32[2]])
+								rgb[pos.m128i_i32[2]]=lineColor, wbuffer[pos.m128i_i32[2]]=A.m128_f32[2];
+							if(c1.m128i_i32[3]&&A.m128_f32[3]>wbuffer[pos.m128i_i32[3]])
+								rgb[pos.m128i_i32[3]]=lineColor, wbuffer[pos.m128i_i32[3]]=A.m128_f32[3];
+						}
+					}
+					for(int x=xEnd<0?0:xEnd, xEnd2=int(xb-xa);x<=xEnd2;++x)//horizontal
+					{
+						int xx=x+(int)xa;
+						int y=int(std::floor(y1+dy_dx*(xx-x1)));//-0.5 truncated as 0
+						if(y>=by1&&y<by2)
+						{
+							int pos=w*y+xx;
+							double A=a*xx+b;
+							if(A>wbuffer[pos])
+								rgb[pos]=lineColor, wbuffer[pos]=A;
+							else if(A==wbuffer[pos])
+							{
+								auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;//little endian
+								p[0]=(p[0]+c[0])>>1;//b
+								p[1]=(p[1]+c[1])>>1;//g
+								p[2]=(p[2]+c[2])>>1;//r
+							}
 						}
 					}
 				}
-			/*	for(int x=int(xa), xEnd=int(xb);x<=xEnd;++x)//horizontal
+				else
 				{
-					//int y;
-					//{
-					//	double Y=y1+dy_dx*(x-x1);
-					//	y=int(Y)-(Y<0);
-					//}
-					int y=int(std::floor(y1+dy_dx*(x-x1)));//-0.5 truncated as 0
-					if(y>=by1&&y<by2)
+					for(int x=int(xa), xEnd=int(xb);x<=xEnd;++x)//horizontal
 					{
-						int pos=w*y+x;
-						double A=a*x+b;
-						if(A>wbuffer[pos])
-							rgb[pos]=lineColor, wbuffer[pos]=A;
-						else if(A==wbuffer[pos])
-						{
-							auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;//little endian
-							p[0]=(p[0]+c[0])>>1;//b
-							p[1]=(p[1]+c[1])>>1;//g
-							p[2]=(p[2]+c[2])>>1;//r
-						}
+						//int y;
 						//{
-						//	((unsigned char*)&rgb[pos])[0]=((unsigned char*)&rgb[pos])[0]+((unsigned char*)&lineColor)[0]>>1;
-						//	((unsigned char*)&rgb[pos])[1]=((unsigned char*)&rgb[pos])[1]+((unsigned char*)&lineColor)[1]>>1;
-						//	((unsigned char*)&rgb[pos])[2]=((unsigned char*)&rgb[pos])[2]+((unsigned char*)&lineColor)[2]>>1;
+						//	double Y=y1+dy_dx*(x-x1);
+						//	y=int(Y)-(Y<0);
 						//}
-						//	rgb[pos]=0xFFC0CB;
+						int y=int(std::floor(y1+dy_dx*(x-x1)));//-0.5 truncated as 0
+						if(y>=by1&&y<by2)
+						{
+							int pos=w*y+x;
+							double A=a*x+b;
+							if(A>wbuffer[pos])
+								rgb[pos]=lineColor, wbuffer[pos]=A;
+							else if(A==wbuffer[pos])
+							{
+								auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;//little endian
+								p[0]=(p[0]+c[0])>>1;//b
+								p[1]=(p[1]+c[1])>>1;//g
+								p[2]=(p[2]+c[2])>>1;//r
+							}
+							//{
+							//	((unsigned char*)&rgb[pos])[0]=((unsigned char*)&rgb[pos])[0]+((unsigned char*)&lineColor)[0]>>1;
+							//	((unsigned char*)&rgb[pos])[1]=((unsigned char*)&rgb[pos])[1]+((unsigned char*)&lineColor)[1]>>1;
+							//	((unsigned char*)&rgb[pos])[2]=((unsigned char*)&rgb[pos])[2]+((unsigned char*)&lineColor)[2]>>1;
+							//}
+							//	rgb[pos]=0xFFC0CB;
+						}
 					}
-				}//*/
+				}
 			}
 			else//vertical
 			{
@@ -13016,77 +13032,83 @@ namespace	modes
 					double t=(Ycp2-Ycp1)*Zcp1-Ycp1*(Zcp2-Zcp1);
 					a=(Zcp1-Zcp2)*tanfov/(X0*t), b=((Zcp2-Zcp1)*Y0*tanfov/X0+Ycp2-Ycp1)/t;
 				}*/
-				int yEnd=int(yb-ya)-(int(yb-ya)&7);
-				for(int y=0;y<yEnd;y+=4)
+				if(SSE4_1)
 				{
-					__m128 yf=_mm_set_ps(float(y+3), float(y+2), float(y+1), (float)y);
-					yf=_mm_add_ps(yf, _mm_set1_ps((float)ya));
-					__m128 xf=_mm_sub_ps(yf, _mm_set1_ps((float)y1));
-					xf=_mm_mul_ps(xf, _mm_set1_ps((float)dx_dy));
-					xf=_mm_add_ps(xf, _mm_set1_ps((float)x1));
-					__m128i m_x=_mm_cvtps_epi32(xf);
-					__m128i c1=_mm_cmpgt_epi32(m_x, _mm_set1_epi32(bx1));//
-					__m128i c2=_mm_cmplt_epi32(m_x, _mm_set1_epi32(bx2));
-					c1=_mm_and_si128(c1, c2);
+					int yEnd=int(yb-ya)-(int(yb-ya)&7);
+					for(int y=0;y<yEnd;y+=4)
+					{
+						__m128 yf=_mm_set_ps(float(y+3), float(y+2), float(y+1), (float)y);
+						yf=_mm_add_ps(yf, _mm_set1_ps((float)ya));
+						__m128 xf=_mm_sub_ps(yf, _mm_set1_ps((float)y1));
+						xf=_mm_mul_ps(xf, _mm_set1_ps((float)dx_dy));
+						xf=_mm_add_ps(xf, _mm_set1_ps((float)x1));
+						__m128i m_x=_mm_cvtps_epi32(xf);
+						__m128i c1=_mm_cmpgt_epi32(m_x, _mm_set1_epi32(bx1));//
+						__m128i c2=_mm_cmplt_epi32(m_x, _mm_set1_epi32(bx2));
+						c1=_mm_and_si128(c1, c2);
 
-					c2=_mm_srli_si128(c1, 8);
-					c2=_mm_or_si128(c2, c1);
-					__m128i c3=_mm_srli_si128(c2, 4);
-					c2=_mm_or_si128(c2, c3);
-					if(c2.m128i_i32[0])
-					{
-						__m128i m_y=_mm_cvtps_epi32(yf);
-						__m128i pos=_mm_mullo_epi32(m_y, _mm_set1_epi32(w));
-						pos=_mm_add_epi32(pos, m_x);
-						__m128 A=_mm_mul_ps(yf, _mm_set1_ps((float)a));
-						A=_mm_add_ps(A, _mm_set1_ps((float)b));
-						if(c1.m128i_i32[0]&&A.m128_f32[0]>wbuffer[pos.m128i_i32[0]])
-							rgb[pos.m128i_i32[0]]=lineColor, wbuffer[pos.m128i_i32[0]]=A.m128_f32[0];
-						if(c1.m128i_i32[1]&&A.m128_f32[1]>wbuffer[pos.m128i_i32[1]])
-							rgb[pos.m128i_i32[1]]=lineColor, wbuffer[pos.m128i_i32[1]]=A.m128_f32[1];
-						if(c1.m128i_i32[2]&&A.m128_f32[2]>wbuffer[pos.m128i_i32[2]])
-							rgb[pos.m128i_i32[2]]=lineColor, wbuffer[pos.m128i_i32[2]]=A.m128_f32[2];
-						if(c1.m128i_i32[3]&&A.m128_f32[3]>wbuffer[pos.m128i_i32[3]])
-							rgb[pos.m128i_i32[3]]=lineColor, wbuffer[pos.m128i_i32[3]]=A.m128_f32[3];
-					}
-				}
-				for(int y=yEnd<0?0:yEnd, yEnd2=int(yb-ya);y<=yEnd2;++y)//vertical
-				{
-					int yy=y+(int)ya;
-					int x=int(std::floor(x1+dx_dy*(yy-y1)));//-0.5 truncated as 0
-					if(x>=bx1&&x<bx2)
-					{
-						int pos=w*yy+x;
-						double A=a*yy+b;
-						if(A>wbuffer[pos])
-							rgb[pos]=lineColor, wbuffer[pos]=A;
-						else if(A==wbuffer[pos])
+						c2=_mm_srli_si128(c1, 8);
+						c2=_mm_or_si128(c2, c1);
+						__m128i c3=_mm_srli_si128(c2, 4);
+						c2=_mm_or_si128(c2, c3);
+						if(c2.m128i_i32[0])
 						{
-							auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;
-							p[0]=(p[0]+c[0])>>1;//b
-							p[1]=(p[1]+c[1])>>1;//g
-							p[2]=(p[2]+c[2])>>1;//r
+							__m128i m_y=_mm_cvtps_epi32(yf);
+							__m128i pos=_mm_mullo_epi32(m_y, _mm_set1_epi32(w));
+							pos=_mm_add_epi32(pos, m_x);
+							__m128 A=_mm_mul_ps(yf, _mm_set1_ps((float)a));
+							A=_mm_add_ps(A, _mm_set1_ps((float)b));
+							if(c1.m128i_i32[0]&&A.m128_f32[0]>wbuffer[pos.m128i_i32[0]])
+								rgb[pos.m128i_i32[0]]=lineColor, wbuffer[pos.m128i_i32[0]]=A.m128_f32[0];
+							if(c1.m128i_i32[1]&&A.m128_f32[1]>wbuffer[pos.m128i_i32[1]])
+								rgb[pos.m128i_i32[1]]=lineColor, wbuffer[pos.m128i_i32[1]]=A.m128_f32[1];
+							if(c1.m128i_i32[2]&&A.m128_f32[2]>wbuffer[pos.m128i_i32[2]])
+								rgb[pos.m128i_i32[2]]=lineColor, wbuffer[pos.m128i_i32[2]]=A.m128_f32[2];
+							if(c1.m128i_i32[3]&&A.m128_f32[3]>wbuffer[pos.m128i_i32[3]])
+								rgb[pos.m128i_i32[3]]=lineColor, wbuffer[pos.m128i_i32[3]]=A.m128_f32[3];
+						}
+					}
+					for(int y=yEnd<0?0:yEnd, yEnd2=int(yb-ya);y<=yEnd2;++y)//vertical
+					{
+						int yy=y+(int)ya;
+						int x=int(std::floor(x1+dx_dy*(yy-y1)));//-0.5 truncated as 0
+						if(x>=bx1&&x<bx2)
+						{
+							int pos=w*yy+x;
+							double A=a*yy+b;
+							if(A>wbuffer[pos])
+								rgb[pos]=lineColor, wbuffer[pos]=A;
+							else if(A==wbuffer[pos])
+							{
+								auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;
+								p[0]=(p[0]+c[0])>>1;//b
+								p[1]=(p[1]+c[1])>>1;//g
+								p[2]=(p[2]+c[2])>>1;//r
+							}
 						}
 					}
 				}
-			/*	for(int y=int(ya), yEnd=int(yb);y<yEnd;++y)//vertical
+				else
 				{
-					int x=int(std::floor(x1+dx_dy*(y-y1)));//-0.5 truncated as 0
-					if(x>=bx1&&x<bx2)
+					for(int y=int(ya), yEnd=int(yb);y<yEnd;++y)//vertical
 					{
-						int pos=w*y+x;
-						double A=a*y+b;
-						if(A>wbuffer[pos])
-							rgb[pos]=lineColor, wbuffer[pos]=A;
-						else if(A==wbuffer[pos])
+						int x=int(std::floor(x1+dx_dy*(y-y1)));//-0.5 truncated as 0
+						if(x>=bx1&&x<bx2)
 						{
-							auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;
-							p[0]=(p[0]+c[0])>>1;//b
-							p[1]=(p[1]+c[1])>>1;//g
-							p[2]=(p[2]+c[2])>>1;//r
+							int pos=w*y+x;
+							double A=a*y+b;
+							if(A>wbuffer[pos])
+								rgb[pos]=lineColor, wbuffer[pos]=A;
+							else if(A==wbuffer[pos])
+							{
+								auto p=(unsigned char*)&rgb[pos], c=(unsigned char*)&lineColor;
+								p[0]=(p[0]+c[0])>>1;//b
+								p[1]=(p[1]+c[1])>>1;//g
+								p[2]=(p[2]+c[2])>>1;//r
+							}
 						}
 					}
-				}//*/
+				}
 			}
 		}
 		double linearY(double x1, double y1, double x2, double y2, double x){return (y2-y1)/(x2-x1)*(x-x1)+y1;}
@@ -42843,13 +42865,12 @@ int copy_text_with_n0d_results(int wParam)//friend InputTextBox
 		int selStart=itb.cursor<itb.selcur?itb.cursor:itb.selcur, selEnd=itb.cursor>itb.selcur?itb.cursor:itb.selcur;
 		int nBounds=bounds.size();
 		int startBound=0, startEx=0;
-		for(int k=0, bound=0, e=0;;++k)
+		for(int k=0, bound=0, e=0;;++k)//seek to selStart
 		{
 			if(bound<nBounds&&k==bounds[bound].first)
 			{
+				e+=bound<nBounds&&bounds[bound].second=='e';
 				++bound;
-				if(bound<nBounds&&bounds[bound].second=='e')
-					++e;
 			}
 			if(k==selStart)
 			{
@@ -42858,24 +42879,29 @@ int copy_text_with_n0d_results(int wParam)//friend InputTextBox
 			}
 		}
 		int maxlen=0;
-		for(int k=selStart, e=startEx, linelen=0;;++k)
+		for(int k=selStart, bound=startBound, e=startEx, linelen=0;;++k)
 	//	for(int k=selStart, linelen=0;k<selEnd;++k)
 		{
+			if(k>selStart&&bound<nBounds&&k==bounds[bound].first)
+			{
+				e+=bound<nBounds&&bounds[bound].second=='e';
+				++bound;
+			}
 			if(k>=selEnd)
 			{
-				if(expr[e].rmode[0]==1&&maxlen<linelen)
+				if(bound<nBounds&&bounds[bound].second=='e'&&expr[e].rmode[0]==1&&maxlen<linelen)
 					maxlen=linelen;
 				break;
 			}
 			if(text[k]=='\r')
 			{
-				if(expr[e].rmode[0]==1&&maxlen<linelen)
+				if(bound<nBounds&&bounds[bound].second=='e'&&expr[e].rmode[0]==1&&maxlen<linelen)
 			//	if(maxlen<linelen)
 					maxlen=linelen;
 				linelen=0;
 				if(text[k+1]=='\n')
 					++k;
-				++e;
+			//	++e;
 			}
 			else
 				++linelen;
@@ -42887,17 +42913,20 @@ int copy_text_with_n0d_results(int wParam)//friend InputTextBox
 		{
 			if(k==selEnd)
 			{
-				auto &ex=expr[e];
-				if(ex.rmode[0]==1)//n0d
+				if(bound<nBounds&&bounds[bound].second=='e')
 				{
-					int nTabs=(offset-linelen)/tabsize+1;
-					int buf_off=0;
-					ex.data[0].print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
-					str.insert(k2, std::string(nTabs, '\t')+g_buf);
+					auto &ex=expr[e];
+					if(ex.rmode[0]==1)//n0d
+					{
+						int nTabs=(offset-linelen)/tabsize+1;
+						int buf_off=0;
+						ex.data[0].print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
+						str.insert(k2, std::string(nTabs, '\t')+g_buf);
+					}
 				}
 				break;
 			}
-			if(bound<nBounds&&k==bounds[bound].first)
+			if(bound<nBounds&&k==bounds[bound].first&&bounds[bound].second=='e')
 			{
 				auto &ex=expr[e];
 				if(ex.rmode[0]==1)//n0d
@@ -42919,9 +42948,8 @@ int copy_text_with_n0d_results(int wParam)//friend InputTextBox
 						linelen=1;
 					k2+=nTabs+buf_off;
 				}
-				++bound;
-				if(bound<nBounds&&bounds[bound].second=='e')
-					++e;
+				//e+=bound<nBounds&&bounds[bound].second=='e';
+				//++bound;
 			}
 			if(text[k]=='\r')
 			{
@@ -42931,6 +42959,11 @@ int copy_text_with_n0d_results(int wParam)//friend InputTextBox
 					++k, ++k2;
 			}
 			++linelen;
+			if(bound<nBounds&&k==bounds[bound].first)
+			{
+				e+=bound<nBounds&&bounds[bound].second=='e';
+				++bound;
+			}
 		}
 	/*	int startLine=-1, endLine=0, startBound=0, endBound=0, startEx=0, endEx=0;
 		int maxlen=0;
@@ -45790,6 +45823,22 @@ int			__stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char*, int nCmdShow)
 	tagWNDCLASSEXA wndClassEx={sizeof(tagWNDCLASSEXA), CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS, WndProc, 0, 0, hInstance, LoadIconA(0, (char*)0x00007F00), LoadCursorA(0, (char*)0x00007F00), (HBRUSH__*)(COLOR_WINDOW+1), 0, "New format", 0};
 	RegisterClassExA(&wndClassEx);
 	ghWnd=CreateWindowExA(0, wndClassEx.lpszClassName, "", WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_CLIPCHILDREN, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, 0, 0, hInstance, 0);
+	{
+		int cpui[4]={0};
+		__cpuid(cpui, 0);//function IDs
+		int nIds=cpui[0];
+		int d_size=nIds<<2;//4 ints
+		int *data=(int*)malloc(d_size*sizeof(int));
+		for(int k=0;k<nIds;++k)
+			__cpuidex(data+(k<<2), k, 0);
+		int f1_ecx;
+		if(nIds>=1)
+		{
+			f1_ecx=data[(1<<2)+2];
+			SSE4_1=f1_ecx>>19&1;
+		}
+		free(data);
+	}
 	{
 		int width, height;
 		bool set_width=false, set_height=false;
