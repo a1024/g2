@@ -1,4 +1,4 @@
-How to use:
+﻿How to use:
 
 	Esc: switch between edit and interaction modes
 	F7: toggle benchmark
@@ -100,7 +100,7 @@ _atm, atm?<		101325			Pa	atmospheric pressure
 _bbr			5.670373e-8		W/m2K4	Stefan–Boltzmann constant
 _c, c<			299792458		m/s	speed of light
 _ele, permittivity	8.854187817620e-12	F/m	electric permittivity in vacuum
-_e, e			exp(1.)				euler's	number
+_e, e			exp(1.)				Euler's	number
 _g			9.80665			m/s2	gravitational strength
 _G			6.67384e-11		m3/kg/s	gravitational constant
 _h			6.62606957e-34		m2kg/s	Planck constant
