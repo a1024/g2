@@ -1,13 +1,14 @@
 How to use:
+
+Text editor:
 	Esc: switch between edit and interaction modes
 	F1: context help
-	F7: toggle bechmark
-	ctrl F7: switch between SIMD modes supported by CPU.
+	F2/right click: parameter menu
+	F7: toggle benchmark
 	F11: fullscreen
 
 
-Text editor (edit mode):
-	F2/right click: parameter menu
+Edit mode:
 	ctrl wheel/+/-: text size
 	ctrl c:		copy selected text
 	ctrl shift c:	copy with single number results
@@ -30,20 +31,17 @@ Interaction mode:
 	Number keys:	apply operations on results (differentiate, FFT, LPF, ...)
 	0:		remove all operations
 	`:	show/hide contour
-	TAB:	switch between software and OpenGL
 
 Numeric result:
 	1:	binary
 	2:	octal
 	3/0:	decimal
 	4:	hexadecimal
-	+/-:	change numeric precision
 
 2D:
 	arrows:		move
 	wheel/+/-:	zoom
 	F8:		reverse drag direction
-	L/S:		switch between linear and log scale
 
 3D:
 	W/A/S/D/T/G:		move
@@ -53,7 +51,6 @@ Numeric result:
 	wheel/+/-:		change fov
 	alt wheel/+/-:		change scale
 	ctrl wheel/+/-:		change speed
-	L:		switch between linear and log scale
 
 
 
