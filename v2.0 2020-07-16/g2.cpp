@@ -12216,6 +12216,9 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 			else if(in.type==27&&disc_in_t!=0)
 				disc_1d_in_t(ex, in, offset, disc_offset, x1, x2, y1, y2, z1, z2, Xplaces, Yplaces, Zplaces);
 		}
+#ifdef _DEBUG
+		free(malloc(1));//
+#endif
 		switch(in.type)
 		{
 		case 'c':
@@ -16788,7 +16791,8 @@ namespace	modes
 		{
 			int aXplaces, aYplaces;
 			if(ex.resultLogicType>=2)
-				aXstart=&Xstart_s, aYend=&Yend_s, aXplaces=Xplaces+2, aYplaces=Yplaces+2;
+				aXstart=&Xstart_s, aYend=&Yend_s, aXplaces=Xplaces+4, aYplaces=Yplaces+2;//unlike Yplaces, Xplaces is inflated by 4 to keep divisibility by 4
+			//	aXstart=&Xstart_s, aYend=&Yend_s, aXplaces=Xplaces+2, aYplaces=Yplaces+2;
 			else
 				aXstart=&Xstart, aYend=&Yend, aXplaces=Xplaces, aYplaces=Yplaces;
 			int aNDRsize=aXplaces*aYplaces;
@@ -16825,9 +16829,10 @@ namespace	modes
 					//if(ex.n[1].r.size()==(aXplaces*aYplaces>>1))
 					//	ndr_to_clipboard_2d((double*)ex.n[1].r.p, aXplaces, aYplaces);//
 					
+				//	free(malloc(1));
 					::solve_disc(ex, 0, 0, aXplaces, 0, aYplaces, 0, 1, aXplaces, aYplaces, 1,		disc_i2d_in_u, disc_i2d_in_b, disc_i2d_in_t, disc_i2d_out, yDiscOffset, true);
 				//	::solve_disc(ex, 0, 0, aXplaces, 0, aYplaces, 0, 1, aXplaces, aYplaces, 1,		0, 0, 0, 0, 0, true);//
-
+				//	free(malloc(1));
 					//if(ex.n[0].r.size()==(aXplaces*aYplaces>>1))
 					//	ndr_to_clipboard_2d((double*)ex.n[0].r.p, aXplaces, aYplaces);//
 
@@ -16847,7 +16852,8 @@ namespace	modes
 
 			int inflate=(ex.resultLogicType>=2)<<1;
 			modes::exColorRA=exColorRA, modes::exColorRB=exColorRB, modes::exColorGA=exColorGA, modes::exColorGB=exColorGB, modes::exColorBA=exColorBA, modes::exColorBB=exColorBB;
-			solve_zerocross_2d(ex, prgb, 0, w+inflate, 0, Yplaces+inflate, Xplaces, Yplaces);//inflated range
+			solve_zerocross_2d(ex, prgb, 0, Xplaces+(inflate<<1), 0, Yplaces+inflate, Xplaces+inflate, Yplaces);//inflated range		unlike Yplaces, Xplaces is inflated by 4 to keep divisibility by 4, zerocross expects Xplaces=actualXplaces-2
+		//	solve_zerocross_2d(ex, prgb, 0, w+inflate, 0, Yplaces+inflate, Xplaces, Yplaces);//inflated range
 		//	solve_zerocross_2d(ex, prgb, 0, Xplaces+inflate, 0, Yplaces+inflate, Xplaces, Yplaces);//inflated range
 			//if(ex.resultLogicType==1)
 			//	solve_zerocross_2d(ex, prgb, 0, Xplaces, 0, Yplaces, Xplaces, Yplaces);
