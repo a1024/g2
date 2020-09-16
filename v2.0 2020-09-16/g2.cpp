@@ -1126,7 +1126,7 @@ namespace MP
 		FP& operator=(void *p){r_r=(void(*)(Real&, const Real&))p; return *this;}//*/
 	};
 }
-union	FP
+union	FP//function pointer
 {
 	enum	Type
 	{
@@ -7575,6 +7575,244 @@ enum FORMAT
 	FORMAT_UNARY_OPERATOR_LEFT, FORMAT_UNARY_OPERATOR_RIGHT, FORMAT_BINARY_OPERATOR,
 	FORMAT_UNARY_FUNCTION, FORMAT_BINARY_FUNCTION
 };
+#if 1
+struct		UnaryFunctionNameMap
+{
+	void *func[3];
+	const char *name;
+	int format;
+};
+struct		BinaryFunctionNameMap
+{
+	void *func[9];
+	const char *name;
+	int format;
+};
+#define		UFNAMES(name)		{r_r_##name, c_c_##name, q_q_##name}
+#define		UFNAMES_R(name)		{r_r_##name, r_c_##name, r_q_##name}
+#define		UFMAP(name)			{UFNAMES(name), #name, FORMAT_UNARY_FUNCTION}
+#define		BFNAMES(name)		{r_rr_##name, c_rc_##name, q_rq_##name, c_cr_##name, c_cc_##name, q_cq_##name, q_qr_##name, q_qc_##name, q_qq_##name}
+#define		BFNAMES_R(name)		{r_rr_##name, r_rc_##name, r_rq_##name, r_cr_##name, r_cc_##name, r_cq_##name, r_qr_##name, r_qc_##name, r_qq_##name}
+#define		BFMAP(name)			{BFNAMES(name), #name, FORMAT_UNARY_FUNCTION}
+#define		UMAP_DECLARATION	static const UnaryFunctionNameMap umap[]=\
+{\
+	UFMAP(setzero), UFMAP(ceil), UFMAP(floor),\
+	{{r_r_abs, r_c_abs, r_q_abs}, "abs", FORMAT_UNARY_FUNCTION},\
+	{{r_r_arg, r_c_arg, r_q_arg}, "arg", FORMAT_UNARY_FUNCTION},\
+	{{r_c_real, r_c_real, r_c_real}, "re", FORMAT_UNARY_FUNCTION},\
+	{{r_c_imag, r_c_imag, r_c_imag}, "im", FORMAT_UNARY_FUNCTION},\
+	{{c_c_conjugate,  c_c_conjugate, q_q_conjugate}, "conjugate", FORMAT_UNARY_FUNCTION},\
+	{{c_c_polar,  c_c_polar, c_q_polar}, "polar", FORMAT_UNARY_FUNCTION},\
+	{{c_c_cartesian,  c_c_cartesian, q_q_cartesian}, "cartesian", FORMAT_UNARY_FUNCTION},\
+	{UFNAMES(minus), "-", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(divide), "reciprocal", FORMAT_UNARY_FUNCTION},\
+	{{c_c_ln,  c_c_ln, q_q_ln}, "ln", FORMAT_UNARY_FUNCTION},\
+	{{c_c_log,  c_c_log, q_q_log}, "log10", FORMAT_UNARY_FUNCTION},\
+	{UFNAMES(bitwise_shift_left_l), "<<", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_shift_left_r), "<<", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES(bitwise_shift_right_l), ">>", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_shift_right_r), ">>", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES(bitwise_not), "~", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_and), "&", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_nand), "~&", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_or), "|", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_nor), "~|", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_xor), "xor", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(bitwise_xnor), "xnor", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES_R(logic_equal), "==0", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES_R(logic_not_equal), "!=0", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES_R(logic_less_l), "0<", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES_R(logic_less_r), "<0", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES_R(logic_less_equal_l), "0<=", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES_R(logic_less_equal_r), "<=0", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES_R(logic_greater_l), "0>", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES_R(logic_greater_r), ">0", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES_R(logic_greater_equal_l), "0>=", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES_R(logic_greater_equal_r), ">=0", FORMAT_UNARY_OPERATOR_RIGHT},\
+	{UFNAMES_R(logic_not), "!", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(percent), "percent", FORMAT_UNARY_OPERATOR_RIGHT},\
+	UFMAP(sgn), UFMAP(sq),\
+	{{c_c_sqrt,  c_c_sqrt, q_q_sqrt}, "sqrt", FORMAT_UNARY_FUNCTION},\
+	{{r_r_invsqrt,  r_r_invsqrt, r_r_invsqrt}, "invsqrt", FORMAT_UNARY_FUNCTION},\
+	UFMAP(cbrt), UFMAP(gauss),\
+	{{r_r_erf,  r_r_erf, r_r_erf}, "erf", FORMAT_UNARY_FUNCTION},\
+	{{r_r_zeta,  r_r_zeta, r_r_zeta}, "zeta", FORMAT_UNARY_FUNCTION},\
+	UFMAP(tgamma),\
+	{{r_r_loggamma,  r_r_loggamma, r_r_loggamma}, "loggamma", FORMAT_UNARY_FUNCTION},\
+	UFMAP(permutation), UFMAP(combination),\
+	UFMAP(cos),\
+	{{c_c_acos,  c_c_acos, q_q_acos}, "acos", FORMAT_UNARY_FUNCTION},\
+	UFMAP(cosh),\
+	{{c_c_acosh,  c_c_acosh, q_q_acosh}, "acosh", FORMAT_UNARY_FUNCTION},\
+	UFMAP(cosc), UFMAP(sec),\
+	{{c_c_asec,  c_c_asec, q_q_asec}, "asec", FORMAT_UNARY_FUNCTION},\
+	{{c_c_asech,  c_c_asech, q_q_asech}, "asech", FORMAT_UNARY_FUNCTION},\
+	UFMAP(sin),\
+	{{c_c_asin,  c_c_asin, q_q_asin}, "asin", FORMAT_UNARY_FUNCTION},\
+	UFMAP(sinh), UFMAP(asinh), UFMAP(sinc), UFMAP(sinhc), UFMAP(csc),\
+	{{c_c_acsc,  c_c_acsc, q_q_acsc}, "acsc", FORMAT_UNARY_FUNCTION},\
+	UFMAP(csch), UFMAP(acsch), UFMAP(tan), UFMAP(atan), UFMAP(tanh),\
+	{{c_c_atanh,  c_c_atanh, q_q_atanh}, "atanh", FORMAT_UNARY_FUNCTION},\
+	UFMAP(tanc), UFMAP(cot), UFMAP(acot), UFMAP(coth),\
+	{{c_c_acoth,  c_c_acoth, c_c_acoth}, "acoth", FORMAT_UNARY_FUNCTION},\
+	UFMAP(exp), UFMAP(fib),\
+	{UFNAMES(random), "rand", FORMAT_UNARY_FUNCTION},\
+	{{r_r_beta, r_r_beta, r_r_beta}, "beta", FORMAT_UNARY_FUNCTION},\
+	{{r_r_cyl_bessel_j, r_r_cyl_bessel_j, r_r_cyl_bessel_j}, "bessel_j", FORMAT_UNARY_FUNCTION},\
+	{{r_r_cyl_neumann, r_r_cyl_neumann, r_r_cyl_neumann}, "neumann", FORMAT_UNARY_FUNCTION},\
+	{{c_r_hankel1, c_c_hankel1,  c_c_hankel1}, "hankel1", FORMAT_UNARY_FUNCTION},\
+	UFMAP(step), UFMAP(rect),\
+	{UFNAMES_R(trgl), "trgl", FORMAT_UNARY_FUNCTION},\
+	{UFNAMES_R(sqwv), "sqwv", FORMAT_UNARY_FUNCTION},\
+	{UFNAMES_R(trwv), "trwv", FORMAT_UNARY_FUNCTION},\
+	UFMAP(saw),\
+	{{r_r_mandelbrot, r_c_mandelbrot,  r_c_mandelbrot}, "mandelbrot", FORMAT_UNARY_FUNCTION},\
+	{UFNAMES(increment), "++", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(decrement), "--", FORMAT_UNARY_OPERATOR_LEFT},\
+	{UFNAMES(assign), "", FORMAT_UNARY_OPERATOR_LEFT},\
+}//=	an operator that does nothing
+#define		BMAP_DECLARATION	static const BinaryFunctionNameMap bmap[]=\
+{\
+	{BFNAMES(plus), "+", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(minus), "-", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(multiply), "*", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(divide), "/", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_divides), "@", FORMAT_BINARY_OPERATOR},\
+	{{r_rr_power_real, c_cr_power_real, q_qr_power_real,  r_rr_power_real, c_cr_power_real, q_qr_power_real,  r_rr_power_real, c_cr_power_real, q_qr_power_real}, "**", FORMAT_BINARY_OPERATOR},\
+	{{c_cr_pow, c_cc_pow, q_cq_pow, q_qr_pow, q_qc_pow, q_qq_pow,  q_qr_pow, q_qc_pow, q_qq_pow}, "^", FORMAT_BINARY_OPERATOR},\
+	{{c_cr_log, c_cc_log, q_cq_log, q_qc_log, q_qq_log,  c_cc_log, q_cq_log, q_qc_log, q_qq_log}, "log", FORMAT_BINARY_FUNCTION},\
+	{{c_rr_tetrate, c_rc_tetrate, c_cr_tetrate, c_cc_tetrate, q_qr_tetrate,  c_rc_tetrate, c_cr_tetrate, c_cc_tetrate, q_qr_tetrate}, "^^", FORMAT_BINARY_OPERATOR},\
+	{{c_rr_pentate, c_cr_pentate,  c_rr_pentate, c_cr_pentate,  c_rr_pentate, c_cr_pentate,  c_rr_pentate, c_cr_pentate,  c_cr_pentate}, "^^^", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_shift_left), "<<", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_shift_right), ">>", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_and), "&", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_nand), "~&", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_or), "|", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_nor), "~|", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_xor), "xor", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(bitwise_xnor), "xnor", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_equal), "==", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_not_equal), "!=", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_less), "<", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_less_equal), "<=", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_greater), ">", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_greater_equal), ">=", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_and), "&&", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_or), "||", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES_R(logic_xor), "##", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(condition_zero), "??", FORMAT_BINARY_OPERATOR},\
+	{BFNAMES(modulo), "mod", FORMAT_BINARY_OPERATOR},\
+	{{r_rr_permutation, c_cr_permutation, c_cc_permutation, q_qq_permutation,  q_qq_permutation, q_qq_permutation, q_qq_permutation, q_qq_permutation, q_qq_permutation}, "permutation", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_combination, c_cr_combination, c_cc_combination, q_qq_combination,  q_qq_combination, q_qq_combination, q_qq_combination, q_qq_combination, q_qq_combination}, "permutation", FORMAT_BINARY_FUNCTION},\
+	BFMAP(atan),\
+	{{r_rr_random, c_cr_random, c_cc_random, q_qq_random,  q_qq_random, q_qq_random, q_qq_random, q_qq_random, q_qq_random}, "rand", FORMAT_BINARY_FUNCTION},\
+	{{c_rr_hankel1,  c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1}, "hankel1", FORMAT_BINARY_FUNCTION},\
+	{BFNAMES_R(sqwv), "sqwv", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_trwv,   c_cr_trwv, c_cc_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv}, "trwv", FORMAT_BINARY_FUNCTION},\
+	BFMAP(saw),\
+	{{r_rr_hypot,  r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot}, "hypot", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_mandelbrot, r_cr_mandelbrot,   r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot}, "mandelbrot", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_min, c_cc_min, q_qq_min,   q_qq_min, q_qq_min, q_qq_min, q_qq_min, q_qq_min, q_qq_min}, "min", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_max, c_cc_max, q_qq_max,   q_qq_max, q_qq_max, q_qq_max, q_qq_max, q_qq_max, q_qq_max}, "max", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_conditional_110, c_rc_conditional_110, q_rq_conditional_110, r_cr_conditional_110, c_cc_conditional_110, q_cq_conditional_110, r_qr_conditional_110, c_qc_conditional_110, q_qq_conditional_110}, "x?y:0", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_conditional_101, c_rc_conditional_101, q_rq_conditional_101, r_cr_conditional_101, c_cc_conditional_101, q_cq_conditional_101, r_qr_conditional_101, c_qc_conditional_101, q_qq_conditional_101}, "x?0:y", FORMAT_BINARY_FUNCTION},\
+}
+#define		FP2STR_BODY		\
+const int\
+	nuOps=sizeof umap/sizeof UnaryFunctionNameMap,\
+	nbOps=sizeof bmap/sizeof BinaryFunctionNameMap;\
+if(is_binary)\
+{\
+	for(int k=0;k<nbOps;++k)\
+	{\
+		auto &row=bmap[k];\
+		for(int k2=0;k2<9;++k2)\
+		{\
+			if((void*)fp==row.func[k2])\
+			{\
+				fmt=row.format;\
+				return row.name;\
+			}\
+		}\
+	}\
+}\
+else\
+{\
+	for(int k=0;k<nuOps;++k)\
+	{\
+		auto &row=umap[k];\
+		for(int k2=0;k2<3;++k2)\
+		{\
+			if((void*)fp==row.func[k2])\
+			{\
+				fmt=row.format;\
+				return row.name;\
+			}\
+		}\
+	}\
+}\
+fmt=FORMAT_INSTRUCTION;\
+return "???";
+const char*	fp2str(void *fp, bool is_binary, int &fmt)
+{
+	using namespace G2;
+	UMAP_DECLARATION;
+	BMAP_DECLARATION;
+	FP2STR_BODY;//how to debug this?
+	//const int
+	//	nuOps=sizeof umap/sizeof UnaryFunctionNameMap,//number of unary operations
+	//	nbOps=sizeof bmap/sizeof BinaryFunctionNameMap;//number of binary operations
+	//if(is_binary)
+	//{
+	//	for(int k=0;k<nbOps;++k)
+	//	{
+	//		auto &row=bmap[k];
+	//		for(int k2=0;k2<9;++k2)
+	//		{
+	//			if((void*)fp==row.func[k2])
+	//			{
+	//				fmt=row.format;
+	//				return row.name;
+	//			}
+	//		}
+	//	}
+	//}
+	//else
+	//{
+	//	for(int k=0;k<nuOps;++k)
+	//	{
+	//		auto &row=umap[k];
+	//		for(int k2=0;k2<3;++k2)
+	//		{
+	//			if((void*)fp==row.func[k2])
+	//			{
+	//				fmt=row.format;
+	//				return row.name;
+	//			}
+	//		}
+	//	}
+	//}
+	//fmt=FORMAT_INSTRUCTION;
+	//return "???";
+}
+const char*	mp_fp2str(void *fp, bool is_binary, int &fmt)
+{
+	using namespace MP;
+	UMAP_DECLARATION;
+	BMAP_DECLARATION;
+	FP2STR_BODY;
+}
+#undef		UFNAMES
+#undef		UFNAMES_R
+#undef		UFMAP
+#undef		BFNAMES
+#undef		BFNAMES_R
+#undef		BFMAP
+#undef		UMAP_DECLARATION
+#undef		BMAP_DECLARATION
+typedef		const char* (*FP2STR_FN)(void *fp, bool is_binary, int &fmt);
+#endif
+#if 0
 const char* fp2str(FP const &fp, int &fmt)
 {
 	using namespace G2;
@@ -7646,7 +7884,7 @@ const char* fp2str(FP const &fp, int &fmt)
 	else if(fp.r_r==r_r_logic_greater_l			||fp.r_c==r_c_logic_greater_l	||fp.r_q==r_q_logic_greater_l	)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="0>";
 	else if(fp.r_r==r_r_logic_greater_r			||fp.r_c==r_c_logic_greater_r	||fp.r_q==r_q_logic_greater_r	)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a=">0";
 	else if(fp.r_rr==r_rr_logic_greater			||fp.r_rc==r_rc_logic_greater	||fp.r_rq==r_rq_logic_greater	||fp.r_cr==r_cr_logic_greater	||fp.r_cc==r_cc_logic_greater	||fp.r_cq==r_cq_logic_greater		||fp.r_qr==r_qr_logic_greater		||fp.r_qc==r_qc_logic_greater		||fp.r_qq==r_qq_logic_greater		)fmt=FORMAT_BINARY_OPERATOR, a=">";
-	else if(fp.r_r==r_r_logic_greater_equal_l	||fp.r_c==r_c_logic_greater_equal_l||fp.r_q==r_q_logic_greater_equal_l)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="0>";
+	else if(fp.r_r==r_r_logic_greater_equal_l	||fp.r_c==r_c_logic_greater_equal_l||fp.r_q==r_q_logic_greater_equal_l)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="0>=";
 	else if(fp.r_r==r_r_logic_greater_equal_r	||fp.r_c==r_c_logic_greater_equal_r||fp.r_q==r_q_logic_greater_equal_r)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a=">=0";
 	else if(fp.r_rr==r_rr_logic_greater_equal	||fp.r_rc==r_rc_logic_greater_equal||fp.r_rq==r_rq_logic_greater_equal||fp.r_cr==r_cr_logic_greater_equal||fp.r_cc==r_cc_logic_greater_equal||fp.r_cq==r_cq_logic_greater_equal||fp.r_qr==r_qr_logic_greater_equal||fp.r_qc==r_qc_logic_greater_equal||fp.r_qq==r_qq_logic_greater_equal)fmt=FORMAT_BINARY_OPERATOR, a=">=";
 	if(a)
@@ -7670,7 +7908,7 @@ const char* fp2str(FP const &fp, int &fmt)
 	else if(fp.r_r==r_r_zeta					)fmt=FORMAT_UNARY_FUNCTION, a="zeta";
 	else if(fp.r_r==r_r_tgamma					||fp.c_c==c_c_tgamma			||fp.q_q==q_q_tgamma			)fmt=FORMAT_UNARY_FUNCTION, a="tgamma";
 	else if(fp.r_r==r_r_loggamma				)fmt=FORMAT_UNARY_FUNCTION, a="loggamma";
-	else if(fp.r_r==r_r_permutation				||fp.c_c==c_c_permutation		||fp.q_q==q_q_permutation
+	else if(fp.r_r==r_r_permutation				||fp.c_c==c_c_permutation		||fp.q_q==q_q_permutation//why unary?
 		||fp.r_rr==r_rr_permutation				||fp.c_cr==c_cr_permutation		||fp.c_cc==c_cc_permutation		||fp.q_qq==q_qq_permutation 	)fmt=FORMAT_UNARY_FUNCTION, a="permutation";
 	else if(fp.r_r==r_r_combination				||fp.c_c==c_c_combination		||fp.q_q==q_q_combination
 		||fp.r_rr==r_rr_combination				||fp.c_cr==c_cr_combination		||fp.c_cc==c_cc_combination		||fp.q_qq==q_qq_combination 	)fmt=FORMAT_UNARY_FUNCTION, a="combination";
@@ -7710,7 +7948,7 @@ const char* fp2str(FP const &fp, int &fmt)
 	else if(									fp.c_c==c_c_acoth				||fp.q_q==q_q_acoth				)fmt=FORMAT_UNARY_FUNCTION, a="acoth";
 	else if(fp.r_r==r_r_exp						||fp.c_c==c_c_exp				||fp.q_q==q_q_exp				)fmt=FORMAT_UNARY_FUNCTION, a="exp";
 	else if(fp.r_r==r_r_fib						||fp.c_c==c_c_fib				||fp.q_q==q_q_fib				)fmt=FORMAT_UNARY_FUNCTION, a="fib";
-	else if(fp.r_r==r_r_random					||fp.c_c==c_c_random			||fp.q_q==q_q_random
+	else if(fp.r_r==r_r_random					||fp.c_c==c_c_random			||fp.q_q==q_q_random//why unary?
 		||fp.r_rr==r_rr_random					||fp.c_cr==c_cr_random			||fp.c_cc==c_cc_random			||fp.q_qq==q_qq_random)fmt=FORMAT_UNARY_FUNCTION, a="rand";
 	if(a)
 		return a;
@@ -7722,13 +7960,13 @@ const char* fp2str(FP const &fp, int &fmt)
 	else if(fp.r_r==r_r_step					||fp.c_c==c_c_step				||fp.q_q==q_q_step				)fmt=FORMAT_UNARY_FUNCTION, a="step";
 	else if(fp.r_r==r_r_rect					||fp.c_c==c_c_rect				||fp.q_q==q_q_rect				)fmt=FORMAT_UNARY_FUNCTION, a="rect";
 	else if(fp.r_r==r_r_trgl					||fp.r_c==r_c_trgl				||fp.r_q==r_q_trgl				)fmt=FORMAT_UNARY_FUNCTION, a="trgl";
-	else if(fp.r_r==r_r_sqwv					||fp.r_c==r_c_sqwv				||fp.r_q==r_q_sqwv
+	else if(fp.r_r==r_r_sqwv					||fp.r_c==r_c_sqwv				||fp.r_q==r_q_sqwv//why unary?
 		||fp.r_rr==r_rr_sqwv					||fp.r_rc==r_rc_sqwv			||fp.r_rq==r_rq_sqwv			||fp.r_cr==r_cr_sqwv			||fp.r_cc==r_cc_sqwv			||fp.r_cq==r_cq_sqwv				||fp.r_qr==r_qr_sqwv				||fp.r_qc==r_qc_sqwv				||fp.r_qq==r_qq_sqwv)fmt=FORMAT_BINARY_FUNCTION, a="sqwv";
 	else if(fp.r_r==r_r_trwv					||fp.r_c==r_c_trwv				||fp.r_q==r_q_trwv)fmt=FORMAT_UNARY_FUNCTION, a="trwv";
 	if(a)
 		return a;
 		 if(fp.r_rr==r_rr_trwv					||fp.c_cr==c_cr_trwv			||fp.c_cc==c_cc_trwv			||fp.q_qq==q_qq_trwv)fmt=FORMAT_BINARY_FUNCTION, a="trwv";
-	else if(fp.r_r==r_r_saw						||fp.c_c==c_c_saw				||fp.q_q==q_q_saw
+	else if(fp.r_r==r_r_saw						||fp.c_c==c_c_saw				||fp.q_q==q_q_saw//why unary?
 		||fp.r_rr==r_rr_saw						||fp.c_rc==c_rc_saw				||fp.q_rq==q_rq_saw				||fp.c_cr==c_cr_saw				||fp.c_cc==c_cc_saw				||fp.q_cq==q_cq_saw					||fp.q_qr==q_qr_saw					||fp.q_qc==q_qc_saw					||fp.q_qq==q_qq_saw)fmt=FORMAT_BINARY_FUNCTION, a="saw";
 	else if(fp.r_rr==r_rr_hypot					)fmt=FORMAT_BINARY_FUNCTION, a="hypot";
 	else if(fp.r_r==r_r_mandelbrot				||fp.r_c==r_c_mandelbrot		)fmt=FORMAT_UNARY_FUNCTION, a="mandelbrot";
@@ -7746,6 +7984,7 @@ const char* fp2str(FP const &fp, int &fmt)
 	if(!a)fmt=FORMAT_INSTRUCTION, a="???";
 	return a;
 }
+#endif
 void print_term(std::stringstream &LOL_1, Expression const &ex, int idx)
 {
 	auto &n=ex.n[idx];
@@ -7768,7 +8007,95 @@ void print_term(std::stringstream &LOL_1, Expression const &ex, int idx)
 	else//temp var
 		LOL_1<<'['<<idx<<n.mathSet<<']';
 }
-void expr2str(Expression const &ex, std::string &str)
+template<typename In>inline void instr2str(Expression const &ex, int i, In const &in, void *fp, std::stringstream &LOL_1, FP2STR_FN fp2str_fn)
+{
+	const char space=' ';
+	using namespace G2;
+	LOL_1<<i<<'\t';
+	switch(in.type)
+	{
+	case 'c':
+		LOL_1<<"call "<<in.op1<<" -> ";
+		print_term(LOL_1, ex, in.result);
+	//	LOL_1<<"call "<<in.op1<<" -> "<<in.result;
+		break;
+	case 'b':
+		LOL_1<<"bif ";
+		print_term(LOL_1, ex, in.op1);
+		LOL_1<<" to "<<in.result;
+	//	LOL_1<<"bif "<<in.op1<<" to "<<in.result;
+		break;
+	case 'B':
+		LOL_1<<"bin ";
+		print_term(LOL_1, ex, in.op1);
+		LOL_1<<" to "<<in.result;
+	//	LOL_1<<"bin "<<in.op1<<" to "<<in.result;
+		break;
+	case 'j':LOL_1<<"j "<<in.result;break;
+	case 'r':
+		LOL_1<<"r ";
+		print_term(LOL_1, ex, in.result);
+	//	LOL_1<<"r "<<in.result;
+		break;
+	case 1:case 2:case 3:case 13:case 14:case 15:case 16://unary operator/function
+	case 4:case 5:case 6:case 7:case 8:case 9:case 10:case 11:case 12:case 17:case 18:case 19:case 20:case 21:case 22:case 23:case 24:case 25:case 26://binary operator/function
+		{
+			int fmt=FORMAT_INSTRUCTION;
+			const char *oplabel=fp2str_fn(fp, in.is_binary(), fmt);
+			switch(fmt)
+			{
+			case FORMAT_INSTRUCTION:
+				print_term(LOL_1, ex, in.result);
+				LOL_1<<" = "<<oplabel<<space;
+				print_term(LOL_1, ex, in.op1);
+				if(in.is_binary())
+				{
+					LOL_1<<space;
+					print_term(LOL_1, ex, in.op2);
+				}
+				break;
+			case FORMAT_UNARY_OPERATOR_LEFT:
+				print_term(LOL_1, ex, in.result);
+				LOL_1<<" = "<<oplabel<<space;
+				print_term(LOL_1, ex, in.op1);
+				break;
+			case FORMAT_UNARY_OPERATOR_RIGHT:
+				print_term(LOL_1, ex, in.result);
+				LOL_1<<" = ";
+				print_term(LOL_1, ex, in.op1);
+				LOL_1<<space<<oplabel;
+				break;
+			case FORMAT_BINARY_OPERATOR:
+				print_term(LOL_1, ex, in.result);
+				LOL_1<<" = ";
+				print_term(LOL_1, ex, in.op1);
+				LOL_1<<space<<oplabel<<space;
+				print_term(LOL_1, ex, in.op2);
+				break;
+			case FORMAT_UNARY_FUNCTION:
+				print_term(LOL_1, ex, in.result);
+				LOL_1<<" = "<<oplabel<<'(';
+				print_term(LOL_1, ex, in.op1);
+				LOL_1<<')';
+				break;
+			case FORMAT_BINARY_FUNCTION:
+				print_term(LOL_1, ex, in.result);
+				LOL_1<<" = "<<oplabel<<'(';
+				print_term(LOL_1, ex, in.op1);
+				LOL_1<<", ";
+				print_term(LOL_1, ex, in.op2);
+				LOL_1<<')';
+				break;
+			}
+		}
+		break;
+	case 27:
+		LOL_1<<in.result<<in.r_ms<<' '<<in.op1<<in.op1_ms<<' '<<in.op2<<in.op2_ms<<' '<<in.op3<<in.op3_ms;
+		break;
+	}
+	LOL_1<<"\r\n";
+}
+void expr2str(Expression const &ex, std::string &str, bool mp_instructions=false)
 {
 	const char space=' ';
 	std::stringstream LOL_1;
@@ -7793,97 +8120,25 @@ void expr2str(Expression const &ex, std::string &str)
 	}
 	LOL_1<<"\topcode result operand1 [operand2]\r\n";
 //	LOL_1<<"\r\n";
-	for(int i=0, nInstr=ex.i.size();i<nInstr;++i)//print instructions
+	if(mp_instructions)
 	{
-		auto &in=ex.i[i];
-		using namespace G2;
-		LOL_1<<i<<'\t';
-		switch(in.type)
+		for(int i=0, nInstr=ex.i.size();i<nInstr;++i)//print instructions
 		{
-		case 'c':
-			LOL_1<<"call "<<in.op1<<" -> ";
-			print_term(LOL_1, ex, in.result);
-		//	LOL_1<<"call "<<in.op1<<" -> "<<in.result;
-			break;
-		case 'b':
-			LOL_1<<"bif ";
-			print_term(LOL_1, ex, in.op1);
-			LOL_1<<" to "<<in.result;
-		//	LOL_1<<"bif "<<in.op1<<" to "<<in.result;
-			break;
-		case 'B':
-			LOL_1<<"bin ";
-			print_term(LOL_1, ex, in.op1);
-			LOL_1<<" to "<<in.result;
-		//	LOL_1<<"bin "<<in.op1<<" to "<<in.result;
-			break;
-		case 'j':LOL_1<<"j "<<in.result;break;
-		case 'r':
-			LOL_1<<"r ";
-			print_term(LOL_1, ex, in.result);
-		//	LOL_1<<"r "<<in.result;
-			break;
-		case 1:case 2:case 3:case 13:case 14:case 15:case 16://unary operator/function
-		case 4:case 5:case 6:case 7:case 8:case 9:case 10:case 11:case 12:case 17:case 18:case 19:case 20:case 21:case 22:case 23:case 24:case 25:case 26://binary operator/function
-			{
-				int fmt=FORMAT_INSTRUCTION;
-				const char *oplabel=fp2str(in.ia32, fmt);
-				switch(fmt)
-				{
-				case FORMAT_INSTRUCTION:
-					print_term(LOL_1, ex, in.result);
-					LOL_1<<" = "<<oplabel<<space;
-					print_term(LOL_1, ex, in.op1);
-					if(in.is_binary())
-					{
-						LOL_1<<space;
-						print_term(LOL_1, ex, in.op2);
-					}
-					break;
-				case FORMAT_UNARY_OPERATOR_LEFT:
-					print_term(LOL_1, ex, in.result);
-					LOL_1<<" = "<<oplabel<<space;
-					print_term(LOL_1, ex, in.op1);
-					break;
-				case FORMAT_UNARY_OPERATOR_RIGHT:
-					print_term(LOL_1, ex, in.result);
-					LOL_1<<" = ";
-					print_term(LOL_1, ex, in.op1);
-					LOL_1<<space<<oplabel;
-					break;
-				case FORMAT_BINARY_OPERATOR:
-					print_term(LOL_1, ex, in.result);
-					LOL_1<<" = ";
-					print_term(LOL_1, ex, in.op1);
-					LOL_1<<space<<oplabel<<space;
-					print_term(LOL_1, ex, in.op2);
-					break;
-				case FORMAT_UNARY_FUNCTION:
-					print_term(LOL_1, ex, in.result);
-					LOL_1<<" = "<<oplabel<<'(';
-					print_term(LOL_1, ex, in.op1);
-					LOL_1<<')';
-					break;
-				case FORMAT_BINARY_FUNCTION:
-					print_term(LOL_1, ex, in.result);
-					LOL_1<<" = "<<oplabel<<'(';
-					print_term(LOL_1, ex, in.op1);
-					LOL_1<<", ";
-					print_term(LOL_1, ex, in.op2);
-					LOL_1<<')';
-					break;
-				}
-			}
-			break;
-		case 27:
-			LOL_1<<in.result<<in.r_ms<<' '<<in.op1<<in.op1_ms<<' '<<in.op2<<in.op2_ms<<' '<<in.op3<<in.op3_ms;
-			break;
+			auto &in=ex.i[i];
+			instr2str(ex, i, in, in.ia32.r_r, LOL_1, fp2str);
 		}
-		LOL_1<<"\r\n";
+	}
+	else
+	{
+		for(int i=0, nInstr=ex.ni.size();i<nInstr;++i)
+		{
+			auto &in=ex.ni[i];
+			instr2str(ex, i, in, in.fp.uf, LOL_1, mp_fp2str);
+		}
 	}
 	str+=LOL_1.str();
 }
-void all_to_clipboard()
+void all_to_clipboard(bool mp_instructions=false)
 {
 	std::string str;
 	if(userFunctionDefinitions.size())
@@ -7902,7 +8157,7 @@ void all_to_clipboard()
 	if(str.size())
 		copy_to_clipboard(str.c_str(), str.size());
 }
-void expression_to_clipboard(Expression const &ex)
+void expression_to_clipboard(Expression const &ex, bool mp_instructions=false)
 {
 	std::string str;
 	expr2str(ex, str);
@@ -10020,6 +10275,7 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 	}
 	else
 		expr->i.push_back(in);
+	expr->ni.push_back(MP::Instruction(function, args, result));
 /*	if(result_constant)
 		Solve_UserFunction(*expr, in)();
 	else
@@ -10031,16 +10287,17 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 	}//*/
 	return result;
 }
-int				Compile::compile_instruction_branch_if		(int n_condition){	expr->i.push_back(Instruction('b', n_condition));	return expr->i.size()-1;}
-int				Compile::compile_instruction_branch_if_not	(int n_condition){	expr->i.push_back(Instruction('B', n_condition));	return expr->i.size()-1;}
-int				Compile::compile_instruction_jump			(){					expr->i.push_back(Instruction());					return expr->i.size()-1;}
-int				Compile::compile_instruction_return			(int n_result){		expr->i.push_back(Instruction(n_result));			return expr->i.size()-1;}
+int				Compile::compile_instruction_branch_if		(int n_condition){	expr->i.push_back(Instruction('b', n_condition)),	expr->ni.push_back(MP::Instruction('b', n_condition));	return expr->i.size()-1;}
+int				Compile::compile_instruction_branch_if_not	(int n_condition){	expr->i.push_back(Instruction('B', n_condition)),	expr->ni.push_back(MP::Instruction('b', n_condition));	return expr->i.size()-1;}
+int				Compile::compile_instruction_jump			(){					expr->i.push_back(Instruction()),					expr->ni.push_back(MP::Instruction());					return expr->i.size()-1;}
+int				Compile::compile_instruction_return			(int n_result){		expr->i.push_back(Instruction(n_result)),			expr->ni.push_back(MP::Instruction(n_result));			return expr->i.size()-1;}
 int				Compile::compile_instruction_return			(Value const &x)
 {
 	expr->insertData(x.j||x.k?'h':x.i?'c':'R', x);
 	term=(CompileTerm*)realloc(term, expr->n.size()*sizeof(CompileTerm));
 	term[expr->n.size()-1]=CompileTerm(true, expr->n.rbegin()->mathSet);
 	expr->i.push_back(Instruction(expr->n.size()-1));
+	expr->ni.push_back(MP::Instruction(expr->n.size()-1));
 	return expr->i.size()-1;
 }
 void			Compile::compile_instruction_assign			(int dst, int src){compile_instruction_b(G2::M_ASSIGN, dst, src, true);}
@@ -10344,7 +10601,7 @@ void Compile::compile_inline_if(int i, int f, int v)
 								compile_instruction_assign_value(expr->m[i0]._1, Value());//n[i0]=0;
 							//	compile_instruction_assign_value(i0, Value());//n[i0]=0;
 							int i_jump=compile_instruction_jump();
-							expr->i[i_branch].op2=expr->i.size();
+							expr->ni[i_branch].op2=expr->i[i_branch].op2=expr->i.size();
 							if(expr2)
 							{
 								compile_abs(i1+1, f1, 0);//expr2
@@ -10354,7 +10611,7 @@ void Compile::compile_inline_if(int i, int f, int v)
 							else
 								compile_instruction_assign_value(expr->m[i0]._1, Value());//n[i0]=0;
 							//	compile_instruction_assign_value(i0, Value());//n[i0]=0;
-							expr->i[i_jump].op1=expr->i.size();
+							expr->ni[i_jump].op1=expr->i[i_jump].op1=expr->i.size();
 							expr->m[i1+1]._0=M_IGNORED, expr->m[f1+1]._0=M_IGNORED;
 #if 0//branch if not
 						/*	expr1 ? expr2 : expr3
@@ -10381,7 +10638,7 @@ void Compile::compile_inline_if(int i, int f, int v)
 								compile_instruction_assign_value(expr.m[i0]._1, Value());//n[i0]=0;
 							//	compile_instruction_assign_value(i0, Value());//n[i0]=0;
 							int i_jump=compile_instruction_jump();
-							expr->i[i_branch].op2=expr->i.size();
+							expr->ni[i_branch].op2=expr->i[i_branch].op2=expr->i.size();
 							if(expr3)
 							{
 								compile_abs(f1+1, f2, 0);//expr3
@@ -10391,7 +10648,7 @@ void Compile::compile_inline_if(int i, int f, int v)
 							else
 								compile_instruction_assign_value(expr.m[i0]._1, Value());//n[i0]=0;
 							//	compile_instruction_assign_value(i0, Value());//n[i0]=0;
-							expr->i[i_jump].op1=expr->i.size();
+							expr->ni[i_jump].op1=expr->i[i_jump].op1=expr->i.size();
 							expr->m[i1+1]._0=M_IGNORED, expr->m[f1+1]._0=M_IGNORED;
 #endif
 						}
@@ -10586,6 +10843,7 @@ void Compile::compile_expression_local(int _i, int _f)
 					else//highlight arglist contents
 						expr->insertSyntaxError(expr->m[i].pos, expr->m[f].pos);
 					expr->i.clear();
+					expr->ni.clear();
 					expr->valid=false;
 					return;
 				}
@@ -10627,6 +10885,7 @@ void Compile::compile_expression_local(int _i, int _f)
 					expr->insertSyntaxError(expr->m[i].pos, expr->m[f].pos);//arglist
 				//	expr->insertSyntaxError(expr->m[k]._1);//mark the error		function call level: highlight id, parentheses and arglist
 					expr->i.clear();
+					expr->ni.clear();
 					expr->valid=false;
 					return;
 				}
@@ -10813,7 +11072,7 @@ void	compile_break_address(std::stack<std::pair<int, std::vector<int>>> &loopInf
 	for(unsigned k3=0;k3<it.size();++k3)
 	{
 		int &i_break=it[k3];
-		expr->i[i_break].result=end;
+		expr->ni[i_break].result=expr->i[i_break].result=end;
 	}
 }
 void Compile::compile_statement(int &k, int mEnd)
@@ -10861,15 +11120,15 @@ void Compile::compile_statement(int &k, int mEnd)
 				if(comp_seek_allowNewline(k2, mEnd, M_ELSE))
 				{
 					int i_jump=compile_instruction_jump();
-					expr->i[i_branch].result=expr->i.size();//branch to else
+					expr->ni[i_branch].result=expr->i[i_branch].result=expr->i.size();//branch to else
 				//	expr->i[i_branch].op2=expr->i.size();
 					++k2;
 					compile_statement(k2, mEnd);//<else body> statement						//recursive for now
-					expr->i[i_jump].result=expr->i.size();//jump to end
+					expr->ni[i_jump].result=expr->i[i_jump].result=expr->i.size();//jump to end
 				//	expr->i[i_jump].op2=expr->i.size();
 				}
 				else
-					expr->i[i_branch].result=expr->i.size();//branch to end
+					expr->ni[i_branch].result=expr->i[i_branch].result=expr->i.size();//branch to end
 				//	expr->i[i_branch].op2=expr->i.size();
 				k=k2;
 			}
@@ -10919,21 +11178,21 @@ void Compile::compile_statement(int &k, int mEnd)
 				compile_expression_local(sc2+1, headerEnd);//<increment>
 				if(conditionNotEmpty)
 				{
-					expr->i[i_jump].result=expr->i.size();
-				//	expr->i[i_jump].op1=expr->i.size();
+					expr->ni[i_jump].result=expr->i[i_jump].result=expr->i.size();
+				//	expr->ni[i_jump].op1=expr->i[i_jump].op1=expr->i.size();
 					compile_expression_local(sc1+1, sc2);//<condition>
 					int n_condition=expr->m[sc1+1]._1;
 				//	int n_condition;
 				//	compile_expression_local(n_condition=sc1+1, sc2);
 
 					int i_branch=compile_instruction_branch_if(n_condition);
-					expr->i[i_branch].result=i_loop;
-				//	expr->i[i_branch].op2=i_loop;
+					expr->ni[i_branch].result=expr->i[i_branch].result=i_loop;
+				//	expr->ni[i_branch].op2=expr->i[i_branch].op2=i_loop;
 				}
 				else
 				{
 					i_jump=compile_instruction_jump();
-					expr->i[i_jump].result=i_loop;
+					expr->ni[i_jump].result=expr->i[i_jump].result=i_loop;
 				}
 				compile_break_address(loopInfo, expr);
 				k=k2;
@@ -10977,8 +11236,8 @@ void Compile::compile_statement(int &k, int mEnd)
 					//	compile_exprStatement(conditionEnd, mEnd);
 				}
 				if(conditionNotEmpty)
-					expr->i[i_jump].result=expr->i.size();
-			//	expr->i[i_jump].op1=expr->i.size();
+					expr->ni[i_jump].result=expr->i[i_jump].result=expr->i.size();
+			//	expr->ni[i_jump].op1=expr->i[i_jump].op1=expr->i.size();
 				
 				if(conditionNotEmpty)
 				{
@@ -10988,13 +11247,13 @@ void Compile::compile_statement(int &k, int mEnd)
 				//	compile_expression_local(n_condition=conditionStart, conditionEnd);
 
 					int i_branch=compile_instruction_branch_if(n_condition);
-					expr->i[i_branch].result=i_loop;
-				//	expr->i[i_branch].op2=i_loop;
+					expr->ni[i_branch].result=expr->i[i_branch].result=i_loop;
+				//	expr->ni[i_branch].op2=expr->i[i_branch].op2=i_loop;
 				}
 				else
 				{
 					i_jump=compile_instruction_jump();
-					expr->i[i_jump].result=i_loop;
+					expr->ni[i_jump].result=expr->i[i_jump].result=i_loop;
 				}
 				compile_break_address(loopInfo, expr);
 				k=k2;
@@ -11046,13 +11305,13 @@ void Compile::compile_statement(int &k, int mEnd)
 					//	compile_expression_local(n_condition=conditionStart, conditionEnd);
 
 						int i_branch=compile_instruction_branch_if(n_condition);
-						expr->i[i_branch].result=i_loop;
-					//	expr->i[i_branch].op2=i_loop;
+						expr->ni[i_branch].result=expr->i[i_branch].result=i_loop;
+					//	expr->ni[i_branch].op2=expr->i[i_branch].op2=i_loop;
 					}
 					else
 					{
 						int i_jump=compile_instruction_jump();
-						expr->i[i_jump].result=i_loop;
+						expr->ni[i_jump].result=expr->i[i_jump].result=i_loop;
 					}
 					compile_break_address(loopInfo, expr);
 					k=k2;
@@ -11082,14 +11341,15 @@ void Compile::compile_statement(int &k, int mEnd)
 		if(loopInfo.size())
 		{
 			int i_jump=compile_instruction_jump();
-			expr->i[i_jump]=loopInfo.top().first;
+			auto &LOL_1=loopInfo.top().first;
+			expr->ni[i_jump].result=expr->i[i_jump].result=loopInfo.top().first;
 		}
 		else//continue not expected here
 			expr->insertSyntaxError(expr->m[k].pos, expr->m[k].pos+8);
 	/*	if(loopStart.size())
 		{
 			int i_jump=compile_instruction_jump();
-			expr->i[i_jump]=loopStart.top();
+			expr->ni[i_jump]=expr->i[i_jump]=loopStart.top();
 		}
 		else//continue not expected here
 			expr->insertSyntaxError(expr->m[k].pos, expr->m[k].pos+8);//*/
@@ -11105,7 +11365,7 @@ void Compile::compile_statement(int &k, int mEnd)
 	/*	if(loopStart.size())
 		{
 			int i_jump=compile_instruction_jump();
-			loopEnd.push(i_jump);//when loop is compiled	if(loopEnd.size())expr->i[loopEnd.top()].op1=expr->i.size(), loopEnd.pop();
+			loopEnd.push(i_jump);//when loop is compiled	if(loopEnd.size())expr->ni[loopEnd.top()].op1=expr->i[loopEnd.top()].op1=expr->i.size(), loopEnd.pop();
 		}
 		else//break not expected here
 			expr->insertSyntaxError(expr->m[k].pos, expr->m[k].pos+5);//*/
@@ -11250,7 +11510,7 @@ void Compile::compile_function(Expression &expr)
 			}//'r' handled in compile_statement
 		}
 	}
-	else
+	else//no instructions, default return 0;
 		compile_instruction_return(Value());
 	free(term);
 }
@@ -11500,7 +11760,7 @@ void Compile::compile_expression_global(Expression &expr)
 				}
 				if(d_match!=-1)
 				{
-					std::vector<int> args(commas.size()+notVoidCall);
+					std::vector<int> args(exprNArgs);
 					if(notVoidCall)//compile args
 					{
 						int start=i;
@@ -15853,6 +16113,169 @@ namespace	modes
 			Tstart=li.QuadPart;
 		}
 	};
+	struct		MP_CallInfo
+	{
+		int i;//call address		index in instructions vector
+		Expression *func;
+		std::vector<MP::Quat> fData;
+		MP_CallInfo(Expression *func, int i):func(func), i(i){}
+	};
+	void		mp_solve_userfunction(std::vector<MP::Quat> &ndata, MP::Instruction &in)
+	{
+		auto func=&userFunctionDefinitions[in.op1];
+		std::vector<MP::Quat> fData(func->data.size());
+		{
+			int k=0;
+			for(int kEnd=in.args.size();k<kEnd;++k)//copy args
+				fData[k]=ndata[in.args[k]];
+			for(int kEnd=func->data.size();k<kEnd;++k)//initialize const data
+				fData[k]=func->data[k];
+		}
+		int startTime=clock(), expiryTime=startTime+userFunctionTimeLimit, offset=(startTime>0&&expiryTime<0)*userFunctionTimeLimit;
+		std::stack<MP_CallInfo> callStack;
+		for(int i2=0, nInstr=func->i.size();;)
+		{
+			if(i2>=nInstr)//return nothing	unreachable
+			{
+				if(callStack.size())
+				{
+					auto &cst=callStack.top();
+					func=cst.func;
+					i2=cst.i, nInstr=func->i.size();
+					cst.fData[func->i[i2].result].setzero();
+				//	cst.fData[func->i[i2].result]=fData[0];//
+					std::swap(cst.fData, fData);
+					callStack.pop();
+					continue;
+				}
+				ndata[in.result].setzero();
+				break;
+			}
+			if(clock()+offset>expiryTime)
+			{
+				func->functionStuck=true;//mark function
+
+				//return nan
+				if(callStack.size())
+				{
+					auto &cst=callStack.top();
+					func=cst.func;
+					i2=cst.i, nInstr=func->i.size();
+					cst.fData[func->i[i2].result].setnan();
+					std::swap(cst.fData, fData);
+					callStack.pop();
+					++i2;
+					continue;
+				}
+				ndata[in.result].setnan();
+				break;
+			}
+			auto &in2=func->ni[i2];
+		//	func_data_to_clipboard(fData);//
+			switch(in2.type)
+			{
+			case 'c'://call user function
+				if(markFunctionsStuck&&userFunctionDefinitions[in2.op1].functionStuck)//return nan without call
+				{
+					fData[in2.result].setnan();
+					++i2;
+				}
+				else
+				{
+					callStack.push(MP_CallInfo(func, i2));
+					auto &cst=callStack.top();
+					cst.fData=std::move(fData);
+				//	func=in2.function;
+					func=&userFunctionDefinitions[in2.op1], i2=0;
+					fData.resize(func->data.size());
+					{
+						int k=0;
+						for(int kEnd=in2.args.size();k<kEnd;++k)//copy args
+							fData[k]=cst.fData[in2.args[k]];
+						//	fData[k]=cst.func->data[in2.args[k]];
+						for(int kEnd=func->data.size();k<kEnd;++k)//initialize const data
+							fData[k]=func->data[k];
+					}
+				}
+				continue;
+			case 'b'://branch if
+				if(fData[in2.op1].q_isTrue())
+					i2=in2.result;
+				else
+					++i2;
+				continue;
+			case 'B'://branch if not
+				if(!fData[in2.op1].q_isTrue())
+					i2=in2.result;
+				else
+					++i2;
+				continue;
+			case 'j'://jump
+				i2=in2.result;
+				continue;
+			case 'r'://return
+				if(callStack.size())
+				{
+					auto &cst=callStack.top();
+					func=cst.func;
+					i2=cst.i, nInstr=func->i.size();
+					cst.fData[func->i[i2].result]=fData[in2.result];
+					std::swap(cst.fData, fData);
+					callStack.pop();
+					++i2;
+					continue;
+				}
+				ndata[in.result]=fData[in2.result];
+				break;
+			case -1:
+				fData[in2.result].setzero();
+				++i2;
+				continue;
+			case FP::_R_R_FUNCTION:
+			case FP::_C_C_FUNCTION:
+			case FP::_Q_Q_FUNCTION:
+					
+			case FP::_C_R_FUNCTION:
+			case FP::_C_Q_FUNCTION:
+			case FP::_R_C_FUNCTION:
+			case FP::_R_Q_FUNCTION:
+				in2.fp.uf(fData[in2.result], fData[in2.op1]);
+				++i2;
+				continue;
+
+			case FP::R_RR_FUNCTION:
+			case FP::C_RC_FUNCTION:
+			case FP::Q_RQ_FUNCTION:
+			case FP::C_CR_FUNCTION:
+			case FP::C_CC_FUNCTION:
+			case FP::Q_CQ_FUNCTION:
+			case FP::Q_QR_FUNCTION:
+			case FP::Q_QC_FUNCTION:
+			case FP::Q_QQ_FUNCTION:
+
+			case FP::C_RR_FUNCTION:
+
+			case FP::R_RC_FUNCTION:
+			case FP::R_RQ_FUNCTION:
+			case FP::R_CR_FUNCTION:
+			case FP::R_CC_FUNCTION:
+			case FP::R_CQ_FUNCTION:
+			case FP::R_QR_FUNCTION:
+			case FP::R_QC_FUNCTION:
+			case FP::R_QQ_FUNCTION:
+
+			case FP::C_QC_FUNCTION:
+				in2.fp.bf(fData[in2.result], fData[in2.op1], fData[in2.op2]);
+				++i2;
+				continue;
+			case FP::INLINE_IF:
+				fData[in2.result]=fData[in2.op1].q_isTrue()?fData[in2.op2]:fData[in2.op3];
+				++i2;
+				continue;
+			}
+			break;
+		}
+	}
 	class		Solve_0D:public Solve
 	{
 	public:
@@ -15872,9 +16295,12 @@ namespace	modes
 			for(int ki=0, kiEnd=ex.ni.size();ki<kiEnd;++ki)
 			{
 				auto &in=ex.ni[ki];
-				auto &res=ndata[in.result], &op1=ndata[in.op1], &op2=ndata[in.is_binary()?in.op2:in.op1];
+			//	auto &res=ndata[in.result], &op1=ndata[in.op1], &op2=ndata[in.is_binary()?in.op2:in.op1];
 				switch(in.type)
 				{
+				case 'c':
+					mp_solve_userfunction(ndata, in);
+					break;
 #ifdef MP_PURE_QUAT
 				case FP::_R_R_FUNCTION:
 				case FP::_C_C_FUNCTION:
@@ -15884,7 +16310,7 @@ namespace	modes
 				case FP::_C_Q_FUNCTION:
 				case FP::_R_C_FUNCTION:
 				case FP::_R_Q_FUNCTION:
-					in.fp.uf(res, op1);
+					in.fp.uf(ndata[in.result], ndata[in.op1]);
 					break;
 
 				case FP::R_RR_FUNCTION:
@@ -15909,7 +16335,7 @@ namespace	modes
 				case FP::R_QQ_FUNCTION:
 
 				case FP::C_QC_FUNCTION:
-					in.fp.bf(res, op1, op2);
+					in.fp.bf(ndata[in.result], ndata[in.op1], ndata[in.op2]);
 					break;
 #else
 				case 'c':
@@ -15978,6 +16404,7 @@ namespace	modes
 				//case FP::C_QC_FUNCTION:in.fp.c_qc();break;
 #endif
 				case FP::INLINE_IF:
+					ndata[in.result]=ndata[in.op1].q_isTrue()?ndata[in.op2]:ndata[in.op3];
 					break;
 				}
 			}
@@ -36656,11 +37083,12 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 						}
 						++e;
 					}
-					else
+					else//user function
 					{
 						Compile::compile_function(*it);
 						it->resultMathSet=Compile::predictedMathSet;
-					//	expression_to_clipboard(*it);
+					//	expression_to_clipboard(*it, true);//MP instructions
+					//	expression_to_clipboard(*it);//
 						++function;
 					}
 				}//end bound loop
