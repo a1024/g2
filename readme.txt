@@ -1,3 +1,31 @@
+Grapher 2: A handy graphing calculator.
+
+
+How to compile:
+	Dependencies on Windows:
+	1) Doanload FFTW from:
+		http://www.fftw.org/
+	2) Download pre-compiled MPIR 2.7.2 and MPFR 4.0.0-dev libraries from:
+		http://www.atelierweb.com/mpir-and-mpfr/
+	3) Download MPFR C++ 3.6.2 from:
+		http://www.holoborodko.com/pavel/mpfr/
+
+	Option A: On an AVX-supporting compiler:
+	4) Compile g2_avx.cpp & g2_common.cpp as a static library AVX.lib.
+	5) Compile the other files including common.cpp and link to AVX.lib.
+	This is to produce an executable that doesn't crash on older non-AVX CPUs.
+
+	Option B: On a pre-AVX compiler:
+	4) Comment out '#include"avx.h"' in g2.cpp.
+	5) Compile everything excluding avx.cpp & avx.h
+
+
+How to install:
+	1) Install Microsoft Visual C++ 2013 Redistributable (x86) if not installed:
+		https://www.microsoft.com/en-us/download/details.aspx?id=40784
+	2) Download everything from bin folder.
+
+
 How to use:
 	Esc:	switch between edit and interaction modes
 	F1:	context help
