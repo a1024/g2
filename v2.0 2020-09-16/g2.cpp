@@ -10288,7 +10288,7 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 	return result;
 }
 int				Compile::compile_instruction_branch_if		(int n_condition){	expr->i.push_back(Instruction('b', n_condition)),	expr->ni.push_back(MP::Instruction('b', n_condition));	return expr->i.size()-1;}
-int				Compile::compile_instruction_branch_if_not	(int n_condition){	expr->i.push_back(Instruction('B', n_condition)),	expr->ni.push_back(MP::Instruction('b', n_condition));	return expr->i.size()-1;}
+int				Compile::compile_instruction_branch_if_not	(int n_condition){	expr->i.push_back(Instruction('B', n_condition)),	expr->ni.push_back(MP::Instruction('B', n_condition));	return expr->i.size()-1;}
 int				Compile::compile_instruction_jump			(){					expr->i.push_back(Instruction()),					expr->ni.push_back(MP::Instruction());					return expr->i.size()-1;}
 int				Compile::compile_instruction_return			(int n_result){		expr->i.push_back(Instruction(n_result)),			expr->ni.push_back(MP::Instruction(n_result));			return expr->i.size()-1;}
 int				Compile::compile_instruction_return			(Value const &x)
