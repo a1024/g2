@@ -3,7 +3,7 @@ Grapher 2: A handy graphing calculator.
 
 How to compile:
 	Dependencies on Windows:
-	1) Doanload FFTW from:
+	1) Download FFTW from:
 		http://www.fftw.org/
 	2) Download pre-compiled MPIR 2.7.2 and MPFR 4.0.0-dev libraries from:
 		http://www.atelierweb.com/mpir-and-mpfr/
@@ -17,7 +17,7 @@ How to compile:
 
 	Option B: On a pre-AVX compiler:
 	4) Comment out '#include"avx.h"' in g2.cpp.
-	5) Compile everything excluding avx.cpp & avx.h
+	5) Compile everything excluding avx.cpp & avx.h.
 
 
 How to install:
