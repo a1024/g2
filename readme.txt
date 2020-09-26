@@ -30,7 +30,7 @@ How to use:
 	Esc:	switch between edit and interaction modes
 	F1:	context help
 	F7:	toggle benchmark
-	ctrl F7: switch between SIMD modes supported by CPU.
+	ctrl F7: switch between SIMD modes supported by CPU (IA32/SSE2/AVX).
 	F11:	fullscreen
 
 
