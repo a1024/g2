@@ -100,7 +100,7 @@ Operators:
 	~	bitwise not
 	^^^	pentate
 	^^	tetrate
-	^ **	power, power real
+	^ **	power, power a real integer
 	* /
 	@	divides
 	+ -
