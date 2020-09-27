@@ -1603,7 +1603,7 @@ public:
 #endif
 	std::vector<Instruction> i;//graph instructions
 	std::vector<MP::Instruction> ni;//numeric instructions
-	int resultLogicType;//0: not bool, 1: && ## || < <= > >= logic/inequality, 2: = equation, 3: != anti-equation
+	int resultLogicType;//0: not bool, 1: && ## || < <= > >= logic/inequality, 2: = @ equation, 3: != anti-equation
 	int lastInstruction;
 	std::vector<int> rmode;
 
@@ -5391,7 +5391,7 @@ namespace	G2
 	void r_qr_logic_divides			(VectP &r, QuatP const &y, VectP const &x)	{auto t=(double)x/(Quat1d)y; r=t==floor(t);}
 	void r_qc_logic_divides			(VectP &r, QuatP const &y, CompP const &x)	{auto t=(Comp1d)x/(Quat1d)y; r=t==floor(t);}
 	void r_qq_logic_divides			(VectP &r, QuatP const &y, QuatP const &x)	{auto t=(Quat1d)x/(Quat1d)y; r=t==floor(t);}
-	bool disc_r_logic_divides_o		(Value const &x0, Value const &x1){return x0.r!=x1.r;}//for all logic_divides functions
+	bool disc_r_logic_divides_o		(Value const &x0, Value const &x1){return x0.r!=x1.r;}//for all logic functions
 
 	inline double power_real(double const &x, int y)
 	{
@@ -6146,24 +6146,25 @@ namespace	G2
 	void r_qr_logic_equal			(VectP &r, QuatP const &x, VectP const &y)	{r=(Quat1d)x==(double)y;}
 	void r_qc_logic_equal			(VectP &r, QuatP const &x, CompP const &y)	{r=(Quat1d)x==(Comp1d)y;}
 	void r_qq_logic_equal			(VectP &r, QuatP const &x, QuatP const &y)	{r=(Quat1d)x==(Quat1d)y;}
-	bool disc_x_logic_equal			(double x0, double x1)
-	{
-		if(x0<0)	return x1>=0;
-		if(x0==0)	return x1<0||x1>0;
-					return x1<=0;
-	}
-	bool disc_r_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r);}
-	bool disc_c_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r)&&disc_x_logic_equal(x0.i, x1.i);}
-	bool disc_q_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r)&&disc_x_logic_equal(x0.i, x1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
-	bool disc_rr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r);}
-	bool disc_rc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(-y0.i, -y1.i);}
-	bool disc_rq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(-y0.i, -y1.i)&&disc_x_logic_equal(-y0.j, -y1.j)&&disc_x_logic_equal(-y0.k, -y1.k);}
-	bool disc_cr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i, x1.i);}
-	bool disc_cc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i);}
-	bool disc_cq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(-y0.j, -y1.j)&&disc_x_logic_equal(-y0.k, -y1.k);}
-	bool disc_qr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i, x1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
-	bool disc_qc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
-	bool disc_qq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(x0.j-y0.j, x1.j-y1.j)&&disc_x_logic_equal(x0.k-y0.k, x1.k-y1.k);}
+	auto disc_r_logic_equal_o		=disc_r_logic_divides_o;
+	//bool disc_x_logic_equal			(double x0, double x1)
+	//{
+	//	if(x0<0)	return x1>=0;
+	//	if(x0==0)	return x1<0||x1>0;
+	//				return x1<=0;
+	//}
+	//bool disc_r_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r);}
+	//bool disc_c_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r)&&disc_x_logic_equal(x0.i, x1.i);}
+	//bool disc_q_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r)&&disc_x_logic_equal(x0.i, x1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
+	//bool disc_rr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r);}
+	//bool disc_rc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(-y0.i, -y1.i);}
+	//bool disc_rq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(-y0.i, -y1.i)&&disc_x_logic_equal(-y0.j, -y1.j)&&disc_x_logic_equal(-y0.k, -y1.k);}
+	//bool disc_cr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i, x1.i);}
+	//bool disc_cc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i);}
+	//bool disc_cq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(-y0.j, -y1.j)&&disc_x_logic_equal(-y0.k, -y1.k);}
+	//bool disc_qr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i, x1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
+	//bool disc_qc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
+	//bool disc_qq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(x0.j-y0.j, x1.j-y1.j)&&disc_x_logic_equal(x0.k-y0.k, x1.k-y1.k);}
 	
 	void  r_r_logic_not_equal		(VectP &r, VectP const &x)					{r=x.r_is_true();}
 	void  r_c_logic_not_equal		(VectP &r, CompP const &x)					{r=x.c_is_true();}
@@ -6177,18 +6178,19 @@ namespace	G2
 	void r_qr_logic_not_equal		(VectP &r, QuatP const &x, VectP const &y)	{r=(Quat1d)x!=(double)y;}
 	void r_qc_logic_not_equal		(VectP &r, QuatP const &x, CompP const &y)	{r=(Quat1d)x!=(Comp1d)y;}
 	void r_qq_logic_not_equal		(VectP &r, QuatP const &x, QuatP const &y)	{r=(Quat1d)x!=(Quat1d)y;}
-	auto disc_r_logic_not_equal_i		=disc_r_logic_equal_i;
-	auto disc_c_logic_not_equal_i		=disc_c_logic_equal_i;
-	auto disc_q_logic_not_equal_i		=disc_q_logic_equal_i;
-	auto disc_rr_logic_not_equal_i		=disc_rr_logic_equal_i;
-	auto disc_rc_logic_not_equal_i		=disc_rc_logic_equal_i;
-	auto disc_rq_logic_not_equal_i		=disc_rq_logic_equal_i;
-	auto disc_cr_logic_not_equal_i		=disc_cr_logic_equal_i;
-	auto disc_cc_logic_not_equal_i		=disc_cc_logic_equal_i;
-	auto disc_cq_logic_not_equal_i		=disc_cq_logic_equal_i;
-	auto disc_qr_logic_not_equal_i		=disc_qr_logic_equal_i;
-	auto disc_qc_logic_not_equal_i		=disc_qc_logic_equal_i;
-	auto disc_qq_logic_not_equal_i		=disc_qq_logic_equal_i;
+	auto disc_r_logic_not_equal_o	=disc_r_logic_divides_o;
+	//auto disc_r_logic_not_equal_i		=disc_r_logic_equal_i;
+	//auto disc_c_logic_not_equal_i		=disc_c_logic_equal_i;
+	//auto disc_q_logic_not_equal_i		=disc_q_logic_equal_i;
+	//auto disc_rr_logic_not_equal_i		=disc_rr_logic_equal_i;
+	//auto disc_rc_logic_not_equal_i		=disc_rc_logic_equal_i;
+	//auto disc_rq_logic_not_equal_i		=disc_rq_logic_equal_i;
+	//auto disc_cr_logic_not_equal_i		=disc_cr_logic_equal_i;
+	//auto disc_cc_logic_not_equal_i		=disc_cc_logic_equal_i;
+	//auto disc_cq_logic_not_equal_i		=disc_cq_logic_equal_i;
+	//auto disc_qr_logic_not_equal_i		=disc_qr_logic_equal_i;
+	//auto disc_qc_logic_not_equal_i		=disc_qc_logic_equal_i;
+	//auto disc_qq_logic_not_equal_i		=disc_qq_logic_equal_i;
 	
 	void  r_r_logic_less_l			(VectP &r, VectP const &x)					{r=0<x;}
 	void  r_c_logic_less_l			(VectP &r, CompP const &x)					{r=0<*x.r;}
@@ -6205,22 +6207,23 @@ namespace	G2
 	void r_qr_logic_less			(VectP &r, QuatP const &x, VectP const &y)	{r=*x.r<y;}
 	void r_qc_logic_less			(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r<*y.r;}
 	void r_qq_logic_less			(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r<*y.r;}
-	bool disc_x_logic_less			(double x0, double x1){return x0<0?x1>=0:x1<0;}//	__|0__
-	bool disc_r_logic_less_l_i		(Value const &x0, Value const &x1){return disc_x_logic_less(-x0.r, -x1.r);}
-	auto disc_c_logic_less_l_i		=disc_r_logic_less_l_i;
-	auto disc_q_logic_less_l_i		=disc_r_logic_less_l_i;
-	bool disc_r_logic_less_r_i		(Value const &x0, Value const &x1){return disc_x_logic_less(x0.r, x1.r);}
-	auto disc_c_logic_less_r_i		=disc_r_logic_less_r_i;
-	auto disc_q_logic_less_r_i		=disc_r_logic_less_r_i;
-	bool disc_rr_logic_less_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_less(x0.r-y0.r, x1.r-y1.r);}
-	auto disc_rc_logic_less_i		=disc_rr_logic_less_i;
-	auto disc_rq_logic_less_i		=disc_rr_logic_less_i;
-	auto disc_cr_logic_less_i		=disc_rr_logic_less_i;
-	auto disc_cc_logic_less_i		=disc_rr_logic_less_i;
-	auto disc_cq_logic_less_i		=disc_rr_logic_less_i;
-	auto disc_qr_logic_less_i		=disc_rr_logic_less_i;
-	auto disc_qc_logic_less_i		=disc_rr_logic_less_i;
-	auto disc_qq_logic_less_i		=disc_rr_logic_less_i;
+	auto disc_r_logic_less_o		=disc_r_logic_divides_o;
+	//bool disc_x_logic_less			(double x0, double x1){return x0<0?x1>=0:x1<0;}//	__|0__
+	//bool disc_r_logic_less_l_i		(Value const &x0, Value const &x1){return disc_x_logic_less(-x0.r, -x1.r);}
+	//auto disc_c_logic_less_l_i		=disc_r_logic_less_l_i;
+	//auto disc_q_logic_less_l_i		=disc_r_logic_less_l_i;
+	//bool disc_r_logic_less_r_i		(Value const &x0, Value const &x1){return disc_x_logic_less(x0.r, x1.r);}
+	//auto disc_c_logic_less_r_i		=disc_r_logic_less_r_i;
+	//auto disc_q_logic_less_r_i		=disc_r_logic_less_r_i;
+	//bool disc_rr_logic_less_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_less(x0.r-y0.r, x1.r-y1.r);}
+	//auto disc_rc_logic_less_i		=disc_rr_logic_less_i;
+	//auto disc_rq_logic_less_i		=disc_rr_logic_less_i;
+	//auto disc_cr_logic_less_i		=disc_rr_logic_less_i;
+	//auto disc_cc_logic_less_i		=disc_rr_logic_less_i;
+	//auto disc_cq_logic_less_i		=disc_rr_logic_less_i;
+	//auto disc_qr_logic_less_i		=disc_rr_logic_less_i;
+	//auto disc_qc_logic_less_i		=disc_rr_logic_less_i;
+	//auto disc_qq_logic_less_i		=disc_rr_logic_less_i;
 	
 	void  r_r_logic_less_equal_l	(VectP &r, VectP const &x)					{r=0<=x;}
 	void  r_c_logic_less_equal_l	(VectP &r, CompP const &x)					{r=0<=*x.r;}
@@ -6237,22 +6240,23 @@ namespace	G2
 	void r_qr_logic_less_equal		(VectP &r, QuatP const &x, VectP const &y)	{r=*x.r<=y;}
 	void r_qc_logic_less_equal		(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r<=*y.r;}
 	void r_qq_logic_less_equal		(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r<=*y.r;}
-	bool disc_x_logic_less_equal		(double x0, double x1){return x0<=0?x1>0:x1<=0;}//	__0|__
-	bool disc_r_logic_less_equal_l_i	(Value const &x0, Value const &x1){return disc_x_logic_less_equal(-x0.r, -x1.r);}
-	auto disc_c_logic_less_equal_l_i	=disc_r_logic_less_equal_l_i;
-	auto disc_q_logic_less_equal_l_i	=disc_r_logic_less_equal_l_i;
-	bool disc_r_logic_less_equal_r_i	(Value const &x0, Value const &x1){return disc_x_logic_less_equal(x0.r, x1.r);}
-	auto disc_c_logic_less_equal_r_i	=disc_r_logic_less_equal_r_i;
-	auto disc_q_logic_less_equal_r_i	=disc_r_logic_less_equal_r_i;
-	bool disc_rr_logic_less_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_r_logic_less_equal_r_i(x0.r-y0.r, x1.r-y1.r);}
-	auto disc_rc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	auto disc_rq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	auto disc_cr_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	auto disc_cc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	auto disc_cq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	auto disc_qr_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	auto disc_qc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	auto disc_qq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	auto disc_r_logic_less_equal_o	=disc_r_logic_divides_o;
+	//bool disc_x_logic_less_equal		(double x0, double x1){return x0<=0?x1>0:x1<=0;}//	__0|__
+	//bool disc_r_logic_less_equal_l_i	(Value const &x0, Value const &x1){return disc_x_logic_less_equal(-x0.r, -x1.r);}
+	//auto disc_c_logic_less_equal_l_i	=disc_r_logic_less_equal_l_i;
+	//auto disc_q_logic_less_equal_l_i	=disc_r_logic_less_equal_l_i;
+	//bool disc_r_logic_less_equal_r_i	(Value const &x0, Value const &x1){return disc_x_logic_less_equal(x0.r, x1.r);}
+	//auto disc_c_logic_less_equal_r_i	=disc_r_logic_less_equal_r_i;
+	//auto disc_q_logic_less_equal_r_i	=disc_r_logic_less_equal_r_i;
+	//bool disc_rr_logic_less_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_r_logic_less_equal_r_i(x0.r-y0.r, x1.r-y1.r);}
+	//auto disc_rc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	//auto disc_rq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	//auto disc_cr_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	//auto disc_cc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	//auto disc_cq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	//auto disc_qr_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	//auto disc_qc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
+	//auto disc_qq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
 	
 	void  r_r_logic_greater_l		(VectP &r, VectP const &x)					{r=0>x;}
 	void  r_c_logic_greater_l		(VectP &r, CompP const &x)					{r=0>*x.r;}
@@ -6269,21 +6273,22 @@ namespace	G2
 	void r_qr_logic_greater			(VectP &r, QuatP const &x, VectP const &y)	{r=*x.r>y;}
 	void r_qc_logic_greater			(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r>*y.r;}
 	void r_qq_logic_greater			(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r>*y.r;}
-	auto disc_r_logic_greater_l_i	=disc_r_logic_less_equal_l_i;
-	auto disc_c_logic_greater_l_i	=disc_c_logic_less_equal_l_i;
-	auto disc_q_logic_greater_l_i	=disc_q_logic_less_equal_l_i;
-	auto disc_r_logic_greater_r_i	=disc_r_logic_less_equal_r_i;
-	auto disc_c_logic_greater_r_i	=disc_c_logic_less_equal_r_i;
-	auto disc_q_logic_greater_r_i	=disc_q_logic_less_equal_r_i;
-	auto disc_rr_logic_greater_i	=disc_rr_logic_less_equal_i;
-	auto disc_rc_logic_greater_i	=disc_rc_logic_less_equal_i;
-	auto disc_rq_logic_greater_i	=disc_rq_logic_less_equal_i;
-	auto disc_cr_logic_greater_i	=disc_cr_logic_less_equal_i;
-	auto disc_cc_logic_greater_i	=disc_cc_logic_less_equal_i;
-	auto disc_cq_logic_greater_i	=disc_cq_logic_less_equal_i;
-	auto disc_qr_logic_greater_i	=disc_qr_logic_less_equal_i;
-	auto disc_qc_logic_greater_i	=disc_qc_logic_less_equal_i;
-	auto disc_qq_logic_greater_i	=disc_qq_logic_less_equal_i;
+	auto disc_r_logic_greater_o		=disc_r_logic_divides_o;
+	//auto disc_r_logic_greater_l_i	=disc_r_logic_less_equal_l_i;
+	//auto disc_c_logic_greater_l_i	=disc_c_logic_less_equal_l_i;
+	//auto disc_q_logic_greater_l_i	=disc_q_logic_less_equal_l_i;
+	//auto disc_r_logic_greater_r_i	=disc_r_logic_less_equal_r_i;
+	//auto disc_c_logic_greater_r_i	=disc_c_logic_less_equal_r_i;
+	//auto disc_q_logic_greater_r_i	=disc_q_logic_less_equal_r_i;
+	//auto disc_rr_logic_greater_i	=disc_rr_logic_less_equal_i;
+	//auto disc_rc_logic_greater_i	=disc_rc_logic_less_equal_i;
+	//auto disc_rq_logic_greater_i	=disc_rq_logic_less_equal_i;
+	//auto disc_cr_logic_greater_i	=disc_cr_logic_less_equal_i;
+	//auto disc_cc_logic_greater_i	=disc_cc_logic_less_equal_i;
+	//auto disc_cq_logic_greater_i	=disc_cq_logic_less_equal_i;
+	//auto disc_qr_logic_greater_i	=disc_qr_logic_less_equal_i;
+	//auto disc_qc_logic_greater_i	=disc_qc_logic_less_equal_i;
+	//auto disc_qq_logic_greater_i	=disc_qq_logic_less_equal_i;
 	
 	void  r_r_logic_greater_equal_l	(VectP &r, VectP const &x)					{r=0>=x;}
 	void  r_c_logic_greater_equal_l	(VectP &r, CompP const &x)					{r=0>=*x.r;}
@@ -6300,28 +6305,30 @@ namespace	G2
 	void r_qr_logic_greater_equal	(VectP &r, QuatP const &x, VectP const &y)	{r=*x.r>=y;}
 	void r_qc_logic_greater_equal	(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r>=*y.r;}
 	void r_qq_logic_greater_equal	(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r>=*y.r;}
-	auto disc_r_logic_greater_equal_l_i	=disc_r_logic_less_l_i;
-	auto disc_c_logic_greater_equal_l_i	=disc_c_logic_less_l_i;
-	auto disc_q_logic_greater_equal_l_i	=disc_q_logic_less_l_i;
-	auto disc_r_logic_greater_equal_r_i	=disc_r_logic_less_r_i;
-	auto disc_c_logic_greater_equal_r_i	=disc_c_logic_less_r_i;
-	auto disc_q_logic_greater_equal_r_i	=disc_q_logic_less_r_i;
-	auto disc_rr_logic_greater_equal_i	=disc_rr_logic_less_i;
-	auto disc_rc_logic_greater_equal_i	=disc_rc_logic_less_i;
-	auto disc_rq_logic_greater_equal_i	=disc_rq_logic_less_i;
-	auto disc_cr_logic_greater_equal_i	=disc_cr_logic_less_i;
-	auto disc_cc_logic_greater_equal_i	=disc_cc_logic_less_i;
-	auto disc_cq_logic_greater_equal_i	=disc_cq_logic_less_i;
-	auto disc_qr_logic_greater_equal_i	=disc_qr_logic_less_i;
-	auto disc_qc_logic_greater_equal_i	=disc_qc_logic_less_i;
-	auto disc_qq_logic_greater_equal_i	=disc_qq_logic_less_i;
+	auto disc_r_logic_greater_equal_o=disc_r_logic_divides_o;
+	//auto disc_r_logic_greater_equal_l_i	=disc_r_logic_less_l_i;
+	//auto disc_c_logic_greater_equal_l_i	=disc_c_logic_less_l_i;
+	//auto disc_q_logic_greater_equal_l_i	=disc_q_logic_less_l_i;
+	//auto disc_r_logic_greater_equal_r_i	=disc_r_logic_less_r_i;
+	//auto disc_c_logic_greater_equal_r_i	=disc_c_logic_less_r_i;
+	//auto disc_q_logic_greater_equal_r_i	=disc_q_logic_less_r_i;
+	//auto disc_rr_logic_greater_equal_i	=disc_rr_logic_less_i;
+	//auto disc_rc_logic_greater_equal_i	=disc_rc_logic_less_i;
+	//auto disc_rq_logic_greater_equal_i	=disc_rq_logic_less_i;
+	//auto disc_cr_logic_greater_equal_i	=disc_cr_logic_less_i;
+	//auto disc_cc_logic_greater_equal_i	=disc_cc_logic_less_i;
+	//auto disc_cq_logic_greater_equal_i	=disc_cq_logic_less_i;
+	//auto disc_qr_logic_greater_equal_i	=disc_qr_logic_less_i;
+	//auto disc_qc_logic_greater_equal_i	=disc_qc_logic_less_i;
+	//auto disc_qq_logic_greater_equal_i	=disc_qq_logic_less_i;
 	
 	void  r_r_logic_not				(VectP &r, VectP const &x)					{r=x==0;}
 	void  r_c_logic_not				(VectP &r, CompP const &x)					{r=(*x.r==0)&(*x.i==0);}
 	void  r_q_logic_not				(VectP &r, QuatP const &x)					{r=(*x.r==0)&(*x.i==0)&(*x.j==0)&(*x.k==0);}
-	auto disc_r_logic_not_i			=disc_r_divide_i;
-	auto disc_c_logic_not_i			=disc_c_divide_i;
-	auto disc_q_logic_not_i			=disc_q_divide_i;
+	auto disc_r_logic_not_o			=disc_r_logic_divides_o;
+	//auto disc_r_logic_not_i			=disc_r_divide_i;
+	//auto disc_c_logic_not_i			=disc_c_divide_i;
+	//auto disc_q_logic_not_i			=disc_q_divide_i;
 	
 	void r_rr_logic_and				(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()&y.r_is_true();}
 	void r_rc_logic_and				(VectP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()&y.c_is_true();}
@@ -6332,21 +6339,22 @@ namespace	G2
 	void r_qr_logic_and				(VectP &r, QuatP const &x, VectP const &y)	{r=x.q_is_true()&y.r_is_true();}
 	void r_qc_logic_and				(VectP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()&y.c_is_true();}
 	void r_qq_logic_and				(VectP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()&y.q_is_true();}
-	bool disc_x_logic_and			(double x0, double x1)
-	{
-		if(x0<0)	return x1>=0;
-		if(x0==0)	return x1<0||x1>0;
-					return x1<=0;
-	}
-	bool disc_rr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r);}
-	bool disc_rc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	bool disc_rq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	bool disc_cr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r);}
-	bool disc_cc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	bool disc_cq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	bool disc_qr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r);}
-	bool disc_qc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	bool disc_qq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
+	auto disc_r_logic_and_o			=disc_r_logic_divides_o;
+	//bool disc_x_logic_and			(double x0, double x1)
+	//{
+	//	if(x0<0)	return x1>=0;
+	//	if(x0==0)	return x1<0||x1>0;
+	//				return x1<=0;
+	//}
+	//bool disc_rr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r);}
+	//bool disc_rc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
+	//bool disc_rq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
+	//bool disc_cr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r);}
+	//bool disc_cc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
+	//bool disc_cq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
+	//bool disc_qr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r);}
+	//bool disc_qc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
+	//bool disc_qq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
 	
 	void r_rr_logic_or				(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()|y.r_is_true();}
 	void r_rc_logic_or				(VectP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()|y.c_is_true();}
@@ -6357,15 +6365,16 @@ namespace	G2
 	void r_qr_logic_or				(VectP &r, QuatP const &x, VectP const &y)	{r=x.q_is_true()|y.r_is_true();}
 	void r_qc_logic_or				(VectP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()|y.c_is_true();}
 	void r_qq_logic_or				(VectP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()|y.q_is_true();}
-	bool disc_rr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r);}
-	bool disc_rc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	bool disc_rq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	bool disc_cr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r);}
-	bool disc_cc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	bool disc_cq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	bool disc_qr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r);}
-	bool disc_qc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	bool disc_qq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
+	auto disc_r_logic_or_o			=disc_r_logic_divides_o;
+	//bool disc_rr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r);}
+	//bool disc_rc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
+	//bool disc_rq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
+	//bool disc_cr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r);}
+	//bool disc_cc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
+	//bool disc_cq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
+	//bool disc_qr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r);}
+	//bool disc_qc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
+	//bool disc_qq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
 	
 	void r_rr_logic_xor				(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()^y.r_is_true();}
 	void r_rc_logic_xor				(VectP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()^y.c_is_true();}
@@ -6376,15 +6385,16 @@ namespace	G2
 	void r_qr_logic_xor				(VectP &r, QuatP const &x, VectP const &y)	{r=x.q_is_true()^y.r_is_true();}
 	void r_qc_logic_xor				(VectP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()^y.c_is_true();}
 	void r_qq_logic_xor				(VectP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()^y.q_is_true();}
-	auto disc_rr_logic_xor_i		=disc_rr_logic_and_i;
-	auto disc_rc_logic_xor_i		=disc_rc_logic_and_i;
-	auto disc_rq_logic_xor_i		=disc_rq_logic_and_i;
-	auto disc_cr_logic_xor_i		=disc_cr_logic_and_i;
-	auto disc_cc_logic_xor_i		=disc_cc_logic_and_i;
-	auto disc_cq_logic_xor_i		=disc_cq_logic_and_i;
-	auto disc_qr_logic_xor_i		=disc_qr_logic_and_i;
-	auto disc_qc_logic_xor_i		=disc_qc_logic_and_i;
-	auto disc_qq_logic_xor_i		=disc_qq_logic_and_i;
+	auto disc_r_logic_xor_o			=disc_r_logic_divides_o;
+	//auto disc_rr_logic_xor_i		=disc_rr_logic_and_i;
+	//auto disc_rc_logic_xor_i		=disc_rc_logic_and_i;
+	//auto disc_rq_logic_xor_i		=disc_rq_logic_and_i;
+	//auto disc_cr_logic_xor_i		=disc_cr_logic_and_i;
+	//auto disc_cc_logic_xor_i		=disc_cc_logic_and_i;
+	//auto disc_cq_logic_xor_i		=disc_cq_logic_and_i;
+	//auto disc_qr_logic_xor_i		=disc_qr_logic_and_i;
+	//auto disc_qc_logic_xor_i		=disc_qc_logic_and_i;
+	//auto disc_qq_logic_xor_i		=disc_qq_logic_and_i;
 	
 	void r_rr_condition_zero		(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()?x:y;}
 	void c_rc_condition_zero		(CompP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()?Comp1d(*x.r):y;}
@@ -8815,18 +8825,18 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 									else				function.set(SIMD(r_r_bitwise_shift_left_r)),	umts=returns_rcq,	d();										return;
 		case M_BITWISE_SHIFT_RIGHT:		 if(side=='<')	function.set(SIMD(r_r_bitwise_shift_right_l)),	umts=returns_rcq,	d(disc_r_bitwise_shift_right_l_o, false);
 									else				function.set(SIMD(r_r_bitwise_shift_right_r)),	umts=returns_rcq,	d();										return;
-		case M_FACTORIAL_LOGIC_NOT:		 if(side=='<')	function.set(SIMD(r_r_logic_not)),				umts=returns_rrr,	d(disc_r_logic_not_i, true);
+		case M_FACTORIAL_LOGIC_NOT:		 if(side=='<')	function.set(SIMD(r_r_logic_not)),				umts=returns_rrr,	d(disc_r_logic_not_o, false);
 									else				function.set(SCALAR(r_r_factorial)),			umts=returns_rcq,	d(disc_r_factorial_i, true);				return;
-		case M_LOGIC_LESS:				 if(side=='<')	function.set(SIMD(r_r_logic_less_l)),			umts=returns_rrr,	d(disc_r_logic_less_l_i, true);
-									else				function.set(SIMD(r_r_logic_less_r)),			umts=returns_rrr,	d(disc_r_logic_less_r_i, true);				return;
-		case M_LOGIC_LESS_EQUAL:		 if(side=='<')	function.set(SIMD(r_r_logic_less_equal_l)),		umts=returns_rrr,	d(disc_r_logic_less_equal_l_i, true);
-									else				function.set(SIMD(r_r_logic_less_equal_r)),		umts=returns_rrr,	d(disc_r_logic_less_equal_r_i, true);		return;
-		case M_LOGIC_GREATER:			 if(side=='<')	function.set(SIMD(r_r_logic_greater_l)),		umts=returns_rrr,	d(disc_r_logic_greater_l_i, true);
-									else				function.set(SIMD(r_r_logic_greater_r)),		umts=returns_rrr,	d(disc_r_logic_greater_r_i, true);			return;
-		case M_LOGIC_GREATER_EQUAL:		 if(side=='<')	function.set(SIMD(r_r_logic_greater_equal_l)),	umts=returns_rrr,	d(disc_r_logic_greater_equal_l_i, true);
-									else				function.set(SIMD(r_r_logic_greater_equal_r)),	umts=returns_rrr,	d(disc_r_logic_greater_equal_r_i, true);	return;
-		case M_LOGIC_EQUAL:			function.set(SIMD(r_r_logic_equal)),	umts=returns_rrr,		d(disc_r_logic_equal_i, true);		return;
-		case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_r_logic_not_equal)),umts=returns_rrr,		d(disc_r_logic_not_equal_i, true);	return;
+		case M_LOGIC_LESS:				 if(side=='<')	function.set(SIMD(r_r_logic_less_l)),			umts=returns_rrr,	d(disc_r_logic_less_o, false);
+									else				function.set(SIMD(r_r_logic_less_r)),			umts=returns_rrr,	d(disc_r_logic_less_o, false);				return;
+		case M_LOGIC_LESS_EQUAL:		 if(side=='<')	function.set(SIMD(r_r_logic_less_equal_l)),		umts=returns_rrr,	d(disc_r_logic_less_equal_o, false);
+									else				function.set(SIMD(r_r_logic_less_equal_r)),		umts=returns_rrr,	d(disc_r_logic_less_equal_o, false);		return;
+		case M_LOGIC_GREATER:			 if(side=='<')	function.set(SIMD(r_r_logic_greater_l)),		umts=returns_rrr,	d(disc_r_logic_greater_o, false);
+									else				function.set(SIMD(r_r_logic_greater_r)),		umts=returns_rrr,	d(disc_r_logic_greater_o, false);			return;
+		case M_LOGIC_GREATER_EQUAL:		 if(side=='<')	function.set(SIMD(r_r_logic_greater_equal_l)),	umts=returns_rrr,	d(disc_r_logic_greater_equal_o, false);
+									else				function.set(SIMD(r_r_logic_greater_equal_r)),	umts=returns_rrr,	d(disc_r_logic_greater_equal_o, false);		return;
+		case M_LOGIC_EQUAL:			function.set(SIMD(r_r_logic_equal)),	umts=returns_rrr,		d(disc_r_logic_equal_o, false);		return;
+		case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_r_logic_not_equal)),umts=returns_rrr,		d(disc_r_logic_not_equal_o, false);	return;
 		case M_BITWISE_AND:			function.set(SCALAR(r_r_bitwise_and)),	umts=returns_rcq,		d(disc_r_bitwise_and_o, false);		return;
 		case M_BITWISE_NAND:		function.set(SCALAR(r_r_bitwise_nand)),	umts=returns_rcq,		d(disc_r_bitwise_nand_o, false);	return;
 		case M_BITWISE_XOR:			function.set(SCALAR(r_r_bitwise_xor)),	umts=returns_rcq,		d(disc_r_bitwise_xor_o, false);		return;
@@ -8919,18 +8929,18 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 									else				function.set(SIMD(c_c_bitwise_shift_left_r)),	umts=returns_rcq,		d();										return;
 		case M_BITWISE_SHIFT_RIGHT:		 if(side=='<')	function.set(SIMD(c_c_bitwise_shift_right_l)),	umts=returns_rcq,		d(disc_c_bitwise_shift_right_l_o, false);
 									else				function.set(SIMD(c_c_bitwise_shift_right_r)),	umts=returns_rcq,		d();										return;
-		case M_FACTORIAL_LOGIC_NOT:		 if(side=='<')	function.set(SIMD(r_c_logic_not)),				umts=returns_rrr,		d(disc_c_logic_not_i, true);
+		case M_FACTORIAL_LOGIC_NOT:		 if(side=='<')	function.set(SIMD(r_c_logic_not)),				umts=returns_rrr,		d(disc_r_logic_not_o, false);
 									else				function.set(SCALAR(c_c_factorial)),			umts=returns_rcq,		d(disc_c_factorial_i, true);				return;
-		case M_LOGIC_LESS:				 if(side=='<')	function.set(SIMD(r_c_logic_less_l)),			umts=returns_rrr,		d(disc_c_logic_less_l_i, true);
-									else				function.set(SIMD(r_c_logic_less_r)),			umts=returns_rrr,		d(disc_c_logic_less_r_i, true);				return;
-		case M_LOGIC_LESS_EQUAL:		 if(side=='<')	function.set(SIMD(r_c_logic_less_equal_l)),		umts=returns_rrr,		d(disc_c_logic_less_equal_l_i, true);
-									else				function.set(SIMD(r_c_logic_less_equal_r)),		umts=returns_rrr,		d(disc_c_logic_less_equal_r_i, true);		return;
-		case M_LOGIC_GREATER:			 if(side=='<')	function.set(SIMD(r_c_logic_greater_l)),		umts=returns_rrr,		d(disc_c_logic_greater_l_i, true);
-									else				function.set(SIMD(r_c_logic_greater_r)),		umts=returns_rrr,		d(disc_c_logic_greater_r_i, true);			return;
-		case M_LOGIC_GREATER_EQUAL:		 if(side=='<')	function.set(SIMD(r_c_logic_greater_equal_l)),	umts=returns_rrr,		d(disc_c_logic_greater_equal_l_i, true);
-									else				function.set(SIMD(r_c_logic_greater_equal_r)),	umts=returns_rrr,		d(disc_c_logic_greater_equal_r_i, true);	return;
-		case M_LOGIC_EQUAL:			function.set(SIMD(r_c_logic_equal)),	umts=returns_rrr,		d(disc_c_logic_equal_i, true);		return;
-		case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_c_logic_not_equal)),umts=returns_rrr,		d(disc_c_logic_not_equal_i, true);	return;
+		case M_LOGIC_LESS:				 if(side=='<')	function.set(SIMD(r_c_logic_less_l)),			umts=returns_rrr,		d(disc_r_logic_less_o, false);
+									else				function.set(SIMD(r_c_logic_less_r)),			umts=returns_rrr,		d(disc_r_logic_less_o, false);				return;
+		case M_LOGIC_LESS_EQUAL:		 if(side=='<')	function.set(SIMD(r_c_logic_less_equal_l)),		umts=returns_rrr,		d(disc_r_logic_less_equal_o, false);
+									else				function.set(SIMD(r_c_logic_less_equal_r)),		umts=returns_rrr,		d(disc_r_logic_less_equal_o, false);		return;
+		case M_LOGIC_GREATER:			 if(side=='<')	function.set(SIMD(r_c_logic_greater_l)),		umts=returns_rrr,		d(disc_r_logic_greater_o, false);
+									else				function.set(SIMD(r_c_logic_greater_r)),		umts=returns_rrr,		d(disc_r_logic_greater_o, false);			return;
+		case M_LOGIC_GREATER_EQUAL:		 if(side=='<')	function.set(SIMD(r_c_logic_greater_equal_l)),	umts=returns_rrr,		d(disc_r_logic_greater_equal_o, false);
+									else				function.set(SIMD(r_c_logic_greater_equal_r)),	umts=returns_rrr,		d(disc_r_logic_greater_equal_o, false);		return;
+		case M_LOGIC_EQUAL:			function.set(SIMD(r_c_logic_equal)),	umts=returns_rrr,		d(disc_r_logic_equal_o, false);		return;
+		case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_c_logic_not_equal)),umts=returns_rrr,		d(disc_r_logic_not_equal_o, false);	return;
 		case M_BITWISE_AND:			function.set(SCALAR(c_c_bitwise_and)),	umts=returns_rcq,		d(disc_c_bitwise_and_o, false);		return;
 		case M_BITWISE_NAND:		function.set(SCALAR(c_c_bitwise_nand)),	umts=returns_rcq,		d(disc_c_bitwise_nand_o, false);	return;
 		case M_BITWISE_XOR:			function.set(SCALAR(c_c_bitwise_xor)),	umts=returns_rcq,		d(disc_c_bitwise_xor_o, false);		return;
@@ -9022,18 +9032,18 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 									else				function.set(SIMD(q_q_bitwise_shift_left_r)),	umts=returns_rcq,		d();										return;
 		case M_BITWISE_SHIFT_RIGHT:		 if(side=='<')	function.set(SIMD(q_q_bitwise_shift_right_l)),	umts=returns_rcq,		d(disc_q_bitwise_shift_right_l_o, false);
 									else				function.set(SIMD(q_q_bitwise_shift_right_r)),	umts=returns_rcq,		d();										return;
-		case M_FACTORIAL_LOGIC_NOT:		 if(side=='<')	function.set(SIMD(r_q_logic_not)),				umts=returns_rrr,		d(disc_q_logic_not_i, true);
+		case M_FACTORIAL_LOGIC_NOT:		 if(side=='<')	function.set(SIMD(r_q_logic_not)),				umts=returns_rrr,		d(disc_r_logic_not_o, false);
 									else				function.set(SCALAR(q_q_factorial)),			umts=returns_rcq,		d(disc_q_factorial_i, true);				return;
-		case M_LOGIC_LESS:				 if(side=='<')	function.set(SIMD(r_q_logic_less_l)),			umts=returns_rrr,		d(disc_q_logic_less_l_i, true);
-									else				function.set(SIMD(r_q_logic_less_r)),			umts=returns_rrr,		d(disc_q_logic_less_r_i, true);				return;
-		case M_LOGIC_LESS_EQUAL:		 if(side=='<')	function.set(SIMD(r_q_logic_less_equal_l)),		umts=returns_rrr,		d(disc_q_logic_less_equal_l_i, true);
-									else				function.set(SIMD(r_q_logic_less_equal_r)),		umts=returns_rrr,		d(disc_q_logic_less_equal_r_i, true);		return;
-		case M_LOGIC_GREATER:			 if(side=='<')	function.set(SIMD(r_q_logic_greater_l)),		umts=returns_rrr,		d(disc_q_logic_greater_l_i, true);
-									else				function.set(SIMD(r_q_logic_greater_r)),		umts=returns_rrr,		d(disc_q_logic_greater_r_i, true);			return;
-		case M_LOGIC_GREATER_EQUAL:		 if(side=='<')	function.set(SIMD(r_q_logic_greater_equal_l)),	umts=returns_rrr,		d(disc_q_logic_greater_equal_l_i, true);
-									else				function.set(SIMD(r_q_logic_greater_equal_r)),	umts=returns_rrr,		d(disc_q_logic_greater_equal_r_i, true);	return;
-		case M_LOGIC_EQUAL:			function.set(SIMD(r_q_logic_equal)),	umts=returns_rrr,		d(disc_q_logic_equal_i, true);		return;
-		case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_q_logic_not_equal)),umts=returns_rrr,		d(disc_q_logic_not_equal_i, true);	return;
+		case M_LOGIC_LESS:				 if(side=='<')	function.set(SIMD(r_q_logic_less_l)),			umts=returns_rrr,		d(disc_r_logic_less_o, false);
+									else				function.set(SIMD(r_q_logic_less_r)),			umts=returns_rrr,		d(disc_r_logic_less_o, false);				return;
+		case M_LOGIC_LESS_EQUAL:		 if(side=='<')	function.set(SIMD(r_q_logic_less_equal_l)),		umts=returns_rrr,		d(disc_r_logic_less_equal_o, false);
+									else				function.set(SIMD(r_q_logic_less_equal_r)),		umts=returns_rrr,		d(disc_r_logic_less_equal_o, false);		return;
+		case M_LOGIC_GREATER:			 if(side=='<')	function.set(SIMD(r_q_logic_greater_l)),		umts=returns_rrr,		d(disc_r_logic_greater_o, false);
+									else				function.set(SIMD(r_q_logic_greater_r)),		umts=returns_rrr,		d(disc_r_logic_greater_o, false);			return;
+		case M_LOGIC_GREATER_EQUAL:		 if(side=='<')	function.set(SIMD(r_q_logic_greater_equal_l)),	umts=returns_rrr,		d(disc_r_logic_greater_equal_o, false);
+									else				function.set(SIMD(r_q_logic_greater_equal_r)),	umts=returns_rrr,		d(disc_r_logic_greater_equal_o, false);		return;
+		case M_LOGIC_EQUAL:			function.set(SIMD(r_q_logic_equal)),	umts=returns_rrr,		d(disc_r_logic_equal_o, false);		return;
+		case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_q_logic_not_equal)),umts=returns_rrr,		d(disc_r_logic_not_equal_o, false);	return;
 		case M_BITWISE_AND:			function.set(SCALAR(q_q_bitwise_and)),	umts=returns_rcq,		d(disc_q_bitwise_and_o, false);		return;
 		case M_BITWISE_NAND:		function.set(SCALAR(q_q_bitwise_nand)),	umts=returns_rcq,		d(disc_q_bitwise_or_o, false);		return;
 		case M_BITWISE_XOR:			function.set(SCALAR(q_q_bitwise_xor)),	umts=returns_rcq,		d(disc_q_bitwise_xor_o, false);		return;
@@ -9132,22 +9142,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(r_rr_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(r_rr_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_rr_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_rr_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_rr_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_rr_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_rr_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_rr_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(r_rr_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_rr_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(r_rr_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_rr_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(r_rr_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(r_rr_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_rr_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_rr_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_rr_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_rr_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_rr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_rr_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(r_rr_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_rr_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_rr_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_rr_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_rr_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_rr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(r_rr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(r_rr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_nand_o, false);	return;
@@ -9193,22 +9203,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(c_rc_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(c_rc_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_rc_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_rc_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_rc_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_rc_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_rc_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_rc_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_rc_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_rc_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(c_rc_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(c_rc_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(c_rc_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_rc_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_rc_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_equal_i);			return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_rc_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_rc_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_rc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(c_rc_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_rc_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_rc_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_rc_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_rc_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_rc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(c_rc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(c_rc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_nand_o, false);	return;
@@ -9257,22 +9267,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(q_rq_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(q_rq_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_rq_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_rq_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_rq_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_rq_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_rq_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_rq_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(q_rq_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_rq_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(q_rq_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(q_rq_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_rq_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_rq_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_rq_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_rq_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_rq_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_rq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_rq_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_rq_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_rq_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_rq_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_rq_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_rq_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_rq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(q_rq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(q_rq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_nand_o, false);	return;
@@ -9327,22 +9337,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(c_cr_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(c_cr_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_cr_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_cr_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_cr_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_cr_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_cr_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_cr_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_cr_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_cr_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(c_cr_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_cr_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(c_cr_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(c_cr_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_cr_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_cr_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_cr_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_cr_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_cr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(c_cr_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_cr_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_cr_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_cr_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_cr_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_cr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(c_cr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(c_cr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_nand_o, false);	return;
@@ -9386,22 +9396,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(c_cc_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(c_cc_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_cc_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_cc_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_cc_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_or_i);				return;
-			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_cc_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_cc_condition_zero_i);	return;
+			case M_LOGIC_AND:			function.set(SIMD(r_cc_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_cc_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_cc_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
+			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_cc_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_cc_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(c_cc_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(c_cc_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(c_cc_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_cc_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_cc_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_cc_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_cc_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_cc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_cc_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(c_cc_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_cc_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_cc_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_cc_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_cc_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_cc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(c_cc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(c_cc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_nand_o, false);	return;
@@ -9444,22 +9454,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(q_cq_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(q_cq_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_cq_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_cq_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_cq_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_cq_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_cq_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_cq_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(q_cq_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_cq_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(q_cq_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(q_cq_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_cq_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_cq_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_cq_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_cq_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_cq_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_cq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_cq_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_cq_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_cq_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_cq_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_cq_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_cq_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_cq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(q_cq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(q_cq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_nand_o, false);	return;
@@ -9513,22 +9523,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(q_qr_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(q_qr_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_qr_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_qr_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_qr_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_qr_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_qr_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_qr_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(q_qr_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_qr_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(q_qr_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(q_qr_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_qr_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_qr_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_qr_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_qr_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_qr_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_qr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_qr_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_qr_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_qr_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_qr_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_qr_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_qr_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_qr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(q_qr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(q_qr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_nand_o, false);	return;
@@ -9577,22 +9587,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(q_qc_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(q_qc_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_qc_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_qc_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_qc_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_qc_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_qc_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_qc_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(q_qc_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_qc_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(q_qc_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(q_qc_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_qc_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_qc_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_qc_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_qc_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_qc_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_qc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_qc_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_qc_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_qc_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_qc_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_qc_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_qc_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_qc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(q_qc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(q_qc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_nand_o, false);	return;
@@ -9641,22 +9651,22 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MULTIPLY:			function.set(SIMD(q_qq_multiply)),				bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_ASSIGN_PLUS:
 			case M_PLUS:				function.set(SIMD(q_qq_plus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_LOGIC_AND:			function.set(SIMD(r_qq_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_and_i);				return;
-			case M_LOGIC_XOR:			function.set(SIMD(r_qq_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_xor_i);				return;
-			case M_LOGIC_OR:			function.set(SIMD(r_qq_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_or_i);				return;
+			case M_LOGIC_AND:			function.set(SIMD(r_qq_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_and_o, false);		return;
+			case M_LOGIC_XOR:			function.set(SIMD(r_qq_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_xor_o, false);		return;
+			case M_LOGIC_OR:			function.set(SIMD(r_qq_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_or_o, false);		return;
 			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(q_qq_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_qq_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(q_qq_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_modulo_i);				return;
 			case M_ASSIGN_LEFT:
 			case M_BITWISE_SHIFT_LEFT:	function.set(SIMD(q_qq_bitwise_shift_left)),	bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_shift_left_i);	return;
 			case M_ASSIGN_RIGHT:
-			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_qq_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_shift_right_i);	return;
-			case M_LOGIC_LESS:			function.set(SIMD(r_qq_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_less_i);			return;
-			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_qq_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_less_equal_i);		return;
-			case M_LOGIC_GREATER:		function.set(SIMD(r_qq_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_greater_i);			return;
-			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_qq_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_greater_equal_i);	return;
-			case M_LOGIC_EQUAL:			function.set(SIMD(r_qq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_equal_i);			return;
-			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_qq_logic_not_equal_i);		return;
+			case M_BITWISE_SHIFT_RIGHT:	function.set(SIMD(q_qq_bitwise_shift_right)),	bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_shift_right_i);		return;
+			case M_LOGIC_LESS:			function.set(SIMD(r_qq_logic_less)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_o, false);			return;
+			case M_LOGIC_LESS_EQUAL:	function.set(SIMD(r_qq_logic_less_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_less_equal_o, false);	return;
+			case M_LOGIC_GREATER:		function.set(SIMD(r_qq_logic_greater)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_o, false);		return;
+			case M_LOGIC_GREATER_EQUAL:	function.set(SIMD(r_qq_logic_greater_equal)),	bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_greater_equal_o, false);	return;
+			case M_LOGIC_EQUAL:			function.set(SIMD(r_qq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
+			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
 			case M_BITWISE_AND:			function.set(SCALAR(q_qq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_and_o, false);	return;
 			case M_BITWISE_NAND:		function.set(SCALAR(q_qq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_nand_o, false);	return;
