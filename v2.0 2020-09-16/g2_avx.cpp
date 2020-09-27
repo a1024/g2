@@ -1,3 +1,4 @@
+//best viewed with tab size of 4 spaces
 //g2_avx.cpp - All AVX functions are implemented here.
 //All AVX functions are compiled in a separate project as a static library.
 //Copyright (C) 2012-2020  Ayman Wagih Mohsen

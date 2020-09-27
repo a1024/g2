@@ -1,3 +1,4 @@
+//best viewed with tab size of 4 spaces
 //g2.cpp - Grapher 2 main implementation file.
 //Copyright (C) 2012-2020  Ayman Wagih Mohsen
 //

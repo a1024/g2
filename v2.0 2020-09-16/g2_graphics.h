@@ -1,3 +1,4 @@
+//best viewed with tab size of 4 spaces
 //g2_graphics.h - Include for G2 graphics API.
 //Copyright (C) 2012-2020  Ayman Wagih Mohsen
 //

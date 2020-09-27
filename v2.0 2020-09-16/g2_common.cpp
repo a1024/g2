@@ -1,3 +1,4 @@
+//best viewed with tab size of 4 spaces
 //g2_common.cpp - Implementation of common functions used by all Grapher 2 source files.
 //Copyright (C) 2012-2020  Ayman Wagih Mohsen
 //

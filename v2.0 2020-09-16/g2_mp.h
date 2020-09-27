@@ -1,3 +1,4 @@
+//best viewed with tab size of 4 spaces
 //g2_mp.h - Include for multiprecision version of math functions.
 //Copyright (C) 2012-2020  Ayman Wagih Mohsen
 //
