@@ -369,8 +369,8 @@ tagRECT		R;
 HWND__		*ghWnd;
 HDC__		*ghDC;
 Bitmap		gBitmap;
+//int		*rgb=nullptr;
 int			*modeRGB=nullptr;
-//int			*rgb=nullptr, *modeRGB=nullptr;
 void		minmax(double *a, int size, double *result)
 {
 #ifdef AVX_H
@@ -5289,13 +5289,13 @@ namespace	G2
 	
 	inline Comp1d inv(Comp1d const &x)
 	{
-		double inv_mag=1/abs(x);
-		return Comp1d(x.real()*inv_mag, -x.imag()*inv_mag);
+		double inv_abs2=1/(x.real()*x.real()+x.imag()*x.imag());
+		return Comp1d(x.real()*inv_abs2, -x.imag()*inv_abs2);
 	}
 	inline Quat1d inv(Quat1d const &x)
 	{
-		double inv_mag=1/abs(x);
-		return Quat1d(x.R_component_1()*inv_mag, -x.R_component_2()*inv_mag, -x.R_component_3()*inv_mag, -x.R_component_4()*inv_mag);
+		double inv_abs2=1/(x.R_component_1()*x.R_component_1()+x.R_component_2()*x.R_component_2()+x.R_component_3()*x.R_component_3()+x.R_component_4()*x.R_component_4());
+		return Quat1d(x.R_component_1()*inv_abs2, -x.R_component_2()*inv_abs2, -x.R_component_3()*inv_abs2, -x.R_component_4()*inv_abs2);
 	}
 	void  r_r_divide				(VectP &r, VectP const &y)					{r=1/y;}
 	void  c_c_divide				(CompP &r, CompP const &y)					{r=inv((Comp1d)y);}
@@ -5382,7 +5382,7 @@ namespace	G2
 	bool disc_qc_divide_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_c_divide_i(y0, y1);}
 	bool disc_qq_divide_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_q_divide_i(y0, y1);}
 
-	void r_rr_logic_divides			(VectP &r, VectP const &y, VectP const &x)	{auto t=x/y; r=t==::floor(t);}//rc_divides, rq_divides: applied to each component
+	void r_rr_logic_divides			(VectP &r, VectP const &y, VectP const &x)	{auto t=x/y; r=t==::floor(t);}//note: this is a boolean (logic) operator
 	void r_rc_logic_divides			(VectP &r, VectP const &y, CompP const &x)	{auto t=(Comp1d)x/(double)y; r=t==floor(t);}
 	void r_rq_logic_divides			(VectP &r, VectP const &y, QuatP const &x)	{auto t=(Quat1d)x/(double)y; r=t==floor(t);}
 	void r_cr_logic_divides			(VectP &r, CompP const &y, VectP const &x)	{auto t=(double)x/(Comp1d)y; r=t==floor(t);}
@@ -5391,7 +5391,7 @@ namespace	G2
 	void r_qr_logic_divides			(VectP &r, QuatP const &y, VectP const &x)	{auto t=(double)x/(Quat1d)y; r=t==floor(t);}
 	void r_qc_logic_divides			(VectP &r, QuatP const &y, CompP const &x)	{auto t=(Comp1d)x/(Quat1d)y; r=t==floor(t);}
 	void r_qq_logic_divides			(VectP &r, QuatP const &y, QuatP const &x)	{auto t=(Quat1d)x/(Quat1d)y; r=t==floor(t);}
-	//disc
+	bool disc_r_logic_divides_o		(Value const &x0, Value const &x1){return x0.r!=x1.r;}//for all logic_divides functions
 
 	inline double power_real(double const &x, int y)
 	{
@@ -5792,13 +5792,13 @@ namespace	G2
 	bool disc_rr_pentate_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 	bool disc_cr_pentate_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 
-	void  r_r_bitwise_shift_left_l	(VectP &r, VectP const &x)					{r=::exp(x.floor()*_ln2);}	//<<x = 2^floor(x)
+	void  r_r_bitwise_shift_left_l	(VectP &r, VectP const &x)					{r=::exp(x.floor()*_ln2);}	//<<x = 2^floor(x)		//is floor necessary?	floor: granular shift
 	void  c_c_bitwise_shift_left_l	(CompP &r, CompP const &x)					{r=exp(floor(x)*_ln2);}
 	void  q_q_bitwise_shift_left_l	(QuatP &r, QuatP const &x)					{r=exp(floor(x)*_ln2);}
 	void  r_r_bitwise_shift_left_r	(VectP &r, VectP const &x)					{r=x+x;}					//x<< = 2x
 	void  c_c_bitwise_shift_left_r	(CompP &r, CompP const &x)					{Comp1d cx=x; r=cx+cx;}
 	void  q_q_bitwise_shift_left_r	(QuatP &r, QuatP const &x)					{Quat1d qx=x; r=qx+qx;}
-	void r_rr_bitwise_shift_left	(VectP &r, VectP const &x, VectP const &y)	{r=x*::exp(y.floor()*_ln2);}//x<<y = x*2^y
+	void r_rr_bitwise_shift_left	(VectP &r, VectP const &x, VectP const &y)	{r=x*::exp(y.floor()*_ln2);}//x<<y = x*2^floor(y)
 	void c_rc_bitwise_shift_left	(CompP &r, VectP const &x, CompP const &y)	{r=(double)x*exp(floor(y)*_ln2);}
 	void q_rq_bitwise_shift_left	(QuatP &r, VectP const &x, QuatP const &y)	{r=(double)x*exp(floor(y)*_ln2);}
 	void c_cr_bitwise_shift_left	(CompP &r, CompP const &x, VectP const &y)	{r=(Comp1d)x*::exp(y.floor()*_ln2);}
@@ -5820,13 +5820,13 @@ namespace	G2
 	bool disc_qc_bitwise_shift_left_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return std::floor(x1.r)-std::floor(x0.r)!=0||std::floor(x1.i)-std::floor(x0.i)!=0||std::floor(x1.j)-std::floor(x0.j)!=0||std::floor(x1.k)-std::floor(x0.k)!=0;}
 	bool disc_qq_bitwise_shift_left_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return std::floor(x1.r)-std::floor(x0.r)!=0||std::floor(x1.i)-std::floor(x0.i)!=0||std::floor(x1.j)-std::floor(x0.j)!=0||std::floor(x1.k)-std::floor(x0.k)!=0;}
 
-	void  r_r_bitwise_shift_right_l	(VectP &r, VectP const &x)					{r=::exp(-x.floor()*_ln2);}
+	void  r_r_bitwise_shift_right_l	(VectP &r, VectP const &x)					{r=::exp(-x.floor()*_ln2);}	//>>x = 2^-floor(x)
 	void  c_c_bitwise_shift_right_l	(CompP &r, CompP const &x)					{r=exp(-floor(x)*_ln2);}
 	void  q_q_bitwise_shift_right_l	(QuatP &r, QuatP const &x)					{r=exp(-floor(x)*_ln2);}
-	void  r_r_bitwise_shift_right_r	(VectP &r, VectP const &x)					{r=x*0.5;}
+	void  r_r_bitwise_shift_right_r	(VectP &r, VectP const &x)					{r=x*0.5;}					//x>> = x/2
 	void  c_c_bitwise_shift_right_r	(CompP &r, CompP const &x)					{r=(Comp1d)x*0.5;}
 	void  q_q_bitwise_shift_right_r	(QuatP &r, QuatP const &x)					{r=(Quat1d)x*0.5;}
-	void r_rr_bitwise_shift_right	(VectP &r, VectP const &x, VectP const &y)	{r=x*::exp(-y.floor()*_ln2);}
+	void r_rr_bitwise_shift_right	(VectP &r, VectP const &x, VectP const &y)	{r=x*::exp(-y.floor()*_ln2);}//x>>y = x*2^-floor(y)
 	void c_rc_bitwise_shift_right	(CompP &r, VectP const &x, CompP const &y)	{r=(double)x*exp(-floor(y)*_ln2);}
 	void q_rq_bitwise_shift_right	(QuatP &r, VectP const &x, QuatP const &y)	{r=(double)x*exp(-floor(y)*_ln2);}
 	void c_cr_bitwise_shift_right	(CompP &r, CompP const &x, VectP const &y)	{r=(Comp1d)x*::exp(-y.floor()*_ln2);}
@@ -5902,15 +5902,15 @@ namespace	G2
 	auto disc_r_bitwise_and_o		=disc_r_ceil_o;
 	auto disc_c_bitwise_and_o		=disc_c_ceil_o;
 	auto disc_q_bitwise_and_o		=disc_q_ceil_o;
-	auto disc_rr_bitwise_and_o		=disc_r_ceil_o;
-	auto disc_rc_bitwise_and_o		=disc_c_ceil_o;
-	auto disc_rq_bitwise_and_o		=disc_q_ceil_o;
-	auto disc_cr_bitwise_and_o		=disc_c_ceil_o;
-	auto disc_cc_bitwise_and_o		=disc_c_ceil_o;
-	auto disc_cq_bitwise_and_o		=disc_q_ceil_o;
-	auto disc_qr_bitwise_and_o		=disc_q_ceil_o;
-	auto disc_qc_bitwise_and_o		=disc_q_ceil_o;
-	auto disc_qq_bitwise_and_o		=disc_q_ceil_o;
+	auto disc_rr_bitwise_and_o		=disc_r_ceil_o;//TODO: remove (use disc_[r/c/q]_o instead)
+	auto disc_rc_bitwise_and_o		=disc_c_ceil_o;//
+	auto disc_rq_bitwise_and_o		=disc_q_ceil_o;//
+	auto disc_cr_bitwise_and_o		=disc_c_ceil_o;//
+	auto disc_cc_bitwise_and_o		=disc_c_ceil_o;//
+	auto disc_cq_bitwise_and_o		=disc_q_ceil_o;//
+	auto disc_qr_bitwise_and_o		=disc_q_ceil_o;//
+	auto disc_qc_bitwise_and_o		=disc_q_ceil_o;//
+	auto disc_qq_bitwise_and_o		=disc_q_ceil_o;//
 
 	inline double bitwise_nand(double const &x){return std::isnan(x)|std::isinf(x)?0:!x;}
 	inline double bitwise_nand(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:(double)~(convert_d2ll(x)&convert_d2ll(y));}
@@ -5958,15 +5958,15 @@ namespace	G2
 	auto disc_r_bitwise_nand_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_nand_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_nand_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_nand_o		=disc_rr_bitwise_and_o;
-	auto disc_rc_bitwise_nand_o		=disc_rc_bitwise_and_o;
-	auto disc_rq_bitwise_nand_o		=disc_rq_bitwise_and_o;
-	auto disc_cr_bitwise_nand_o		=disc_cr_bitwise_and_o;
-	auto disc_cc_bitwise_nand_o		=disc_cc_bitwise_and_o;
-	auto disc_cq_bitwise_nand_o		=disc_cq_bitwise_and_o;
-	auto disc_qr_bitwise_nand_o		=disc_qr_bitwise_and_o;
-	auto disc_qc_bitwise_nand_o		=disc_qc_bitwise_and_o;
-	auto disc_qq_bitwise_nand_o		=disc_qq_bitwise_and_o;
+	auto disc_rr_bitwise_nand_o		=disc_rr_bitwise_and_o;//
+	auto disc_rc_bitwise_nand_o		=disc_rc_bitwise_and_o;//
+	auto disc_rq_bitwise_nand_o		=disc_rq_bitwise_and_o;//
+	auto disc_cr_bitwise_nand_o		=disc_cr_bitwise_and_o;//
+	auto disc_cc_bitwise_nand_o		=disc_cc_bitwise_and_o;//
+	auto disc_cq_bitwise_nand_o		=disc_cq_bitwise_and_o;//
+	auto disc_qr_bitwise_nand_o		=disc_qr_bitwise_and_o;//
+	auto disc_qc_bitwise_nand_o		=disc_qc_bitwise_and_o;//
+	auto disc_qq_bitwise_nand_o		=disc_qq_bitwise_and_o;//
 	
 	inline double bitwise_or(double const &x){return std::isnan(x)|std::isinf(x)?0:convert_d2ll(x)!=0;}
 	inline double bitwise_or(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:double(convert_d2ll(x)|convert_d2ll(y));}
@@ -6014,15 +6014,15 @@ namespace	G2
 	auto disc_r_bitwise_or_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_or_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_or_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_or_o		=disc_rr_bitwise_and_o;
-	auto disc_rc_bitwise_or_o		=disc_rc_bitwise_and_o;
-	auto disc_rq_bitwise_or_o		=disc_rq_bitwise_and_o;
-	auto disc_cr_bitwise_or_o		=disc_cr_bitwise_and_o;
-	auto disc_cc_bitwise_or_o		=disc_cc_bitwise_and_o;
-	auto disc_cq_bitwise_or_o		=disc_cq_bitwise_and_o;
-	auto disc_qr_bitwise_or_o		=disc_qr_bitwise_and_o;
-	auto disc_qc_bitwise_or_o		=disc_qc_bitwise_and_o;
-	auto disc_qq_bitwise_or_o		=disc_qq_bitwise_and_o;
+	auto disc_rr_bitwise_or_o		=disc_rr_bitwise_and_o;//
+	auto disc_rc_bitwise_or_o		=disc_rc_bitwise_and_o;//
+	auto disc_rq_bitwise_or_o		=disc_rq_bitwise_and_o;//
+	auto disc_cr_bitwise_or_o		=disc_cr_bitwise_and_o;//
+	auto disc_cc_bitwise_or_o		=disc_cc_bitwise_and_o;//
+	auto disc_cq_bitwise_or_o		=disc_cq_bitwise_and_o;//
+	auto disc_qr_bitwise_or_o		=disc_qr_bitwise_and_o;//
+	auto disc_qc_bitwise_or_o		=disc_qc_bitwise_and_o;//
+	auto disc_qq_bitwise_or_o		=disc_qq_bitwise_and_o;//
 	
 	inline double bitwise_nor(double const &x){return std::isnan(x)|std::isinf(x)?0:!convert_d2ll(x);}
 	inline double bitwise_nor(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(x)|std::isinf(x)?0:(double)~(convert_d2ll(x)|convert_d2ll(y));}
@@ -6070,15 +6070,15 @@ namespace	G2
 	auto disc_r_bitwise_nor_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_nor_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_nor_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_nor_o		=disc_rr_bitwise_and_o;
-	auto disc_rc_bitwise_nor_o		=disc_rc_bitwise_and_o;
-	auto disc_rq_bitwise_nor_o		=disc_rq_bitwise_and_o;
-	auto disc_cr_bitwise_nor_o		=disc_cr_bitwise_and_o;
-	auto disc_cc_bitwise_nor_o		=disc_cc_bitwise_and_o;
-	auto disc_cq_bitwise_nor_o		=disc_cq_bitwise_and_o;
-	auto disc_qr_bitwise_nor_o		=disc_qr_bitwise_and_o;
-	auto disc_qc_bitwise_nor_o		=disc_qc_bitwise_and_o;
-	auto disc_qq_bitwise_nor_o		=disc_qq_bitwise_and_o;
+	auto disc_rr_bitwise_nor_o		=disc_rr_bitwise_and_o;//
+	auto disc_rc_bitwise_nor_o		=disc_rc_bitwise_and_o;//
+	auto disc_rq_bitwise_nor_o		=disc_rq_bitwise_and_o;//
+	auto disc_cr_bitwise_nor_o		=disc_cr_bitwise_and_o;//
+	auto disc_cc_bitwise_nor_o		=disc_cc_bitwise_and_o;//
+	auto disc_cq_bitwise_nor_o		=disc_cq_bitwise_and_o;//
+	auto disc_qr_bitwise_nor_o		=disc_qr_bitwise_and_o;//
+	auto disc_qc_bitwise_nor_o		=disc_qc_bitwise_and_o;//
+	auto disc_qq_bitwise_nor_o		=disc_qq_bitwise_and_o;//
 	
 	//inline double bitwise_xor(double const &x){return std::isnan(x)|std::isinf(x)?0:bitwise_xor(x);}
 	inline double bitwise_xor(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:double(convert_d2ll(x)^convert_d2ll(y));}
@@ -6097,15 +6097,15 @@ namespace	G2
 	auto disc_r_bitwise_xor_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_xor_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_xor_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_xor_o		=disc_rr_bitwise_and_o;
-	auto disc_rc_bitwise_xor_o		=disc_rc_bitwise_and_o;
-	auto disc_rq_bitwise_xor_o		=disc_rq_bitwise_and_o;
-	auto disc_cr_bitwise_xor_o		=disc_cr_bitwise_and_o;
-	auto disc_cc_bitwise_xor_o		=disc_cc_bitwise_and_o;
-	auto disc_cq_bitwise_xor_o		=disc_cq_bitwise_and_o;
-	auto disc_qr_bitwise_xor_o		=disc_qr_bitwise_and_o;
-	auto disc_qc_bitwise_xor_o		=disc_qc_bitwise_and_o;
-	auto disc_qq_bitwise_xor_o		=disc_qq_bitwise_and_o;
+	auto disc_rr_bitwise_xor_o		=disc_rr_bitwise_and_o;//
+	auto disc_rc_bitwise_xor_o		=disc_rc_bitwise_and_o;//
+	auto disc_rq_bitwise_xor_o		=disc_rq_bitwise_and_o;//
+	auto disc_cr_bitwise_xor_o		=disc_cr_bitwise_and_o;//
+	auto disc_cc_bitwise_xor_o		=disc_cc_bitwise_and_o;//
+	auto disc_cq_bitwise_xor_o		=disc_cq_bitwise_and_o;//
+	auto disc_qr_bitwise_xor_o		=disc_qr_bitwise_and_o;//
+	auto disc_qc_bitwise_xor_o		=disc_qc_bitwise_and_o;//
+	auto disc_qq_bitwise_xor_o		=disc_qq_bitwise_and_o;//
 	
 	//inline double bitwise_xnor(double const &x){return std::isnan(x)|std::isinf(x)?0:(double)!bitwise_xor(x);}
 	inline double bitwise_xnor(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:(double)~(convert_d2ll(x)^convert_d2ll(y));}
@@ -6124,15 +6124,15 @@ namespace	G2
 	auto disc_r_bitwise_xnor_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_xnor_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_xnor_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_xnor_o		=disc_rr_bitwise_and_o;
-	auto disc_rc_bitwise_xnor_o		=disc_rc_bitwise_and_o;
-	auto disc_rq_bitwise_xnor_o		=disc_rq_bitwise_and_o;
-	auto disc_cr_bitwise_xnor_o		=disc_cr_bitwise_and_o;
-	auto disc_cc_bitwise_xnor_o		=disc_cc_bitwise_and_o;
-	auto disc_cq_bitwise_xnor_o		=disc_cq_bitwise_and_o;
-	auto disc_qr_bitwise_xnor_o		=disc_qr_bitwise_and_o;
-	auto disc_qc_bitwise_xnor_o		=disc_qc_bitwise_and_o;
-	auto disc_qq_bitwise_xnor_o		=disc_qq_bitwise_and_o;
+	auto disc_rr_bitwise_xnor_o		=disc_rr_bitwise_and_o;//
+	auto disc_rc_bitwise_xnor_o		=disc_rc_bitwise_and_o;//
+	auto disc_rq_bitwise_xnor_o		=disc_rq_bitwise_and_o;//
+	auto disc_cr_bitwise_xnor_o		=disc_cr_bitwise_and_o;//
+	auto disc_cc_bitwise_xnor_o		=disc_cc_bitwise_and_o;//
+	auto disc_cq_bitwise_xnor_o		=disc_cq_bitwise_and_o;//
+	auto disc_qr_bitwise_xnor_o		=disc_qr_bitwise_and_o;//
+	auto disc_qc_bitwise_xnor_o		=disc_qc_bitwise_and_o;//
+	auto disc_qq_bitwise_xnor_o		=disc_qq_bitwise_and_o;//
 	
 	void  r_r_logic_equal			(VectP &r, VectP const &x)					{r=x==0;}
 	void  r_c_logic_equal			(VectP &r, CompP const &x)					{r=!x.c_is_true();}
@@ -6498,9 +6498,6 @@ namespace	G2
 	void  r_r_zeta					(VectP &r, VectP const &x)					{r=zeta(x);}
 	bool disc_r_zeta_i				(Value const &x0, Value const &x1){return x0.r<1?x1.r>=1:x0.r>1&&x1.r<=1;}
 
-	void  r_r_tgamma				(VectP &r, VectP const &x)					{r=tgamma((double)x);}
-	void  c_c_tgamma				(CompP &r, CompP const &x)					{r=tgamma(x);}
-	void  q_q_tgamma				(QuatP &r, QuatP const &x)					{r=tgamma(x);}
 	double tgamma(double x, double y)//upper incomplete gamma, G(x, 0) = G(x)
 	{
 		try
@@ -6543,6 +6540,9 @@ namespace	G2
 			return _HUGE;
 		}
 	}
+	void  r_r_tgamma				(VectP &r, VectP const &x)					{r=tgamma((double)x);}
+	void  c_c_tgamma				(CompP &r, CompP const &x)					{r=tgamma(x);}
+	void  q_q_tgamma				(QuatP &r, QuatP const &x)					{r=tgamma(x);}
 	void r_rr_tgamma				(VectP &r, VectP const &x, VectP const &y)	{r=tgamma(x, y);}
 	bool disc_r_tgamma_i			(Value const &x0, Value const &x1){return (x0.r<=0||x1.r<=0)&&_1d_int_in_range(x0.r, x1.r);}
 	bool disc_c_tgamma_i			(Value const &x0, Value const &x1)
@@ -9122,7 +9122,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(c_cr_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(r_rr_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_rr_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_rr_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_rr_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(r_rr_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set(SCALAR(c_rr_pentate)),				bmts=returns_rXX_rXX_XXX,	d(disc_rr_pentate_i);				return;
@@ -9184,7 +9184,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(c_cc_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(c_rc_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_rc_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d();								return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_rc_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(c_rc_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set();																									return;
@@ -9196,7 +9196,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_AND:			function.set(SIMD(r_rc_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_and_i);				return;
 			case M_LOGIC_XOR:			function.set(SIMD(r_rc_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_xor_i);				return;
 			case M_LOGIC_OR:			function.set(SIMD(r_rc_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_rc_logic_or_i);				return;
-			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_rc_condition_zero)),	bmts=returns_rcq_ccq_qqq,	d(disc_rc_condition_zero_i);	return;
+			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_rc_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_rc_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(c_rc_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_modulo_i);				return;
 			case M_ASSIGN_LEFT:
@@ -9248,7 +9248,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(q_cq_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_cq_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(q_rq_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_rq_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_rq_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(q_rq_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set();																									return;
@@ -9317,7 +9317,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(c_cr_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(c_cr_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_cr_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD(r_cr_logic_divides)),			bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD(r_cr_logic_divides)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(c_cr_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set(SCALAR(c_cr_pentate));				bmts=returns_rXX_rXX_XXX,	d(disc_cr_pentate_i);				return;
@@ -9330,7 +9330,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_AND:			function.set(SIMD(r_cr_logic_and)),				bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_and_i);				return;
 			case M_LOGIC_XOR:			function.set(SIMD(r_cr_logic_xor)),				bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_xor_i);				return;
 			case M_LOGIC_OR:			function.set(SIMD(r_cr_logic_or)),				bmts=returns_rrr_rrr_rrr,	d(disc_cr_logic_or_i);				return;
-			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_cr_condition_zero)),	bmts=returns_rcq_ccq_qqq,	d(disc_cr_condition_zero_i);	return;
+			case M_LOGIC_CONDITION_ZERO:function.set(SIMD(c_cr_condition_zero)),		bmts=returns_rcq_ccq_qqq,	d(disc_cr_condition_zero_i);		return;
 			case M_ASSIGN_MOD:
 			case M_MODULO_PERCENT:		function.set(SIMD(c_cr_modulo)),				bmts=returns_rcq_ccq_qqq,	d(disc_cr_modulo_i);				return;
 			case M_ASSIGN_LEFT:
@@ -9377,7 +9377,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(c_cc_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(c_cc_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_cc_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_cc_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(c_cc_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set();																									return;
@@ -9435,7 +9435,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(q_cq_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_cq_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(q_cq_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_cq_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_cq_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(q_cq_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set();																									return;
@@ -9481,15 +9481,15 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 		//	case M_MAX:					function.set(SCALAR(q_cq_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MAX:					function.set(SIMD(q_qq_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_BETA:				function.set();																							return;
-			case M_GAMMA:				function.set();																							return;
+			case M_BETA:				function.set();																									return;
+			case M_GAMMA:				function.set();																									return;
 		//	case M_PERMUTATION:			function.set(SCALAR(q_cq_permutation)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_permutation_i);			return;
 			case M_PERMUTATION:			function.set(SCALAR(q_qq_permutation)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_permutation_i);			return;
 		//	case M_COMBINATION:			function.set(SCALAR(q_cq_combination)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_combination_i);			return;
 			case M_COMBINATION:			function.set(SCALAR(q_qq_combination)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_combination_i);			return;
-			case M_BESSEL:				function.set();																							return;
-			case M_NEUMANN:				function.set();																							return;
-			case M_HANKEL1:				function.set();																							return;
+			case M_BESSEL:				function.set();																									return;
+			case M_NEUMANN:				function.set();																									return;
+			case M_HANKEL1:				function.set();																									return;
 			case M_ASSIGN:				function.set(SIMD(q_q_assign)),					bmts=returns_rcq_rcq_rcq,	d();								return;
 			}
 			break;
@@ -9503,7 +9503,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(q_qr_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_qr_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(q_qr_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_qr_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_qr_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(q_qr_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set();																									return;
@@ -9539,8 +9539,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(q_qr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(q_qr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_nor_o, false);	return;
 			case M_LOG:					function.set(SIMD(q_qc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qc_log_i);					return;
-			case M_RAND:				function.set(SCALAR(q_qq_random)),						bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
-		//	case M_RAND:				function.set(SCALAR(q_qr_random)),						bmts=returns_rcq_ccq_qqq,	d(disc_qr_random, false);			return;
+			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
+		//	case M_RAND:				function.set(SCALAR(q_qr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_qr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_sqwv_i);					return;
 		//	case M_TRWV:				function.set(SIMD(q_qr_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_trwv_i);					return;
@@ -9568,7 +9568,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(q_qc_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_qc_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(q_qc_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD(r_qc_logic_divides)),			bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD(r_qc_logic_divides)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(q_qc_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set();																									return;
@@ -9632,7 +9632,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_POWER:				function.set(SIMD(q_qq_pow)),					bmts=returns_ccq_ccq_qqq,	d(disc_qq_pow_i);					return;
 			case M_ASSIGN_DIVIDE:
 			case M_DIVIDE:				function.set(SIMD(q_qq_divide)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_divide_i);				return;
-			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_qq_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d();	return;
+			case M_LOGIC_DIVIDES:		function.set(SIMD2(r_qq_logic_divides)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_logic_divides_o, false);	return;
 			case M_ASSIGN_MINUS:
 			case M_MINUS:				function.set(SIMD(q_qq_minus)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_PENTATE:				function.set();																									return;
@@ -9674,13 +9674,13 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_SAW:					function.set(SIMD(q_qq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_saw_i);					return;
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MAX:					function.set(SIMD(q_qq_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_BETA:				function.set();																							return;
-			case M_GAMMA:				function.set();																							return;
+			case M_BETA:				function.set();																									return;
+			case M_GAMMA:				function.set();																									return;
 			case M_PERMUTATION:			function.set(SCALAR(q_qq_permutation)),			bmts=returns_rcq_ccq_qqq,	d(disc_qq_permutation_i);			return;
 			case M_COMBINATION:			function.set(SCALAR(q_qq_combination)),			bmts=returns_rcq_ccq_qqq,	d(disc_qq_combination_i);			return;
-			case M_BESSEL:				function.set();																							return;
-			case M_NEUMANN:				function.set();																							return;
-			case M_HANKEL1:				function.set();																							return;
+			case M_BESSEL:				function.set();																									return;
+			case M_NEUMANN:				function.set();																									return;
+			case M_HANKEL1:				function.set();																									return;
 			case M_ASSIGN:				function.set(SIMD(q_q_assign)),					bmts=returns_rcq_rcq_rcq,	d();								return;
 			}
 			break;
@@ -14909,17 +14909,17 @@ namespace	modes
 		//		_2dSet3dPoint(xs1+1		, ys1		, Acp1, Rcolor);
 		//		_2dSet3dPoint(xs1+1		, ys1+1		, Acp1, Rcolor);
 		//		_2dSet3dPoint(xs1		, ys1+1		, Acp1, Rcolor);
-
+		//
 		//		_2dSet3dPoint(xs1+3		, ys1		, Acp1, Icolor);
 		//		_2dSet3dPoint(xs1+3+1	, ys1		, Acp1, Icolor);
 		//		_2dSet3dPoint(xs1+3+1	, ys1+1		, Acp1, Icolor);
 		//		_2dSet3dPoint(xs1+3		, ys1+1		, Acp1, Icolor);
-
+		//
 		//		_2dSet3dPoint(xs1		, ys1+3		, Acp1, Jcolor);
 		//		_2dSet3dPoint(xs1+1		, ys1+3		, Acp1, Jcolor);
 		//		_2dSet3dPoint(xs1+1		, ys1+3+1	, Acp1, Jcolor);
 		//		_2dSet3dPoint(xs1		, ys1+3+1	, Acp1, Jcolor);
-
+		//
 		//		_2dSet3dPoint(xs1+3		, ys1+3		, Acp1, Kcolor);
 		//		_2dSet3dPoint(xs1+3+1	, ys1+3		, Acp1, Kcolor);
 		//		_2dSet3dPoint(xs1+3+1	, ys1+3+1	, Acp1, Kcolor);
@@ -15190,7 +15190,7 @@ namespace	modes
 			LOL_text.clear();
 		}
 		void text_dump(){LOL_text.clear();}
-	};
+	};//_3D
 
 	int colorFunction_r(double &r)
 	{
@@ -24130,9 +24130,9 @@ namespace	modes
 				else
 				{
 					b/=a, c/=a;
-					double horse=-b;
-					std::complex<double> shit=std::sqrt(b*b-4*c);
-					r1=.5*(horse+shit), r2=.5*(horse-shit);
+					double first=-b;
+					std::complex<double> disc=std::sqrt(b*b-4*c);
+					r1=.5*(first+disc), r2=.5*(first-disc);
 				}
 			}
 		}
@@ -35635,10 +35635,36 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 				render();
 			}
 			break;
+		case VK_F3:
+			break;
 		case VK_F4:
-			if(kb[VK_MENU])
+			if(kb[VK_MENU])//alt F4 quit
+			{
 				PostQuitMessage(0);
-			return 0;
+				return 0;
+			}
+			else//version
+			{
+				char date[]=__DATE__, time[]=__TIME__, space[]=" ";
+				char *next_token=nullptr, *month=strtok_s(date, space, &next_token), *day=strtok_s(nullptr, space, &next_token), *year=strtok_s(nullptr, space, &next_token);
+				const char *months[]={"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+				const int nmonths=12;
+				int m=0;
+				for(int k=0;k<nmonths;++k)
+				{
+					if(!strcmp(month, months[k]))
+					{
+						m=k+1;
+						break;
+					}
+				}
+				if(m)
+					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s-%02d-%s %s", year, m, day, time);
+				else
+					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s %s", date, time);
+				MessageBoxA(ghWnd, g_buf, "About", MB_OK);
+			}
+			break;
 	//	case VK_F6://3D mode move cam
 		case VK_F7://show benchmark, ctrl+F7: toggle SIMD
 			if(kb[VK_CONTROL])
@@ -35802,7 +35828,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 				
 				user_trigered_seed();
 				int e=exprChangeStart, function=functionChangeStart;
-				for(int bound=boundChangeStart;bound<boundInsertEnd;++bound)
+				for(int bound=boundChangeStart;bound<boundInsertEnd;++bound)//bound loop
 			//	for(int bound=boundChangeStart, e=exprChangeStart, function=functionChangeStart;bound<boundInsertEnd;++bound)
 				{
 					int kStart=bound?bounds[bound-1].first:0, kEnd=bounds[bound].first;
@@ -36774,7 +36800,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_LN						);	++k;	continue;}	    }}
 										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='g'||text[k+2]=='G'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_LOG					);	k+=2;	continue;}	    }}	break;
 						case 'm':case 'M':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='g'||text[k+2]=='G'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ABS					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='n'||text[k+2]=='N'){		if(text[k+3]=='d'||text[k+3]=='D'			&&text[k+4]=='e'||text[k+4]=='E'			&&text[k+5]=='l'||text[k+5]=='L'			&&text[k+3]=='b'||text[k+3]=='B'			&&text[k+3]=='r'||text[k+3]=='R'			&&text[k+3]=='o'||text[k+3]=='O'			&&text[k+3]=='t'||text[k+3]=='T')													if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 10, M_MANDELBROT			);	k+=9;	continue;}		}
+																					else if(text[k+2]=='n'||text[k+2]=='N'){		if((text[k+3]=='d'||text[k+3]=='D')			&&(text[k+4]=='e'||text[k+4]=='E')			&&(text[k+5]=='l'||text[k+5]=='L')			&&(text[k+6]=='b'||text[k+6]=='B')			&&(text[k+7]=='r'||text[k+7]=='R')			&&(text[k+8]=='o'||text[k+8]=='O')			&&(text[k+9]=='t'||text[k+9]=='T'))													if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 10, M_MANDELBROT			);	k+=9;	continue;}		}
 																					else if(text[k+2]=='x'||text[k+2]=='X'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_MAX					);	k+=2;	continue;}	    }}
 										else if((text[k+1]=='i'||text[k+1]=='I')		 &&(text[k+2]=='n'||text[k+2]=='N')){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_MIN					);	k+=2;	continue;}	     }	break;
 						case 'n':case 'N':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _qnan				);	k+=2;	continue;}	    }}
@@ -37554,7 +37580,8 @@ void		render()
 				"Ctrl up/down: scroll",
 				"Ctrl C/X: copy/cut text",
 				"Ctrl Shift C/X: copy/cut text with results",
-				"Ctrl V: paste text"
+				"Ctrl V: paste text",
+				"F4: About Grapher 2"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 256);
 		}

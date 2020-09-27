@@ -92,8 +92,8 @@ namespace		MP
 	__forceinline Comp operator*(Real const &a, Comp const &b){return Comp(a*b.r, a*b.i);}
 	__forceinline Comp operator/(Comp const &a, Comp const &b)
 	{
-		Real _1_mag_b=1/(b.r*b.r+b.i*b.i);
-		return Comp((b.r*a.r+b.i*a.i)*_1_mag_b, (b.r*a.i-b.i*a.r)*_1_mag_b);
+		Real inv_absb=1/(b.r*b.r+b.i*b.i);
+		return Comp((b.r*a.r+b.i*a.i)*inv_absb, (b.r*a.i-b.i*a.r)*inv_absb);
 	}
 	__forceinline Comp operator/(Comp const &a, Real const &br){return Comp(a.r/br, a.i/br);}
 	__forceinline Comp operator/(Real const &a, Comp const &b)
@@ -453,49 +453,49 @@ namespace		MP
 	__forceinline Quat operator*(Real const &a, Quat const &b){return Quat(a*b.r, a*b.i, a*b.j, a*b.k);}
 	__forceinline Quat operator/(Quat const &a, Quat const &b)
 	{
-		Real inv_mag_y=1/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
+		Real inv_absb2=1/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
 		return Quat(
-			(b.r*a.r+b.i*a.i+b.j*a.j+b.k*a.k)*inv_mag_y,
-			(b.r*a.i-b.i*a.r-b.j*a.k+b.k*a.j)*inv_mag_y,
-			(b.r*a.j+b.i*a.k-b.j*a.r-b.k*a.i)*inv_mag_y,
-			(b.r*a.k-b.i*a.j+b.j*a.i-b.k*a.r)*inv_mag_y);
+			(b.r*a.r+b.i*a.i+b.j*a.j+b.k*a.k)*inv_absb2,
+			(b.r*a.i-b.i*a.r-b.j*a.k+b.k*a.j)*inv_absb2,
+			(b.r*a.j+b.i*a.k-b.j*a.r-b.k*a.i)*inv_absb2,
+			(b.r*a.k-b.i*a.j+b.j*a.i-b.k*a.r)*inv_absb2);
 	}
 	__forceinline Quat Comp::operator/=(Quat const &b)
 	{
-		Real inv_mag_y=1/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
+		Real inv_absb2=1/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
 		return Quat(
-			( b.r*r+b.i*i)*inv_mag_y,
-			( b.r*i-b.i*r)*inv_mag_y,
-			(-b.j*r-b.k*i)*inv_mag_y,
-			( b.j*i-b.k*r)*inv_mag_y);
+			( b.r*r+b.i*i)*inv_absb2,
+			( b.r*i-b.i*r)*inv_absb2,
+			(-b.j*r-b.k*i)*inv_absb2,
+			( b.j*i-b.k*r)*inv_absb2);
 	}
 	__forceinline Quat operator/(Quat const &a, Comp const &b)
 	{
-		Real inv_mag_y=1/(b.r*b.r+b.i*b.i);
+		Real inv_absb2=1/(b.r*b.r+b.i*b.i);
 		return Quat(
-			(b.r*a.r+b.i*a.i)*inv_mag_y,
-			(b.r*a.i-b.i*a.r)*inv_mag_y,
-			(b.r*a.j+b.i*a.k)*inv_mag_y,
-			(b.r*a.k-b.i*a.j)*inv_mag_y);
+			(b.r*a.r+b.i*a.i)*inv_absb2,
+			(b.r*a.i-b.i*a.r)*inv_absb2,
+			(b.r*a.j+b.i*a.k)*inv_absb2,
+			(b.r*a.k-b.i*a.j)*inv_absb2);
 	}
 	__forceinline Quat operator/(Quat const &a, Real const &b)
 	{
-		Real inv_mag_y=1/b;
-		return Quat(a.r*inv_mag_y, a.i*inv_mag_y, a.j*inv_mag_y, a.k*inv_mag_y);
+		Real inv_absb=1/b;
+		return Quat(a.r*inv_absb, a.i*inv_absb, a.j*inv_absb, a.k*inv_absb);
 	}
 	__forceinline Quat operator/(Comp const &a, Quat const &b)
 	{
-		Real inv_mag_y=1/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
+		Real inv_absb2=1/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
 		return Quat(
-			(b.r*a.r+b.i*a.i)*inv_mag_y,
-			(b.r*a.i-b.i*a.r)*inv_mag_y,
-			(-b.j*a.r-b.k*a.i)*inv_mag_y,
-			(b.j*a.i-b.k*a.r)*inv_mag_y);
+			(b.r*a.r+b.i*a.i)*inv_absb2,
+			(b.r*a.i-b.i*a.r)*inv_absb2,
+			(-b.j*a.r-b.k*a.i)*inv_absb2,
+			(b.j*a.i-b.k*a.r)*inv_absb2);
 	}
 	__forceinline Quat operator/(Real const &a, Quat const &b)
 	{
-		Real _ar_mag_y=a/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
-		return Quat(b.r*_ar_mag_y, -b.i*_ar_mag_y, -b.j*_ar_mag_y, -b.k*_ar_mag_y);
+		Real a_absb=a/(b.r*b.r+b.i*b.i+b.j*b.j+b.k*b.k);
+		return Quat(b.r*a_absb, -b.i*a_absb, -b.j*a_absb, -b.k*a_absb);
 	}
 	__forceinline Quat log(Quat const &x)
 	{

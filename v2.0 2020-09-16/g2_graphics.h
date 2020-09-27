@@ -345,7 +345,7 @@ struct			ivec4
 	void set(int x, int y, int z, int w){this->x=x, this->y=y, this->z=z, this->w=w;}
 };
 inline mat4		GetTransformInverseNoScale(const mat4 &inM)// Requires this matrix to be transform matrix, NoScale version requires this matrix be of scale 1
-{
+{//https://lxjk.github.io/2017/09/03/Fast-4x4-Matrix-Inverse-with-SSE-SIMD-Explained.html
 #define MakeShuffleMask(x,y,z,w)           (x | (y<<2) | (z<<4) | (w<<6))
 
 // vec(0, 1, 2, 3) -> (vec[x], vec[y], vec[z], vec[w])

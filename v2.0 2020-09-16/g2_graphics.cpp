@@ -1705,7 +1705,7 @@ unsigned		make_gpu_buffer(unsigned target, const void *pointer, int size_bytes)
 	glBufferData(target, size_bytes, pointer, GL_STATIC_DRAW);
 	return buffer_id;
 }
-void			LoadTexture(const unsigned char *data, int data_size, char fontH, const char *widths, unsigned &tx_id)
+void			LoadFontTexture(const unsigned char *data, int data_size, char fontH, const char *widths, unsigned &tx_id)
 {
 	int w2, h2;
 	int *rgb2=nullptr;
@@ -1763,9 +1763,9 @@ void			send_color_rgb(unsigned location, int color)
 }
 void			select_texture(unsigned tx_id, int u_location)
 {
-	glActiveTexture(GL_TEXTURE0);			check(__LINE__);
-	glBindTexture(GL_TEXTURE_2D, tx_id);	check(__LINE__);//select texture
-	glUniform1i(u_location, 0);				check(__LINE__);
+	glActiveTexture(GL_TEXTURE0);		check(__LINE__);
+	glBindTexture(GL_TEXTURE_2D, tx_id);check(__LINE__);//select texture
+	glUniform1i(u_location, 0);			check(__LINE__);
 }
 float			g_fbuf[16]={0};
 int				pen_color=0xFF000000, brush_color=0xFFFFFFFF;
@@ -1838,8 +1838,9 @@ namespace		GL2_2D
 		glBindBuffer(GL_ARRAY_BUFFER, GL2_2D::vertex_buffer);													check(__LINE__);
 		glBufferData(GL_ARRAY_BUFFER, (int)vertices.size()*sizeof(vec2), &GL2_2D::vertices[0], GL_STATIC_DRAW);	check(__LINE__);
 		glVertexAttribPointer(a_vertices, 2, GL_FLOAT, GL_FALSE, 0, 0);											check(__LINE__);
-
-	//	glVertexAttribPointer(a_vertices, 2, GL_FLOAT, GL_FALSE, 0, &vertices[0]);								check(__LINE__);//doesn't draw
+		
+	//	glBindBuffer(GL_ARRAY_BUFFER, 0);												check(__LINE__);
+	//	glVertexAttribPointer(a_vertices, 2, GL_FLOAT, GL_FALSE, 0, &vertices[0]);		check(__LINE__);//doesn't draw
 
 		for(int k=0, kEnd=GL2_2D::drawInfo.size(), idx=0;k<kEnd;++k)
 		{
@@ -1945,7 +1946,7 @@ namespace		GL2_2D
 }
 namespace		GL2_L3D//light 3D
 {
-	struct			TriangleInfo
+	struct		TriangleInfo
 	{
 		int count, color;
 		TriangleInfo(int count, int color):count(count), color(color){}
@@ -1991,7 +1992,7 @@ namespace		GL2_L3D//light 3D
 			mView=matrixFPSViewRH(cam.p, (float)cam.a.y, (float)cam.a.x-_pi),
 			mProj=perspective((float)cam.tanfov, float(w)/h, 0.1f, 1000.f),
 			vp=mProj*mView;
-		mat4 model=mat4(1);
+		mat4 model(1);
 		mat3 m_normal=normalMatrix(model);
 		mat4 mvp=vp*model;
 		glUniformMatrix4fv(GL2_L3D::u_vpmatrix, 1, GL_FALSE, mvp.data());			check(__LINE__);
@@ -2062,7 +2063,7 @@ namespace		GL2_L3D//light 3D
 }
 namespace		GL2_3D
 {
-	struct			VertexInfo
+	struct		VertexInfo
 	{
 		int count;
 		unsigned type;//GL_POINTS/GL_LINES/GL_LINE_STRIP/GL_TRIANGLES/GL_TRIANGLE_FAN/GL_QUADS/...
@@ -2487,7 +2488,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 	{
 	//	glGenVertexArrays=(decltype(glGenVertexArrays))wglGetProcAddress("glGenVertexArrays");//OpenGL 3.0
 	//	glDeleteVertexArrays=(decltype(glDeleteVertexArrays))wglGetProcAddress("glDeleteVertexArrays");//OpenGL 3.0
-		glBindVertexArray=(decltype(glBindVertexArray))wglGetProcAddress("glBindVertexArray");
+		glBindVertexArray=(decltype(glBindVertexArray))wglGetProcAddress("glBindVertexArray");//not defined in GL ES 2
 		glGenBuffers=(decltype(glGenBuffers))wglGetProcAddress("glGenBuffers");
 		glBindBuffer=(decltype(glBindBuffer))wglGetProcAddress("glBindBuffer");
 		glBufferData=(decltype(glBufferData))wglGetProcAddress("glBufferData");
@@ -2859,15 +2860,15 @@ void			gl_initiate(HDC ghDC, int w, int h)
 	
 	{
 		using namespace resources;
-		LoadTexture(sf10, sizeof(sf10), sf10_height, sf10_widths, GL2_Text::tx_id_sf10);
-		LoadTexture(sf8, sizeof(sf8), sf8_height, sf8_widths, GL2_Text::tx_id_sf8);
-		LoadTexture(sf7, sizeof(sf7), sf7_height, sf7_widths, GL2_Text::tx_id_sf7);
-		LoadTexture(sf6, sizeof(sf6), sf6_height, sf6_widths, GL2_Text::tx_id_sf6);
+		LoadFontTexture(sf10, sizeof(sf10), sf10_height, sf10_widths, GL2_Text::tx_id_sf10);
+		LoadFontTexture(sf8, sizeof(sf8), sf8_height, sf8_widths, GL2_Text::tx_id_sf8);
+		LoadFontTexture(sf7, sizeof(sf7), sf7_height, sf7_widths, GL2_Text::tx_id_sf7);
+		LoadFontTexture(sf6, sizeof(sf6), sf6_height, sf6_widths, GL2_Text::tx_id_sf6);
 	}
-	//LoadTexture(compr_sf10, GL2_Text::tx_id_sf10);
-	//LoadTexture(compr_sf8, GL2_Text::tx_id_sf8);
-	//LoadTexture(compr_sf7, GL2_Text::tx_id_sf7);
-	//LoadTexture(compr_sf6, GL2_Text::tx_id_sf6);
+	//LoadFontTexture(compr_sf10, GL2_Text::tx_id_sf10);
+	//LoadFontTexture(compr_sf8, GL2_Text::tx_id_sf8);
+	//LoadFontTexture(compr_sf7, GL2_Text::tx_id_sf7);
+	//LoadFontTexture(compr_sf6, GL2_Text::tx_id_sf6);
 //	prof_add("Unpack textures");
 	current_program=0;
 	gl_setProgram(GL2_Text::program);	check(__LINE__);

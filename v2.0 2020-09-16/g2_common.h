@@ -141,14 +141,13 @@ namespace	G2
 		t1^=t1>>32, t1^=t1>>16, t1^=t1>>8, t1^=t1>>4;
 		t1&=15;
 		return (0x6996>>t1)&1;
-	//	return 0;
 	}
 	inline double	bitwise_xnor(double const &x)
 	{
 		long long t1=convert_d2ll(x);
 		t1^=t1>>32, t1^=t1>>16, t1^=t1>>8, t1^=t1>>4;
 		t1&=15;
-		return ~((0x6996>>t1)&1);
+		return !((0x6996>>t1)&1);
 	}
 
 	inline double	sgn			(double const &x){return (x>0)-(x<0);}

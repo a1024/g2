@@ -246,9 +246,9 @@ namespace		MP
 		Real inv_mag=1/abs(x);
 		return Quat(x.r*inv_mag, -x.i*inv_mag, -x.j*inv_mag, -x.k*inv_mag);
 	}
-	void  r_r_divide				(Quat &r, Quat const &y)				{r=1/(Real)y;}
-	void  c_c_divide				(Quat &r, Quat const &y)				{r=inv((Comp)y);}
-	void  q_q_divide				(Quat &r, Quat const &y)				{r=inv(y);}
+	void  r_r_divide				(Quat &r, Quat const &x)				{r=1/(Real)x;}
+	void  c_c_divide				(Quat &r, Quat const &x)				{r=inv((Comp)x);}
+	void  q_q_divide				(Quat &r, Quat const &x)				{r=inv(x);}
 	void r_rr_divide				(Quat &r, Quat const &x, Quat const &y)	{r=(Real)x/(Real)y;}
 	void c_rc_divide				(Quat &r, Quat const &x, Quat const &y)	{r=(Real)x/(Comp)y;}
 	void q_rq_divide				(Quat &r, Quat const &x, Quat const &y)	{r=(Real)x/y;}
@@ -259,7 +259,7 @@ namespace		MP
 	void q_qc_divide				(Quat &r, Quat const &x, Quat const &y)	{r=x/(Comp)y;}
 	void q_qq_divide				(Quat &r, Quat const &x, Quat const &y)	{r=x/y;}
 	
-	void r_rr_logic_divides			(Quat &r, Quat const &y, Quat const &x)	{auto t=(Real)x/(Real)y; r=t==floor(t);}//rc_divides, rq_divides: applied to each component
+	void r_rr_logic_divides			(Quat &r, Quat const &y, Quat const &x)	{auto t=(Real)x/(Real)y; r=t==floor(t);}
 	void r_rc_logic_divides			(Quat &r, Quat const &y, Quat const &x)	{auto t=(Comp)x/(Real)y; r=t==floor(t);}
 	void r_rq_logic_divides			(Quat &r, Quat const &y, Quat const &x)	{auto t=x/(Real)y; r=t==floor(t);}
 	void r_cr_logic_divides			(Quat &r, Quat const &y, Quat const &x)	{auto t=(Real)x/(Comp)y; r=t==floor(t);}
@@ -777,7 +777,7 @@ namespace		MP
 		r=Quat((Real)~(xr_yr-xi_yi-xj_yj-xk_yk), (Real)~(xr_yi+xi_yr+xj_yk-xk_yj), (Real)~(xj_yj-xi_yk+xj_yr+xk_yi), (Real)~(xr_yk+xi_yj-xj_yi+xk_yr));
 	}
 	
-	inline Real bitwise_xor(Real const &x){return isnan(x)|isinf(x)?0:bitwise_xor(x);}
+	inline Real bitwise_xor(Real const &x){return isnan(x)|isinf(x)?0:G2::bitwise_xor(x.toDouble());}
 	inline Real bitwise_xor(Real const &x, Real const &y){return isnan(x)|isinf(x)|isnan(y)|isinf(y)?0:Real(x.toULLong()^y.toULLong());}
 	void  r_r_bitwise_xor			(Quat &r, Quat const &x)				{r=bitwise_xor(x.r);}
 	void  c_c_bitwise_xor			(Quat &r, Quat const &x)				{r=Comp(bitwise_xor(x.r), bitwise_xor(x.i));}
@@ -792,7 +792,7 @@ namespace		MP
 	void q_qc_bitwise_xor			(Quat &r, Quat const &x, Quat const &y)	{r=Quat(bitwise_xor(x.r, y.r), bitwise_xor(x.i, y.i), x.j, x.k);}
 	void q_qq_bitwise_xor			(Quat &r, Quat const &x, Quat const &y)	{r=Quat(bitwise_xor(x.r, y.r), bitwise_xor(x.i, y.i), bitwise_xor(x.j, y.j), bitwise_xor(x.k, y.k));}
 	
-	inline Real bitwise_xnor(Real const &x){return isnan(x)|isinf(x)?0:!bitwise_xor(x).toDouble();}
+	inline Real bitwise_xnor(Real const &x){return isnan(x)|isinf(x)?0:!G2::bitwise_xor(x.toDouble());}
 	inline Real bitwise_xnor(Real const &x, Real const &y){return isnan(x)|isinf(x)|isnan(y)|isinf(y)?0:(Real)~(x.toULLong()^y.toULLong());}
 	void  r_r_bitwise_xnor			(Quat &r, Quat const &x)				{r=bitwise_xnor(x.r);}
 	void  c_c_bitwise_xnor			(Quat &r, Quat const &x)				{r=Comp(bitwise_xnor(x.r), bitwise_xnor(x.i));}
