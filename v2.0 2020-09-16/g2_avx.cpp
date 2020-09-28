@@ -1,7 +1,7 @@
 //best viewed with tab size of 4 spaces
 //g2_avx.cpp - All AVX functions are implemented here.
 //All AVX functions are compiled in a separate project as a static library.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by

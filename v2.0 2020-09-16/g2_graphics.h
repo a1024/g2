@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2_graphics.h - Include for G2 graphics API.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include		<list>
 extern int		w, h, X0, Y0;
 extern HDC		ghDC;
+//extern HDC	ghMemDC;//exposed for debug tests only
 extern bool		usingOpenGL;
 extern long long broken;
 

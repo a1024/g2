@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2_common.h - Included in all Grapher 2 source files.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by
@@ -101,7 +101,7 @@ namespace	G2
 {
 	bool _2d_between(double x1, double y1, double x, double y, double x2, double y2);
 	inline bool _1d_int_in_range(double x0, double x1){return std::floor(x0)!=std::floor(x1)||std::ceil(x0)!=std::ceil(x1);}
-	inline bool _1d_zero_in_range(double x0, double x1){return x0<0?x1>=0:x0==0?x1<0||x1>0:x1<0;}
+	inline bool _1d_zero_in_range(double x0, double x1){return x0<0?x1>=0:x0==0?x1!=0:x1<0;}
 	inline double _1d_zero_crossing(double x0, double y0, double x1, double y1){return x0+(0-y0)*(x1-x0)/(y1-y0);}
 	extern const double ll_max;
 	inline long long convert_d2ll		(double const x){return x!=x||x<-ll_max||x>ll_max?(long long&)x	:(long long)x;}
@@ -173,10 +173,10 @@ namespace	G2
 		return Quat1d(x.R_component_1()*x.R_component_1()-x.R_component_2()*x.R_component_2()-x.R_component_3()*x.R_component_3()-x.R_component_4()*x.R_component_4(),
 			x.R_component_2()*_2r, x.R_component_3()*_2r, x.R_component_4()*_2r);
 	}
-	inline Quat1d	sqrt		(Quat1d	const &x)
+	inline Quat1d	sqrt		(Quat1d	const &x)//2 sqrts
 	{
-		double s=x.R_component_1()+abs(x);
-		if(s)
+		double s=abs(x)+x.R_component_1();
+		if(s)//entire quaternion space except origin & -ve real axis
 		{
 			s=::sqrt(s+s);
 			double inv_s=1/s;

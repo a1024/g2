@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2_mp.h - Include for multiprecision version of math functions.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by
@@ -526,7 +526,6 @@ namespace		MP
 		if(s==0)
 			return Quat(0, sqrt(-x.r), 0, 0);
 		s=sqrt(s+s);
-		auto i=sqrt(-x.r);
 		auto inv_s=1/s;
 		return Quat(s*0.5, x.i*inv_s, x.j*inv_s, x.k*inv_s);
 	}

@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2_graphics.cpp - Implementation of G2 graphics API.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by
@@ -1802,8 +1802,8 @@ namespace		GL2_2D
 	}
 	void		toNDC(float xs, float ys, float &xn, float &yn)
 	{
-		xn=(xs-GL2_2D::current_region.x1)*2.f/GL2_2D::current_region.dx-1;
-		yn=1-(ys-GL2_2D::current_region.y1)*2.f/GL2_2D::current_region.dy;
+		xn=(xs+0.5f-GL2_2D::current_region.x1)*2.f/GL2_2D::current_region.dx-1;
+		yn=1-(ys+0.5f-GL2_2D::current_region.y1)*2.f/GL2_2D::current_region.dy;
 	}
 	//void		toNDC(int xs, int ys, float &xn, float &yn)
 	//{
@@ -3117,10 +3117,10 @@ Pen::Pen(int color):color(0xFF000000|color){hPen=CreatePen(PS_SOLID, 1, color);}
 Pen::~Pen()
 {
 	if(hPen)
-		DeleteObject(hPen);
+		DeleteObject(hPen), hPen=nullptr;
 }
 void		Pen::set(int color){this->color=0xFF000000|color, hPen=CreatePen(PS_SOLID, 1, color);}
-void		Pen::destroy(){DeleteObject(hPen), hPen=0;}
+void		Pen::destroy(){DeleteObject(hPen), hPen=nullptr;}
 void		Pen::use()
 {
 	if(usingOpenGL)

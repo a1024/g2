@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2.cpp - Grapher 2 main implementation file.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by
@@ -6406,21 +6406,15 @@ namespace	G2
 	void q_qr_condition_zero		(QuatP &r, QuatP const &x, VectP const &y)	{r=x.q_is_true()?x:Quat1d(*y.r);}
 	void q_qc_condition_zero		(QuatP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()?x:Quat1d(y);}
 	void q_qq_condition_zero		(QuatP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()?x:y;}
-	bool disc_rr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1)
-	{
-		return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);
-	//	if(x0<0)	return x0>=0;
-	//	if(x0==0)	return x0<0||x0>0;
-	//				return x0<=0;
-	}
-	bool disc_rc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_rq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_rr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r);}
+	bool disc_rc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r);}
+	bool disc_rq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r);}
+	bool disc_cr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i);}
+	bool disc_cc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i);}
+	bool disc_cq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i);}
+	bool disc_qr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
+	bool disc_qc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
+	bool disc_qq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
 
 	void  r_r_percent				(VectP &r, VectP const &x)					{r=x*0.01;}
 	void  c_c_percent				(CompP &r, CompP const &x)					{r=(Comp1d)x*0.01;}
@@ -6446,7 +6440,7 @@ namespace	G2
 	bool disc_qq_modulo_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 
 	void  r_r_sgn					(VectP &r, VectP const &x)					{r=(x>0)-(x<0);}
-	void  c_c_sgn					(CompP &r, CompP const &x)					{Comp1d cx=x; double mag=abs(cx); r=mag?cx/mag:0;}
+	void  c_c_sgn					(CompP &r, CompP const &x)					{Comp1d cx=x; double mag=abs(cx); r=mag?cx/mag:0;}//sign function gives a unit vector
 	void  q_q_sgn					(QuatP &r, QuatP const &x)					{Quat1d qx=x; double mag=abs(qx); r=mag?qx/mag:Quat1d();}
 	auto disc_r_sgn_i				=disc_r_divide_i;
 	auto disc_c_sgn_i				=disc_c_divide_i;
@@ -6571,7 +6565,8 @@ namespace	G2
 	bool disc_rr_tgamma_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 
 	void  r_r_loggamma				(VectP &r, VectP const &x)					{r=std::lgamma(x);}
-	bool disc_r_loggamma_i			(Value const &x0, Value const &x1){return (x0.r<=0||x1.r<=0)&&_1d_int_in_range(x0.r, x1.r);}
+	auto disc_r_loggamma_i			=disc_r_tgamma_i;
+//	bool disc_r_loggamma_i			(Value const &x0, Value const &x1){return (x0.r<=0||x1.r<=0)&&_1d_int_in_range(x0.r, x1.r);}
 
 	void  r_r_factorial				(VectP &r, VectP const &x)					{r=tgamma(x+1);}
 	void  c_c_factorial				(CompP &r, CompP const &x)					{r=tgamma((Comp1d)x+1.);}
@@ -8259,7 +8254,7 @@ struct Solve_UserFunction
 			if(clock()+offset>expiryTime)
 			{
 				func->functionStuck=true;//mark function
-
+			
 				//return nan
 				if(callStack.size())
 				{
@@ -8295,13 +8290,12 @@ struct Solve_UserFunction
 					auto &cst=callStack.top();
 					cst.fData=std::move(fData);
 				//	func=in2.function;
-					func=&userFunctionDefinitions[in2.op1], i2=0;
+					func=&userFunctionDefinitions[in2.op1], i2=0, nInstr=func->i.size();
 					fData.resize(func->data.size());
 					{
 						int k=0;
 						for(int kEnd=in2.args.size();k<kEnd;++k)//copy args
 							fData[k]=cst.fData[in2.args[k]];
-						//	fData[k]=cst.func->data[in2.args[k]];
 						for(int kEnd=func->data.size();k<kEnd;++k)//initialize const data
 							fData[k]=func->data[k];
 					}
@@ -15084,16 +15078,16 @@ namespace	modes
 		//returns true if can be cast to integers
 		bool pointCoordinates3dText(double x, double y, double z, int &Xs, int &Ys)
 		{
-			dvec3 cp;
-			cam.world2cam(dvec3(x, y, z), cp);
+		//	dvec3 cp;
+			cam.world2cam(dvec3(x, y, z), cp1);
 			//double dx=x-camx, dy=y-camy, dz=z-camz, cpt=dx*cax+dy*sax, Xcp1=dx*sax-dy*cax, Ycp1=cpt*say-dz*cay;
 			//if((Zcp1=cpt*cay+dz*say)>0)
-			if(cp.z>0)
+			if(cp1.z>0)
 			{
-				double Acp=1/cp.z;
+				double Acp=1/cp1.z;
 			//	double Acp1=1/Zcp1;
 				dvec2 s;
-				cam.cam2screen(cp, s);
+				cam.cam2screen(cp1, s);
 				//cpt=X0/(Zcp1*tanfov);
 				//double _Xs=X0+Xcp1*cpt, _Ys=Y0+Ycp1*cpt;
 				if(s.x>-1e6&&s.x<1e6&&s.y>-1e6&&s.y<1e6)
@@ -20493,6 +20487,8 @@ namespace	modes
 				setBkMode(bkMode);
 			//	SetBkMode(ghMemDC, bkMode);
 			}
+#if 1
+		//	prof_start();//
 			if(colorCondition)//draw the solutions
 			{
 				for(int e=0, eEnd=expr.size();e<eEnd;++e)
@@ -20654,6 +20650,23 @@ namespace	modes
 					}
 				}
 			}
+		//	prof_add("draw solution");//
+		//	prof_print();//
+			//debug test
+			//if(usingOpenGL)
+			//{
+			//	for(int kx=0;kx<w;++kx)
+			//	{
+			//		if(kx==451)
+			//			int LOL_1=0;
+			//		byte a=kx*255/w;
+			//		Pen pen(a);
+			//		pen.use();
+			//		line(kx, 0, kx, h);
+			//		pen.drop();
+			//	}
+			//}
+#endif
 		}
 		void i_draw();
 		void a_draw();
@@ -21695,7 +21708,8 @@ namespace	modes
 					{
 						double RL=ys.ticks2dist(r);
 					//	double RL=Rstep*r;
-						if(R1<=RL&&RL<R2)
+						if(R1<RL&&RL<=R2)
+					//	if(R1<=RL&&RL<R2)
 						{
 							double M=(RL-V1.r)/(V2.r-V1.r);
 							Rcontour[r].push_back(Double_x_i(xs.ifn_x(v+M), V1.i+(V2.i-V1.i)*M));
@@ -21711,7 +21725,8 @@ namespace	modes
 					{
 						double IL=zs.ticks2dist(i);
 					//	double IL=Istep*i;
-						if(I1<=IL&&IL<I2)
+						if(I1<IL&&IL<=I2)
+					//	if(I1<=IL&&IL<I2)
 						{
 							double M=(IL-V1.i)/(V2.i-V1.i);
 							Icontour[i].push_back(Double_x_r(xs.ifn_x(v+M), V1.r+(V2.r-V1.r)*M));
@@ -22420,7 +22435,7 @@ namespace	modes
 		{
 			if(usingOpenGL)
 				gl_enabledepthtest();
-			xs.set_Xplaces(1000), ys.set_Xplaces(1000);
+			xs.set_Xplaces(1000), ys.set_Xplaces(1000), zs.set_Xplaces(1000);
 			if(toSolve)
 			{
 				if(!operations.size()&&shiftOnly==1&&abs(Xoffset)<Xplaces)
@@ -22805,6 +22820,15 @@ namespace	modes
 					}
 				}
 			}
+			//HFONT hFont=(HFONT)SelectObject(ghMemDC, GetStockObject(DEFAULT_GUI_FONT));//debug test
+			//for(int k=0, nlabels=_3d.LOL_text.size(), x=w>>1, y=0;k<nlabels;++k)
+			//{
+			//	GUIPrint(x, y, "%s", _3d.LOL_text[k].second.str.c_str());
+			//	y+=13;
+			//	if(y>=h-13)
+			//		x+=100, y=0;
+			//}
+			//(HFONT)SelectObject(ghMemDC, hFont);//end debug test
 			_3d.text_show();
 			if(kb_VK_F6_msg||kb[VK_F6])
 			{
@@ -35905,7 +35929,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 												it->insertFVar(mathSet, ufVarNames.rbegin()->name);
 											//	it->insertData(mathSet, Value());
 												++it->nArgs;
-												mathSet='R';
+												state='a', mathSet='R';
 											}
 										}
 										k=k2-1;

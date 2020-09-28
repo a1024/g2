@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2_common.cpp - Implementation of common functions used by all Grapher 2 source files.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by
@@ -155,51 +155,51 @@ namespace	G2
 	Comp1d			tgamma		(Comp1d const &x)
 	{
 		using namespace gamma;
-		if(x.real()<.5)
+		if(x.real()<0.5)
 		{
 			Comp1d t1(p[0]);
 			for(int k=1;k<g+2;++k)
 				t1+=p[k]/(double(k)-x);
-			Comp1d t2=g+.5-x;
-			return _pi/(sin(_pi*x)*_sqrt_2pi*std::pow(t2, .5-x)*std::exp(-t2)*t1);
+			Comp1d t2=g+0.5-x;
+			return _pi/(sin(_pi*x)*_sqrt_2pi*std::pow(t2, 0.5-x)*std::exp(-t2)*t1);
 		}
 		else
 		{
 			Comp1d t1(p[0]);
 			for(int k=1;k<g+2;++k)
 				t1+=p[k]/(double(k)+x-1.);
-			Comp1d t2=g+.5+x-1.;
-			return _sqrt_2pi*std::pow(t2, .5+x-1.)*std::exp(-t2)*t1;
+			Comp1d t2=g+0.5+x-1.;
+			return _sqrt_2pi*std::pow(t2, 0.5+x-1.)*std::exp(-t2)*t1;
 		}
-		//if(x.real()<.5)
+		//if(x.real()<0.5)
 		//	return _pi/(sin(_pi*x)*tgamma(1.-x));
 		//else
 		//{
 		//	Comp1d t1(p[0]);
 		//	for(int k=1;k<g+2;++k)
 		//		t1+=p[k]/(x-1.+double(k));
-		//	Comp1d t2=x-1.+g+.5;
-		//	return _sqrt_2pi*std::pow(t2, x-1.+.5)*std::exp(-t2)*t1;
+		//	Comp1d t2=x-1.+g+0.5;
+		//	return _sqrt_2pi*std::pow(t2, x-1.+0.5)*std::exp(-t2)*t1;
 		//}
 	}
 	Quat1d			tgamma		(Quat1d	const &x)
 	{
 		using namespace gamma;
-		if(x.real()<.5)
+		if(x.real()<0.5)
 		{
 			Quat1d t1(p[0]);
 			for(int k=1;k<g+2;++k)
 				t1+=p[k]/(double(k)-x);
-			Quat1d t2=g+.5-x;
-			return _pi/(sin(_pi*x)*_sqrt_2pi*pow(t2, .5-x)*exp(-t2)*t1);
+			Quat1d t2=g+0.5-x;
+			return _pi/(sin(_pi*x)*_sqrt_2pi*pow(t2, 0.5-x)*exp(-t2)*t1);
 		}
 		else
 		{
 			Quat1d t1(p[0]);
 			for(int k=1;k<g+2;++k)
 				t1+=p[k]/(double(k)+x-1.);
-			Quat1d t2=g+.5+x-1.;
-			return _sqrt_2pi*pow(t2, .5+x-1.)*exp(-t2)*t1;
+			Quat1d t2=g+0.5+x-1.;
+			return _sqrt_2pi*pow(t2, 0.5+x-1.)*exp(-t2)*t1;
 		}
 	}
 }

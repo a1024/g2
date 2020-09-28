@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2_sse2.cpp - Implementation of SSE2 version of math functions.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by

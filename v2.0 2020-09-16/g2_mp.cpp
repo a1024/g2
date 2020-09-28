@@ -1,6 +1,6 @@
 //best viewed with tab size of 4 spaces
 //g2_mp.cpp - Multiprecision version of math functions.
-//Copyright (C) 2012-2020  Ayman Wagih Mohsen
+//Copyright (C) 2012-2020  Ayman Wagih Mohsen, unless source link provided.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU General Public License as published by
@@ -1025,8 +1025,7 @@ namespace		MP
 	}
 	__forceinline Quat sin(Quat const &x)//boost::math
 	{
-		Real z=sqrt(x.i*x.i+x.j*x.j+x.k*x.k);
-		Real sin_xr, cos_xr;
+		Real z=sqrt(x.i*x.i+x.j*x.j+x.k*x.k), sin_xr, cos_xr;
 		sin_cos(sin_xr, cos_xr, x.r);
 		Real w=-cos_xr*sinhc(z);
 		return Quat(sin_xr*cosh(z), w*x.i, w*x.j, w*x.k);
