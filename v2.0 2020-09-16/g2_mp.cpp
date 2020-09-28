@@ -1008,7 +1008,7 @@ namespace		MP
 	__forceinline Comp cos(Comp const &x)
 	{
 		Comp exp_ix=exp(m_i*x);//sincos, exp
-		return 0.5*exp_ix+0.5/exp_ix;
+		return 0.5*(exp_ix+inv(exp_ix));
 	}
 	__forceinline Quat cos(Quat const &x)
 	{
@@ -1246,18 +1246,19 @@ namespace		MP
 
 	inline Comp atan(Comp const &x){return (m_i*0.5)*log((m_i+x)/(m_i-x));}
 	inline Quat atan(Quat const &x){return (m_i*0.5)*log((m_i+x)/(m_i-x));}
+	inline Real atan_addition(Real const &x, Real const &y){return x<0?y<0?-m_pi:m_pi:0;}
 	void  r_r_atan					(Quat &r, Quat const &x)				{r=atan(x.r);}
 	void  c_c_atan					(Quat &r, Quat const &x)				{r=atan((Comp)x);}
 	void  q_q_atan					(Quat &r, Quat const &x)				{r=atan(x);}
 	void r_rr_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan2(x.r, y.r);}
-	void c_rc_atan					(Quat &r, Quat const &x, Quat const &y)	{Comp t=atan((Comp)y/x.r);		r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
-	void q_rq_atan					(Quat &r, Quat const &x, Quat const &y)	{Quat t=atan(y/x.r);			r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
-	void c_cr_atan					(Quat &r, Quat const &x, Quat const &y)	{Comp t=atan(y.r/(Comp)x);		r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
-	void c_cc_atan					(Quat &r, Quat const &x, Quat const &y)	{Comp t=atan((Comp)y/(Comp)x);	r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
-	void q_cq_atan					(Quat &r, Quat const &x, Quat const &y)	{Quat t=atan(y/(Comp)x);		r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
-	void q_qr_atan					(Quat &r, Quat const &x, Quat const &y)	{Quat t=atan(y/x);				r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
-	void q_qc_atan					(Quat &r, Quat const &x, Quat const &y)	{Quat t=atan((Comp)y/x);		r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
-	void q_qq_atan					(Quat &r, Quat const &x, Quat const &y)	{Quat t=atan(y/x);				r=x.r<0?y.r<0?t-m_pi:t+m_pi:t;}
+	void c_rc_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x.r/(Comp)y)	+atan_addition(x.r, y.r);}
+	void q_rq_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x.r/y)			+atan_addition(x.r, y.r);}
+	void c_cr_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan((Comp)x/y.r)	+atan_addition(x.r, y.r);}
+	void c_cc_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan((Comp)x/(Comp)y)+atan_addition(x.r, y.r);}
+	void q_cq_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan((Comp)x/y)		+atan_addition(x.r, y.r);}
+	void q_qr_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x/y)			+atan_addition(x.r, y.r);}
+	void q_qc_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x/(Comp)y)		+atan_addition(x.r, y.r);}
+	void q_qq_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x/y)			+atan_addition(x.r, y.r);}
 	
 	inline Comp tanh(Comp const &x){Comp e2x=exp(x+x); return (e2x-1.)/(e2x+1.);}
 	inline Quat tanh(Quat const &x){Quat e2x=exp(x+x); return (e2x-1.)/(e2x+1.);}

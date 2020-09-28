@@ -40,6 +40,8 @@
 #ifdef _DEBUG
 #pragma warning(pop)
 #endif
+	#define	VLEAVE	_mm256_zeroupper()
+//	#define	VLEAVE
 bool		avx_supported=false;
 static __m256d minus_one, sign_mask;
 struct Vect4d
@@ -595,8 +597,6 @@ void avx_initialize()
 	m_i.r=0., m_i.i=1;
 }
 #pragma warning(pop)
-	#define	VLEAVE	_mm256_zeroupper();
-//	#define	VLEAVE
 void minmax_avx(double *a, int size, double *lo_hi)//size multiple of 4, 32 byte aligned
 {
 	//if((int)a&31)
@@ -635,7 +635,7 @@ void minmax_avx(double *a, int size, double *lo_hi)//size multiple of 4, 32 byte
 	//	hi=max.m256d_f64[2];
 	//if(hi<max.m256d_f64[3])
 	//	hi=max.m256d_f64[3];
-	VLEAVE
+	VLEAVE;
 }
 namespace	G2
 {
@@ -648,58 +648,58 @@ namespace	G2
 		__forceinline void assign(CompP &p, Comp4d const &v){_mm256_storeu_pd(p.r, v.r), _mm256_storeu_pd(p.i, v.i);}
 		__forceinline void assign(QuatP &p, Quat4d const &v){_mm256_storeu_pd(p.r, v.r), _mm256_storeu_pd(p.i, v.i), _mm256_storeu_pd(p.j, v.j), _mm256_storeu_pd(p.k, v.k);}
 
-		void r_r_setzero				(VectP &r, VectP const&)					{assign(r, _mm256_setzero_pd());VLEAVE}
-		void c_c_setzero				(CompP &r, CompP const&)					{assign(r, Comp4d(_mm256_setzero_pd(), _mm256_setzero_pd()));VLEAVE}
-		void q_q_setzero				(QuatP &r, QuatP const&)					{assign(r, Quat4d(_mm256_setzero_pd(), _mm256_setzero_pd(), _mm256_setzero_pd(), _mm256_setzero_pd()));VLEAVE}
+		void r_r_setzero				(VectP &r, VectP const&)					{assign(r, _mm256_setzero_pd());VLEAVE;}
+		void c_c_setzero				(CompP &r, CompP const&)					{assign(r, Comp4d(_mm256_setzero_pd(), _mm256_setzero_pd()));VLEAVE;}
+		void q_q_setzero				(QuatP &r, QuatP const&)					{assign(r, Quat4d(_mm256_setzero_pd(), _mm256_setzero_pd(), _mm256_setzero_pd(), _mm256_setzero_pd()));VLEAVE;}
 
-		void  r_r_ceil					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).ceil());VLEAVE}
-		void  c_c_ceil					(CompP &r, CompP const &x)					{assign(r, Comp4d(x).ceil());VLEAVE}
-		void  q_q_ceil					(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x).ceil());VLEAVE}
+		void  r_r_ceil					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).ceil());VLEAVE;}
+		void  c_c_ceil					(CompP &r, CompP const &x)					{assign(r, Comp4d(x).ceil());VLEAVE;}
+		void  q_q_ceil					(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x).ceil());VLEAVE;}
 
-		void  r_r_floor					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).floor());VLEAVE}
-		void  c_c_floor					(CompP &r, CompP const &x)					{assign(r, Comp4d(x).floor());VLEAVE}
-		void  q_q_floor					(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x).floor());VLEAVE}
+		void  r_r_floor					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).floor());VLEAVE;}
+		void  c_c_floor					(CompP &r, CompP const &x)					{assign(r, Comp4d(x).floor());VLEAVE;}
+		void  q_q_floor					(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x).floor());VLEAVE;}
 
-		void  r_r_round					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).round());VLEAVE}
-		void  c_c_round					(CompP &r, CompP const &x)					{assign(r, Comp4d(x).round());VLEAVE}
-		void  q_q_round					(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x).round());VLEAVE}
+		void  r_r_round					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).round());VLEAVE;}
+		void  c_c_round					(CompP &r, CompP const &x)					{assign(r, Comp4d(x).round());VLEAVE;}
+		void  q_q_round					(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x).round());VLEAVE;}
 
-		void  r_r_abs					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).abs());VLEAVE}
-		void  r_c_abs					(VectP &r, CompP const &x)					{assign(r, Comp4d(x).abs());VLEAVE}
-		void  r_q_abs					(VectP &r, QuatP const &x)					{assign(r, Quat4d(x).abs());VLEAVE}
+		void  r_r_abs					(VectP &r, VectP const &x)					{assign(r, Vect4d(x).abs());VLEAVE;}
+		void  r_c_abs					(VectP &r, CompP const &x)					{assign(r, Comp4d(x).abs());VLEAVE;}
+		void  r_q_abs					(VectP &r, QuatP const &x)					{assign(r, Quat4d(x).abs());VLEAVE;}
 
-		void  r_r_arg					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, m_pi&(rx<m_zero)|m_qnan&(rx==m_zero));VLEAVE}
+		void  r_r_arg					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, m_pi&(rx<m_zero)|m_qnan&(rx==m_zero));VLEAVE;}
 		void  r_c_arg					(VectP &r, CompP const &x)
 		{
 			Comp4d cx=x;
 			Vect4d mask=(cx.r==m_zero)&(cx.i==m_zero);//zero: FFFF, nonzero: 0
 			assign(r, Vect4d(::atan2(cx.i.v, cx.r.v))&mask.complement()|m_qnan&mask);
-			VLEAVE
+			VLEAVE;
 		}
-		void  r_q_arg					(VectP &r, QuatP const &x)					{Quat4d qx=x; assign(r, Vect4d(::acos((qx.r/qx.abs()).v)));VLEAVE}
+		void  r_q_arg					(VectP &r, QuatP const &x)					{Quat4d qx=x; assign(r, Vect4d(::acos((qx.r/qx.abs()).v)));VLEAVE;}
 
-		void  r_c_real					(VectP &r, CompP const &x)					{assign(r, Vect4d(x.r));VLEAVE}
+		void  r_c_real					(VectP &r, CompP const &x)					{assign(r, Vect4d(x.r));VLEAVE;}
 
-		void  r_c_imag					(VectP &r, CompP const &x)					{assign(r, Vect4d(x.i));VLEAVE}
+		void  r_c_imag					(VectP &r, CompP const &x)					{assign(r, Vect4d(x.i));VLEAVE;}
 
 		//r_conjugate: assign
-		void c_c_conjugate				(CompP &r, CompP const &x)					{assign(r, Comp4d(Vect4d(x.r), -Vect4d(x.i)));VLEAVE}
-		void q_q_conjugate				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(Vect4d(x.r), -Vect4d(x.i), -Vect4d(x.j), -Vect4d(x.k)));VLEAVE}
+		void c_c_conjugate				(CompP &r, CompP const &x)					{assign(r, Comp4d(Vect4d(x.r), -Vect4d(x.i)));VLEAVE;}
+		void q_q_conjugate				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(Vect4d(x.r), -Vect4d(x.i), -Vect4d(x.j), -Vect4d(x.k)));VLEAVE;}
 
-		void  c_r_polar					(CompP &r, VectP const &x)					{Vect4d rx=x; assign(r, Comp4d(rx&m_sign_mask, m_pi&(rx<m_zero)|m_qnan&(rx==m_zero)));VLEAVE}
+		void  c_r_polar					(CompP &r, VectP const &x)					{Vect4d rx=x; assign(r, Comp4d(rx&m_sign_mask, m_pi&(rx<m_zero)|m_qnan&(rx==m_zero)));VLEAVE;}
 		void  c_c_polar					(CompP &r, CompP const &x)
 		{
 			Comp4d cx=x;
 			Vect4d mag=cx.abs(), z_mask=mag==m_zero, arg=::atan2(cx.i.v, cx.r.v);
 			assign(r, Comp4d(mag, arg&z_mask|m_qnan&z_mask.complement()));
-			VLEAVE
+			VLEAVE;
 		}
 		void  c_q_polar					(CompP &r, QuatP const &x)
 		{
 			Quat4d qx=x;
 			Vect4d mag=qx.abs();
 			assign(r, Comp4d(mag, Vect4d(::acos((qx.r/mag).v))));
-			VLEAVE
+			VLEAVE;
 		}
 
 		//r_cartesian	assign
@@ -709,7 +709,7 @@ namespace	G2
 			Vec4d sin_i, cos_i;
 			sin_i=sincos(&cos_i, cx.i.v);
 			assign(r, Comp4d(cx.r*Vect4d(cos_i), cx.r*Vect4d(sin_i)));
-			VLEAVE
+			VLEAVE;
 		}
 		void  q_q_cartesian				(QuatP &r, QuatP const &x)
 		{
@@ -724,82 +724,82 @@ namespace	G2
 				Vect4d(sin_i)*Vect4d(cos_j)*Vect4d(cos_k),
 				Vect4d(sin_j)*Vect4d(cos_k),
 				qx.r*Vect4d(sin_k)));
-			VLEAVE
+			VLEAVE;
 		}
 
-		void r_rr_plus					(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)+Vect4d(y));VLEAVE}
-		void c_rc_plus					(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)+Comp4d(y));VLEAVE}
-		void q_rq_plus					(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)+Quat4d(y));VLEAVE}
-		void c_cr_plus					(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)+Vect4d(y));VLEAVE}
-		void c_cc_plus					(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)+Comp4d(y));VLEAVE}
-		void q_cq_plus					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)+Quat4d(y));VLEAVE}
-		void q_qr_plus					(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)+Vect4d(y));VLEAVE}
-		void q_qc_plus					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)+Comp4d(y));VLEAVE}
-		void q_qq_plus					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)+Quat4d(y));VLEAVE}
+		void r_rr_plus					(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)+Vect4d(y));VLEAVE;}
+		void c_rc_plus					(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)+Comp4d(y));VLEAVE;}
+		void q_rq_plus					(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)+Quat4d(y));VLEAVE;}
+		void c_cr_plus					(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)+Vect4d(y));VLEAVE;}
+		void c_cc_plus					(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)+Comp4d(y));VLEAVE;}
+		void q_cq_plus					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)+Quat4d(y));VLEAVE;}
+		void q_qr_plus					(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)+Vect4d(y));VLEAVE;}
+		void q_qc_plus					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)+Comp4d(y));VLEAVE;}
+		void q_qq_plus					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)+Quat4d(y));VLEAVE;}
 
-		void  r_r_minus					(VectP &r, VectP const &x)					{assign(r, -Vect4d(x));VLEAVE}
-		void  c_c_minus					(CompP &r, CompP const &x)					{assign(r, -Comp4d(x));VLEAVE}
-		void  q_q_minus					(QuatP &r, QuatP const &x)					{assign(r, -Quat4d(x));VLEAVE}
-		void r_rr_minus					(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)-Vect4d(y));VLEAVE}
-		void c_rc_minus					(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)-Comp4d(y));VLEAVE}
-		void q_rq_minus					(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)-Quat4d(y));VLEAVE}
-		void c_cr_minus					(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)-Vect4d(y));VLEAVE}
-		void c_cc_minus					(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)-Comp4d(y));VLEAVE}
-		void q_cq_minus					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)-Quat4d(y));VLEAVE}
-		void q_qr_minus					(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)-Vect4d(y));VLEAVE}
-		void q_qc_minus					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)-Comp4d(y));VLEAVE}
-		void q_qq_minus					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)-Quat4d(y));VLEAVE}
+		void  r_r_minus					(VectP &r, VectP const &x)					{assign(r, -Vect4d(x));VLEAVE;}
+		void  c_c_minus					(CompP &r, CompP const &x)					{assign(r, -Comp4d(x));VLEAVE;}
+		void  q_q_minus					(QuatP &r, QuatP const &x)					{assign(r, -Quat4d(x));VLEAVE;}
+		void r_rr_minus					(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)-Vect4d(y));VLEAVE;}
+		void c_rc_minus					(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)-Comp4d(y));VLEAVE;}
+		void q_rq_minus					(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)-Quat4d(y));VLEAVE;}
+		void c_cr_minus					(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)-Vect4d(y));VLEAVE;}
+		void c_cc_minus					(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)-Comp4d(y));VLEAVE;}
+		void q_cq_minus					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)-Quat4d(y));VLEAVE;}
+		void q_qr_minus					(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)-Vect4d(y));VLEAVE;}
+		void q_qc_minus					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)-Comp4d(y));VLEAVE;}
+		void q_qq_minus					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)-Quat4d(y));VLEAVE;}
 
-		void r_rr_multiply				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)*Vect4d(y));VLEAVE}
-		void c_rc_multiply				(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)*Comp4d(y));VLEAVE}
-		void q_rq_multiply				(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)*Quat4d(y));VLEAVE}
-		void c_cr_multiply				(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)*Vect4d(y));VLEAVE}
-		void c_cc_multiply				(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)*Comp4d(y));VLEAVE}//(xr+i*xi)(yr+i*yi) = xr*yr-xi*yi+i(xr*yi+xi*yr)
-		void q_cq_multiply				(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)*Quat4d(y));VLEAVE}
-		void q_qr_multiply				(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)*Vect4d(y));VLEAVE}
-		void q_qc_multiply				(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)*Comp4d(y));VLEAVE}
-		void q_qq_multiply				(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)*Quat4d(y));VLEAVE}
+		void r_rr_multiply				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)*Vect4d(y));VLEAVE;}
+		void c_rc_multiply				(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)*Comp4d(y));VLEAVE;}
+		void q_rq_multiply				(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)*Quat4d(y));VLEAVE;}
+		void c_cr_multiply				(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)*Vect4d(y));VLEAVE;}
+		void c_cc_multiply				(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)*Comp4d(y));VLEAVE;}//(xr+i*xi)(yr+i*yi) = xr*yr-xi*yi+i(xr*yi+xi*yr)
+		void q_cq_multiply				(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)*Quat4d(y));VLEAVE;}
+		void q_qr_multiply				(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)*Vect4d(y));VLEAVE;}
+		void q_qc_multiply				(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)*Comp4d(y));VLEAVE;}
+		void q_qq_multiply				(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)*Quat4d(y));VLEAVE;}
 
-		void  r_r_divide				(VectP &r, VectP const &y)					{assign(r, m_one/Vect4d(y));VLEAVE}
-		void  c_c_divide				(CompP &r, CompP const &y)					{assign(r, m_one/Comp4d(y));VLEAVE}
-		void  q_q_divide				(QuatP &r, QuatP const &y)					{assign(r, m_one/Quat4d(y));VLEAVE}
-		void r_rr_divide				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)/Vect4d(y));VLEAVE}
-		void c_rc_divide				(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)/Comp4d(y));VLEAVE}
-		void q_rq_divide				(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)/Quat4d(y));VLEAVE}
-		void c_cr_divide				(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)/Vect4d(y));VLEAVE}
-		void c_cc_divide				(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)/Comp4d(y));VLEAVE}
-		void q_cq_divide				(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)/Quat4d(y));VLEAVE}
-		void q_qr_divide				(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)/Vect4d(y));VLEAVE}
-		void q_qc_divide				(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)/Comp4d(y));VLEAVE}
-		void q_qq_divide				(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)/Quat4d(y));VLEAVE}
+		void  r_r_divide				(VectP &r, VectP const &y)					{assign(r, m_one/Vect4d(y));VLEAVE;}
+		void  c_c_divide				(CompP &r, CompP const &y)					{assign(r, m_one/Comp4d(y));VLEAVE;}
+		void  q_q_divide				(QuatP &r, QuatP const &y)					{assign(r, m_one/Quat4d(y));VLEAVE;}
+		void r_rr_divide				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)/Vect4d(y));VLEAVE;}
+		void c_rc_divide				(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)/Comp4d(y));VLEAVE;}
+		void q_rq_divide				(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)/Quat4d(y));VLEAVE;}
+		void c_cr_divide				(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)/Vect4d(y));VLEAVE;}
+		void c_cc_divide				(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)/Comp4d(y));VLEAVE;}
+		void q_cq_divide				(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)/Quat4d(y));VLEAVE;}
+		void q_qr_divide				(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)/Vect4d(y));VLEAVE;}
+		void q_qc_divide				(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)/Comp4d(y));VLEAVE;}
+		void q_qq_divide				(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)/Quat4d(y));VLEAVE;}
 
-		void r_rr_logic_divides			(VectP &r, VectP const &y, VectP const &x)	{auto t=Vect4d(x)/Vect4d(y); assign(r, (t==t.floor())&m_one);VLEAVE}//rc_divides, rq_divides: applied to each component
-		void r_rc_logic_divides			(VectP &r, VectP const &y, CompP const &x)	{auto t=Comp4d(x)/Vect4d(y); assign(r, (t==t.floor())&m_one);VLEAVE}
-		void r_rq_logic_divides			(VectP &r, VectP const &y, QuatP const &x)	{auto t=Quat4d(x)/Vect4d(y); assign(r, (t==t.floor())&m_one);VLEAVE}
-		void r_cr_logic_divides			(VectP &r, CompP const &y, VectP const &x)	{auto t=Vect4d(x)/Comp4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&m_one);VLEAVE}
-		void r_cc_logic_divides			(VectP &r, CompP const &y, CompP const &x)	{auto t=Comp4d(x)/Comp4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&m_one);VLEAVE}
-		void r_cq_logic_divides			(VectP &r, CompP const &y, QuatP const &x)	{auto t=Quat4d(x)/Comp4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE}
-		void r_qr_logic_divides			(VectP &r, QuatP const &y, VectP const &x)	{auto t=Vect4d(x)/Quat4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE}
-		void r_qc_logic_divides			(VectP &r, QuatP const &y, CompP const &x)	{auto t=Comp4d(x)/Quat4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE}
-		void r_qq_logic_divides			(VectP &r, QuatP const &y, QuatP const &x)	{auto t=Quat4d(x)/Quat4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE}
+		void r_rr_logic_divides			(VectP &r, VectP const &y, VectP const &x)	{auto t=Vect4d(x)/Vect4d(y); assign(r, (t==t.floor())&m_one);VLEAVE;}//rc_divides, rq_divides: applied to each component
+		void r_rc_logic_divides			(VectP &r, VectP const &y, CompP const &x)	{auto t=Comp4d(x)/Vect4d(y); assign(r, (t==t.floor())&m_one);VLEAVE;}
+		void r_rq_logic_divides			(VectP &r, VectP const &y, QuatP const &x)	{auto t=Quat4d(x)/Vect4d(y); assign(r, (t==t.floor())&m_one);VLEAVE;}
+		void r_cr_logic_divides			(VectP &r, CompP const &y, VectP const &x)	{auto t=Vect4d(x)/Comp4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&m_one);VLEAVE;}
+		void r_cc_logic_divides			(VectP &r, CompP const &y, CompP const &x)	{auto t=Comp4d(x)/Comp4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&m_one);VLEAVE;}
+		void r_cq_logic_divides			(VectP &r, CompP const &y, QuatP const &x)	{auto t=Quat4d(x)/Comp4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE;}
+		void r_qr_logic_divides			(VectP &r, QuatP const &y, VectP const &x)	{auto t=Vect4d(x)/Quat4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE;}
+		void r_qc_logic_divides			(VectP &r, QuatP const &y, CompP const &x)	{auto t=Comp4d(x)/Quat4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE;}
+		void r_qq_logic_divides			(VectP &r, QuatP const &y, QuatP const &x)	{auto t=Quat4d(x)/Quat4d(y); assign(r, (t.r==t.r.floor())&(t.i==t.i.floor())&(t.j==t.j.floor())&(t.k==t.k.floor())&m_one);VLEAVE;}
 
-		void c_cr_pow					(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)^Vect4d(y));VLEAVE}
-		void c_cc_pow					(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)^Comp4d(y));VLEAVE}
-		void q_cq_pow					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)^Quat4d(y));VLEAVE}
-		void q_qr_pow					(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)^Vect4d(y));VLEAVE}
-		void q_qc_pow					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)^Comp4d(y));VLEAVE}
-		void q_qq_pow					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)^Quat4d(y));VLEAVE}
+		void c_cr_pow					(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)^Vect4d(y));VLEAVE;}
+		void c_cc_pow					(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)^Comp4d(y));VLEAVE;}
+		void q_cq_pow					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)^Quat4d(y));VLEAVE;}
+		void q_qr_pow					(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)^Vect4d(y));VLEAVE;}
+		void q_qc_pow					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)^Comp4d(y));VLEAVE;}
+		void q_qq_pow					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)^Quat4d(y));VLEAVE;}
 
-		void  c_c_ln					(CompP &r, CompP const &x)					{assign(r, log(Comp4d(x)));VLEAVE}
-		void  q_q_ln					(QuatP &r, QuatP const &x)					{assign(r, log(Quat4d(x)));VLEAVE}
+		void  c_c_ln					(CompP &r, CompP const &x)					{assign(r, log(Comp4d(x)));VLEAVE;}
+		void  q_q_ln					(QuatP &r, QuatP const &x)					{assign(r, log(Quat4d(x)));VLEAVE;}
 	
-		void  c_c_log					(CompP &r, CompP const &x)					{assign(r, log(Comp4d(x))*m_inv_ln10);VLEAVE}
-		void  q_q_log					(QuatP &r, QuatP const &x)					{assign(r, log(Quat4d(x))*m_inv_ln10);VLEAVE}
-		void c_cr_log					(CompP &r, CompP const &x, VectP const &y)	{assign(r, log(Comp4d(x))/log(Comp4d(Vect4d(y), m_zero)));VLEAVE}
-		void c_cc_log					(CompP &r, CompP const &x, CompP const &y)	{assign(r, log(Comp4d(x))/log(Comp4d(y)));VLEAVE}
-		void q_cq_log					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, log(Comp4d(x))/log(Quat4d(y)));VLEAVE}
-		void q_qc_log					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, log(Quat4d(x))/log(Comp4d(y)));VLEAVE}
-		void q_qq_log					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, log(Quat4d(x))/log(Quat4d(y)));VLEAVE}
+		void  c_c_log					(CompP &r, CompP const &x)					{assign(r, log(Comp4d(x))*m_inv_ln10);VLEAVE;}
+		void  q_q_log					(QuatP &r, QuatP const &x)					{assign(r, log(Quat4d(x))*m_inv_ln10);VLEAVE;}
+		void c_cr_log					(CompP &r, CompP const &x, VectP const &y)	{assign(r, log(Comp4d(x))/log(Comp4d(Vect4d(y), m_zero)));VLEAVE;}
+		void c_cc_log					(CompP &r, CompP const &x, CompP const &y)	{assign(r, log(Comp4d(x))/log(Comp4d(y)));VLEAVE;}
+		void q_cq_log					(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, log(Comp4d(x))/log(Quat4d(y)));VLEAVE;}
+		void q_qc_log					(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, log(Quat4d(x))/log(Comp4d(y)));VLEAVE;}
+		void q_qq_log					(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, log(Quat4d(x))/log(Quat4d(y)));VLEAVE;}
 	
 	/*	typedef std::complex<double> Complex1d;
 		typedef boost::math::quaternion<double> Quaternion1d;
@@ -1068,37 +1068,37 @@ namespace	G2
 		bool disc_rr_pentate_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 		bool disc_cr_pentate_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}////*/
 
-		void  r_r_bitwise_shift_left_l	(VectP &r, VectP const &x)					{assign(r, Vect4d(::exp((Vect4d(x).floor()*m_ln2).v)));VLEAVE}//<<x = 2^x
-		void  c_c_bitwise_shift_left_l	(CompP &r, CompP const &x)					{assign(r, exp(Comp4d(x).floor()*m_ln2));VLEAVE}
-		void  q_q_bitwise_shift_left_l	(QuatP &r, QuatP const &x)					{assign(r, exp(Quat4d(x).floor()*m_ln2));VLEAVE}
-		void  r_r_bitwise_shift_left_r	(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, rx+rx);VLEAVE}//x<< = x*2
-		void  c_c_bitwise_shift_left_r	(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, cx+cx);VLEAVE}
-		void  q_q_bitwise_shift_left_r	(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, qx+qx);VLEAVE}
-		void r_rr_bitwise_shift_left	(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)*Vect4d(::exp((Vect4d(y).floor()*m_ln2).v)));VLEAVE}//x<<y = x*2^y
-		void c_rc_bitwise_shift_left	(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)*exp(Comp4d(y).floor()*m_ln2));VLEAVE}
-		void q_rq_bitwise_shift_left	(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)*exp(Quat4d(y).floor()*m_ln2));VLEAVE}
-		void c_cr_bitwise_shift_left	(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)*Vect4d(::exp((Vect4d(y).floor()*m_ln2).v)));VLEAVE}
-		void c_cc_bitwise_shift_left	(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)*exp(Comp4d(y).floor()*m_ln2));VLEAVE}
-		void q_cq_bitwise_shift_left	(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)*exp(Quat4d(y).floor()*m_ln2));VLEAVE}
-		void q_qr_bitwise_shift_left	(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)*Vect4d(::exp((Vect4d(y).floor()*m_ln2).v)));VLEAVE}
-		void q_qc_bitwise_shift_left	(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)*exp(Comp4d(y).floor()*m_ln2));VLEAVE}
-		void q_qq_bitwise_shift_left	(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)*exp(Quat4d(y).floor()*m_ln2));VLEAVE}
+		void  r_r_bitwise_shift_left_l	(VectP &r, VectP const &x)					{assign(r, Vect4d(::exp((Vect4d(x).floor()*m_ln2).v)));VLEAVE;}//<<x = 2^x
+		void  c_c_bitwise_shift_left_l	(CompP &r, CompP const &x)					{assign(r, exp(Comp4d(x).floor()*m_ln2));VLEAVE;}
+		void  q_q_bitwise_shift_left_l	(QuatP &r, QuatP const &x)					{assign(r, exp(Quat4d(x).floor()*m_ln2));VLEAVE;}
+		void  r_r_bitwise_shift_left_r	(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, rx+rx);VLEAVE;}//x<< = x*2
+		void  c_c_bitwise_shift_left_r	(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, cx+cx);VLEAVE;}
+		void  q_q_bitwise_shift_left_r	(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, qx+qx);VLEAVE;}
+		void r_rr_bitwise_shift_left	(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)*Vect4d(::exp((Vect4d(y).floor()*m_ln2).v)));VLEAVE;}//x<<y = x*2^y
+		void c_rc_bitwise_shift_left	(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)*exp(Comp4d(y).floor()*m_ln2));VLEAVE;}
+		void q_rq_bitwise_shift_left	(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)*exp(Quat4d(y).floor()*m_ln2));VLEAVE;}
+		void c_cr_bitwise_shift_left	(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)*Vect4d(::exp((Vect4d(y).floor()*m_ln2).v)));VLEAVE;}
+		void c_cc_bitwise_shift_left	(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)*exp(Comp4d(y).floor()*m_ln2));VLEAVE;}
+		void q_cq_bitwise_shift_left	(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)*exp(Quat4d(y).floor()*m_ln2));VLEAVE;}
+		void q_qr_bitwise_shift_left	(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)*Vect4d(::exp((Vect4d(y).floor()*m_ln2).v)));VLEAVE;}
+		void q_qc_bitwise_shift_left	(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)*exp(Comp4d(y).floor()*m_ln2));VLEAVE;}
+		void q_qq_bitwise_shift_left	(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)*exp(Quat4d(y).floor()*m_ln2));VLEAVE;}
 
-		void  r_r_bitwise_shift_right_l	(VectP &r, VectP const &x)					{assign(r, Vect4d(::exp((-Vect4d(x).floor()*m_ln2).v)));VLEAVE}//>>x = 2^-x = exp(-x*ln2)
-		void  c_c_bitwise_shift_right_l	(CompP &r, CompP const &x)					{assign(r, exp(-Comp4d(x).floor()*m_ln2));VLEAVE}
-		void  q_q_bitwise_shift_right_l	(QuatP &r, QuatP const &x)					{assign(r, exp(-Quat4d(x).floor()*m_ln2));VLEAVE}
-		void  r_r_bitwise_shift_right_r	(VectP &r, VectP const &x)					{assign(r, Vect4d(x)*m_half);VLEAVE}//x>> = x/2
-		void  c_c_bitwise_shift_right_r	(CompP &r, CompP const &x)					{assign(r, Comp4d(x)*m_half);VLEAVE}
-		void  q_q_bitwise_shift_right_r	(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)*m_half);VLEAVE}
-		void r_rr_bitwise_shift_right	(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)*Vect4d(::exp((-Vect4d(y).floor()*m_ln2).v)));VLEAVE}
-		void c_rc_bitwise_shift_right	(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)*exp(-Comp4d(y).floor()*m_ln2));VLEAVE}
-		void q_rq_bitwise_shift_right	(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)*exp(-Quat4d(y).floor()*m_ln2));VLEAVE}
-		void c_cr_bitwise_shift_right	(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)*Vect4d(::exp((-Vect4d(y).floor()*m_ln2).v)));VLEAVE}
-		void c_cc_bitwise_shift_right	(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)*exp(-Comp4d(y).floor()*m_ln2));VLEAVE}
-		void q_cq_bitwise_shift_right	(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)*exp(-Quat4d(y).floor()*m_ln2));VLEAVE}
-		void q_qr_bitwise_shift_right	(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)*Vect4d(::exp((-Vect4d(y).floor()*m_ln2).v)));VLEAVE}
-		void q_qc_bitwise_shift_right	(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)*exp(-Comp4d(y).floor()*m_ln2));VLEAVE}
-		void q_qq_bitwise_shift_right	(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)*exp(-Quat4d(y).floor()*m_ln2));VLEAVE}
+		void  r_r_bitwise_shift_right_l	(VectP &r, VectP const &x)					{assign(r, Vect4d(::exp((-Vect4d(x).floor()*m_ln2).v)));VLEAVE;}//>>x = 2^-x = exp(-x*ln2)
+		void  c_c_bitwise_shift_right_l	(CompP &r, CompP const &x)					{assign(r, exp(-Comp4d(x).floor()*m_ln2));VLEAVE;}
+		void  q_q_bitwise_shift_right_l	(QuatP &r, QuatP const &x)					{assign(r, exp(-Quat4d(x).floor()*m_ln2));VLEAVE;}
+		void  r_r_bitwise_shift_right_r	(VectP &r, VectP const &x)					{assign(r, Vect4d(x)*m_half);VLEAVE;}//x>> = x/2
+		void  c_c_bitwise_shift_right_r	(CompP &r, CompP const &x)					{assign(r, Comp4d(x)*m_half);VLEAVE;}
+		void  q_q_bitwise_shift_right_r	(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)*m_half);VLEAVE;}
+		void r_rr_bitwise_shift_right	(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)*Vect4d(::exp((-Vect4d(y).floor()*m_ln2).v)));VLEAVE;}
+		void c_rc_bitwise_shift_right	(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)*exp(-Comp4d(y).floor()*m_ln2));VLEAVE;}
+		void q_rq_bitwise_shift_right	(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)*exp(-Quat4d(y).floor()*m_ln2));VLEAVE;}
+		void c_cr_bitwise_shift_right	(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)*Vect4d(::exp((-Vect4d(y).floor()*m_ln2).v)));VLEAVE;}
+		void c_cc_bitwise_shift_right	(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)*exp(-Comp4d(y).floor()*m_ln2));VLEAVE;}
+		void q_cq_bitwise_shift_right	(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)*exp(-Quat4d(y).floor()*m_ln2));VLEAVE;}
+		void q_qr_bitwise_shift_right	(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)*Vect4d(::exp((-Vect4d(y).floor()*m_ln2).v)));VLEAVE;}
+		void q_qc_bitwise_shift_right	(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)*exp(-Comp4d(y).floor()*m_ln2));VLEAVE;}
+		void q_qq_bitwise_shift_right	(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)*exp(-Quat4d(y).floor()*m_ln2));VLEAVE;}
 
 	/*	__forceinline Vect4d bitwise_not(Vect4d const &x)
 		{
@@ -1394,157 +1394,157 @@ namespace	G2
 		Quat4d q_qc_bitwise_xnor			(Quat4d const &x, Comp4d const &y)	{return Quat4d(bitwise_xnor(x.r, y.r), bitwise_xnor(x.i, y.i), x.j, x.k);}
 		Quat4d q_qq_bitwise_xnor			(Quat4d const &x, Quat4d const &y)	{return Quat4d(bitwise_xnor(x.r, y.r), bitwise_xnor(x.i, y.i), bitwise_xnor(x.j, y.j), bitwise_xnor(x.k, y.k));}//*/
 	
-		void  r_r_logic_equal			(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)==m_zero)&m_one);VLEAVE}
-		void  r_c_logic_equal			(VectP &r, CompP const &x)					{assign(r, Comp4d(x).c_is_true().complement()&m_one);VLEAVE}
-		void  r_q_logic_equal			(VectP &r, QuatP const &x)					{assign(r, Quat4d(x).q_is_true().complement()&m_one);VLEAVE}
-		void r_rr_logic_equal			(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)==Vect4d(y))&m_one);VLEAVE}
-		void r_rc_logic_equal			(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)==Comp4d(y))&m_one);VLEAVE}
-		void r_rq_logic_equal			(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)==Quat4d(y))&m_one);VLEAVE}
-		void r_cr_logic_equal			(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x)==Vect4d(y))&m_one);VLEAVE}
-		void r_cc_logic_equal			(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x)==Comp4d(y))&m_one);VLEAVE}
-		void r_cq_logic_equal			(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x)==Quat4d(y))&m_one);VLEAVE}
-		void r_qr_logic_equal			(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x)==Vect4d(y))&m_one);VLEAVE}
-		void r_qc_logic_equal			(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x)==Comp4d(y))&m_one);VLEAVE}
-		void r_qq_logic_equal			(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x)==Quat4d(y))&m_one);VLEAVE}
+		void  r_r_logic_equal			(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)==m_zero)&m_one);VLEAVE;}
+		void  r_c_logic_equal			(VectP &r, CompP const &x)					{assign(r, Comp4d(x).c_is_true().complement()&m_one);VLEAVE;}
+		void  r_q_logic_equal			(VectP &r, QuatP const &x)					{assign(r, Quat4d(x).q_is_true().complement()&m_one);VLEAVE;}
+		void r_rr_logic_equal			(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)==Vect4d(y))&m_one);VLEAVE;}
+		void r_rc_logic_equal			(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)==Comp4d(y))&m_one);VLEAVE;}
+		void r_rq_logic_equal			(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)==Quat4d(y))&m_one);VLEAVE;}
+		void r_cr_logic_equal			(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x)==Vect4d(y))&m_one);VLEAVE;}
+		void r_cc_logic_equal			(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x)==Comp4d(y))&m_one);VLEAVE;}
+		void r_cq_logic_equal			(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x)==Quat4d(y))&m_one);VLEAVE;}
+		void r_qr_logic_equal			(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x)==Vect4d(y))&m_one);VLEAVE;}
+		void r_qc_logic_equal			(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x)==Comp4d(y))&m_one);VLEAVE;}
+		void r_qq_logic_equal			(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x)==Quat4d(y))&m_one);VLEAVE;}
 	
-		void  r_r_logic_not_equal		(VectP &r, VectP const &x)					{assign(r, Vect4d(x).r_is_true()&m_one);VLEAVE}
-		void  r_c_logic_not_equal		(VectP &r, CompP const &x)					{assign(r, Comp4d(x).c_is_true()&m_one);VLEAVE}
-		void  r_q_logic_not_equal		(VectP &r, QuatP const &x)					{assign(r, Quat4d(x).q_is_true()&m_one);VLEAVE}
-		void r_rr_logic_not_equal		(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)!=Vect4d(y))&m_one);VLEAVE}
-		void r_rc_logic_not_equal		(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)!=Comp4d(y))&m_one);VLEAVE}
-		void r_rq_logic_not_equal		(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)!=Quat4d(y))&m_one);VLEAVE}
-		void r_cr_logic_not_equal		(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x)!=Vect4d(y))&m_one);VLEAVE}
-		void r_cc_logic_not_equal		(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x)!=Comp4d(y))&m_one);VLEAVE}
-		void r_cq_logic_not_equal		(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x)!=Quat4d(y))&m_one);VLEAVE}
-		void r_qr_logic_not_equal		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x)!=Vect4d(y))&m_one);VLEAVE}
-		void r_qc_logic_not_equal		(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x)!=Comp4d(y))&m_one);VLEAVE}
-		void r_qq_logic_not_equal		(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x)!=Quat4d(y))&m_one);VLEAVE}
+		void  r_r_logic_not_equal		(VectP &r, VectP const &x)					{assign(r, Vect4d(x).r_is_true()&m_one);VLEAVE;}
+		void  r_c_logic_not_equal		(VectP &r, CompP const &x)					{assign(r, Comp4d(x).c_is_true()&m_one);VLEAVE;}
+		void  r_q_logic_not_equal		(VectP &r, QuatP const &x)					{assign(r, Quat4d(x).q_is_true()&m_one);VLEAVE;}
+		void r_rr_logic_not_equal		(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)!=Vect4d(y))&m_one);VLEAVE;}
+		void r_rc_logic_not_equal		(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)!=Comp4d(y))&m_one);VLEAVE;}
+		void r_rq_logic_not_equal		(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)!=Quat4d(y))&m_one);VLEAVE;}
+		void r_cr_logic_not_equal		(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x)!=Vect4d(y))&m_one);VLEAVE;}
+		void r_cc_logic_not_equal		(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x)!=Comp4d(y))&m_one);VLEAVE;}
+		void r_cq_logic_not_equal		(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x)!=Quat4d(y))&m_one);VLEAVE;}
+		void r_qr_logic_not_equal		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x)!=Vect4d(y))&m_one);VLEAVE;}
+		void r_qc_logic_not_equal		(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x)!=Comp4d(y))&m_one);VLEAVE;}
+		void r_qq_logic_not_equal		(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x)!=Quat4d(y))&m_one);VLEAVE;}
 	
-		void  r_r_logic_less_l			(VectP &r, VectP const &x)					{assign(r, (m_zero<Vect4d(x))&m_one);VLEAVE}
-		void  r_c_logic_less_l			(VectP &r, CompP const &x)					{assign(r, (m_zero<Vect4d(x.r))&m_one);VLEAVE}
-		void  r_q_logic_less_l			(VectP &r, QuatP const &x)					{assign(r, (m_zero<Vect4d(x.r))&m_one);VLEAVE}
-		void  r_r_logic_less_r			(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)<m_zero)&m_one);VLEAVE}
-		void  r_c_logic_less_r			(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)<m_zero)&m_one);VLEAVE}
-		void  r_q_logic_less_r			(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)<m_zero)&m_one);VLEAVE}
-		void r_rr_logic_less			(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)<Vect4d(y))&m_one);VLEAVE}
-		void r_rc_logic_less			(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)<Vect4d(y.r))&m_one);VLEAVE}
-		void r_rq_logic_less			(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)<Vect4d(y.r))&m_one);VLEAVE}
-		void r_cr_logic_less			(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y))&m_one);VLEAVE}
-		void r_cc_logic_less			(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE}
-		void r_cq_logic_less			(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE}
-		void r_qr_logic_less			(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y))&m_one);VLEAVE}
-		void r_qc_logic_less			(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE}
-		void r_qq_logic_less			(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE}
+		void  r_r_logic_less_l			(VectP &r, VectP const &x)					{assign(r, (m_zero<Vect4d(x))&m_one);VLEAVE;}
+		void  r_c_logic_less_l			(VectP &r, CompP const &x)					{assign(r, (m_zero<Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_q_logic_less_l			(VectP &r, QuatP const &x)					{assign(r, (m_zero<Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_r_logic_less_r			(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)<m_zero)&m_one);VLEAVE;}
+		void  r_c_logic_less_r			(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)<m_zero)&m_one);VLEAVE;}
+		void  r_q_logic_less_r			(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)<m_zero)&m_one);VLEAVE;}
+		void r_rr_logic_less			(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)<Vect4d(y))&m_one);VLEAVE;}
+		void r_rc_logic_less			(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)<Vect4d(y.r))&m_one);VLEAVE;}
+		void r_rq_logic_less			(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)<Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cr_logic_less			(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y))&m_one);VLEAVE;}
+		void r_cc_logic_less			(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cq_logic_less			(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qr_logic_less			(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y))&m_one);VLEAVE;}
+		void r_qc_logic_less			(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qq_logic_less			(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<Vect4d(y.r))&m_one);VLEAVE;}
 	
-		void  r_r_logic_less_equal_l	(VectP &r, VectP const &x)					{assign(r, (m_zero<=Vect4d(x))&m_one);VLEAVE}
-		void  r_c_logic_less_equal_l	(VectP &r, CompP const &x)					{assign(r, (m_zero<=Vect4d(x.r))&m_one);VLEAVE}
-		void  r_q_logic_less_equal_l	(VectP &r, QuatP const &x)					{assign(r, (m_zero<=Vect4d(x.r))&m_one);VLEAVE}
-		void  r_r_logic_less_equal_r	(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)<=m_zero)&m_one);VLEAVE}
-		void  r_c_logic_less_equal_r	(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)<=m_zero)&m_one);VLEAVE}
-		void  r_q_logic_less_equal_r	(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)<=m_zero)&m_one);VLEAVE}
-		void r_rr_logic_less_equal		(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)<=Vect4d(y))&m_one);VLEAVE}
-		void r_rc_logic_less_equal		(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)<=Vect4d(y.r))&m_one);VLEAVE}
-		void r_rq_logic_less_equal		(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)<=Vect4d(y.r))&m_one);VLEAVE}
-		void r_cr_logic_less_equal		(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y))&m_one);VLEAVE}
-		void r_cc_logic_less_equal		(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE}
-		void r_cq_logic_less_equal		(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE}
-		void r_qr_logic_less_equal		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y))&m_one);VLEAVE}
-		void r_qc_logic_less_equal		(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE}
-		void r_qq_logic_less_equal		(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE}
+		void  r_r_logic_less_equal_l	(VectP &r, VectP const &x)					{assign(r, (m_zero<=Vect4d(x))&m_one);VLEAVE;}
+		void  r_c_logic_less_equal_l	(VectP &r, CompP const &x)					{assign(r, (m_zero<=Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_q_logic_less_equal_l	(VectP &r, QuatP const &x)					{assign(r, (m_zero<=Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_r_logic_less_equal_r	(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)<=m_zero)&m_one);VLEAVE;}
+		void  r_c_logic_less_equal_r	(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)<=m_zero)&m_one);VLEAVE;}
+		void  r_q_logic_less_equal_r	(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)<=m_zero)&m_one);VLEAVE;}
+		void r_rr_logic_less_equal		(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)<=Vect4d(y))&m_one);VLEAVE;}
+		void r_rc_logic_less_equal		(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)<=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_rq_logic_less_equal		(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)<=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cr_logic_less_equal		(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y))&m_one);VLEAVE;}
+		void r_cc_logic_less_equal		(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cq_logic_less_equal		(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qr_logic_less_equal		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y))&m_one);VLEAVE;}
+		void r_qc_logic_less_equal		(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qq_logic_less_equal		(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)<=Vect4d(y.r))&m_one);VLEAVE;}
 	
-		void  r_r_logic_greater_l		(VectP &r, VectP const &x)					{assign(r, (m_zero>Vect4d(x))&m_one);VLEAVE}
-		void  r_c_logic_greater_l		(VectP &r, CompP const &x)					{assign(r, (m_zero>Vect4d(x.r))&m_one);VLEAVE}
-		void  r_q_logic_greater_l		(VectP &r, QuatP const &x)					{assign(r, (m_zero>Vect4d(x.r))&m_one);VLEAVE}
-		void  r_r_logic_greater_r		(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)>m_zero)&m_one);VLEAVE}
-		void  r_c_logic_greater_r		(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)>m_zero)&m_one);VLEAVE}
-		void  r_q_logic_greater_r		(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)>m_zero)&m_one);VLEAVE}
-		void r_rr_logic_greater			(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)>Vect4d(y))&m_one);VLEAVE}
-		void r_rc_logic_greater			(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)>Vect4d(y.r))&m_one);VLEAVE}
-		void r_rq_logic_greater			(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)>Vect4d(y.r))&m_one);VLEAVE}
-		void r_cr_logic_greater			(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y))&m_one);VLEAVE}
-		void r_cc_logic_greater			(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE}
-		void r_cq_logic_greater			(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE}
-		void r_qr_logic_greater			(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y))&m_one);VLEAVE}
-		void r_qc_logic_greater			(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE}
-		void r_qq_logic_greater			(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE}
+		void  r_r_logic_greater_l		(VectP &r, VectP const &x)					{assign(r, (m_zero>Vect4d(x))&m_one);VLEAVE;}
+		void  r_c_logic_greater_l		(VectP &r, CompP const &x)					{assign(r, (m_zero>Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_q_logic_greater_l		(VectP &r, QuatP const &x)					{assign(r, (m_zero>Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_r_logic_greater_r		(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)>m_zero)&m_one);VLEAVE;}
+		void  r_c_logic_greater_r		(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)>m_zero)&m_one);VLEAVE;}
+		void  r_q_logic_greater_r		(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)>m_zero)&m_one);VLEAVE;}
+		void r_rr_logic_greater			(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)>Vect4d(y))&m_one);VLEAVE;}
+		void r_rc_logic_greater			(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)>Vect4d(y.r))&m_one);VLEAVE;}
+		void r_rq_logic_greater			(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)>Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cr_logic_greater			(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y))&m_one);VLEAVE;}
+		void r_cc_logic_greater			(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cq_logic_greater			(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qr_logic_greater			(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y))&m_one);VLEAVE;}
+		void r_qc_logic_greater			(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qq_logic_greater			(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>Vect4d(y.r))&m_one);VLEAVE;}
 	
-		void  r_r_logic_greater_equal_l	(VectP &r, VectP const &x)					{assign(r, (m_zero>=Vect4d(x))&m_one);VLEAVE}
-		void  r_c_logic_greater_equal_l	(VectP &r, CompP const &x)					{assign(r, (m_zero>=Vect4d(x.r))&m_one);VLEAVE}
-		void  r_q_logic_greater_equal_l	(VectP &r, QuatP const &x)					{assign(r, (m_zero>=Vect4d(x.r))&m_one);VLEAVE}
-		void  r_r_logic_greater_equal_r	(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)>=m_zero)&m_one);VLEAVE}
-		void  r_c_logic_greater_equal_r	(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)>=m_zero)&m_one);VLEAVE}
-		void  r_q_logic_greater_equal_r	(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)>=m_zero)&m_one);VLEAVE}
-		void r_rr_logic_greater_equal	(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)>=Vect4d(y))&m_one);VLEAVE}
-		void r_rc_logic_greater_equal	(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)>=Vect4d(y.r))&m_one);VLEAVE}
-		void r_rq_logic_greater_equal	(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)>=Vect4d(y.r))&m_one);VLEAVE}
-		void r_cr_logic_greater_equal	(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y))&m_one);VLEAVE}
-		void r_cc_logic_greater_equal	(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE}
-		void r_cq_logic_greater_equal	(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE}
-		void r_qr_logic_greater_equal	(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y))&m_one);VLEAVE}
-		void r_qc_logic_greater_equal	(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE}
-		void r_qq_logic_greater_equal	(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE}
+		void  r_r_logic_greater_equal_l	(VectP &r, VectP const &x)					{assign(r, (m_zero>=Vect4d(x))&m_one);VLEAVE;}
+		void  r_c_logic_greater_equal_l	(VectP &r, CompP const &x)					{assign(r, (m_zero>=Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_q_logic_greater_equal_l	(VectP &r, QuatP const &x)					{assign(r, (m_zero>=Vect4d(x.r))&m_one);VLEAVE;}
+		void  r_r_logic_greater_equal_r	(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)>=m_zero)&m_one);VLEAVE;}
+		void  r_c_logic_greater_equal_r	(VectP &r, CompP const &x)					{assign(r, (Vect4d(x.r)>=m_zero)&m_one);VLEAVE;}
+		void  r_q_logic_greater_equal_r	(VectP &r, QuatP const &x)					{assign(r, (Vect4d(x.r)>=m_zero)&m_one);VLEAVE;}
+		void r_rr_logic_greater_equal	(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x)>=Vect4d(y))&m_one);VLEAVE;}
+		void r_rc_logic_greater_equal	(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x)>=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_rq_logic_greater_equal	(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x)>=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cr_logic_greater_equal	(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y))&m_one);VLEAVE;}
+		void r_cc_logic_greater_equal	(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_cq_logic_greater_equal	(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qr_logic_greater_equal	(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y))&m_one);VLEAVE;}
+		void r_qc_logic_greater_equal	(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE;}
+		void r_qq_logic_greater_equal	(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Vect4d(x.r)>=Vect4d(y.r))&m_one);VLEAVE;}
 	
-		void  r_r_logic_not				(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)==m_zero)&m_one);VLEAVE}
-		void  r_c_logic_not				(VectP &r, CompP const &x)					{Comp4d cx=x; assign(r, (cx.r==m_zero)&(cx.i==m_zero)&m_one);VLEAVE}
-		void  r_q_logic_not				(VectP &r, QuatP const &x)					{Quat4d qx=x; assign(r, (qx.r==m_zero)&(qx.i==m_zero)&(qx.j==m_zero)&(qx.k==m_zero)&m_one);VLEAVE}
+		void  r_r_logic_not				(VectP &r, VectP const &x)					{assign(r, (Vect4d(x)==m_zero)&m_one);VLEAVE;}
+		void  r_c_logic_not				(VectP &r, CompP const &x)					{Comp4d cx=x; assign(r, (cx.r==m_zero)&(cx.i==m_zero)&m_one);VLEAVE;}
+		void  r_q_logic_not				(VectP &r, QuatP const &x)					{Quat4d qx=x; assign(r, (qx.r==m_zero)&(qx.i==m_zero)&(qx.j==m_zero)&(qx.k==m_zero)&m_one);VLEAVE;}
 	
-		void r_rr_logic_and				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x).r_is_true()&Vect4d(y).r_is_true()&m_one);VLEAVE}
-		void r_rc_logic_and				(VectP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x).r_is_true()&Comp4d(y).c_is_true()&m_one);VLEAVE}
-		void r_rq_logic_and				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x).r_is_true()&Quat4d(y).q_is_true()&m_one);VLEAVE}
-		void r_cr_logic_and				(VectP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x).c_is_true()&Vect4d(y).r_is_true()&m_one);VLEAVE}
-		void r_cc_logic_and				(VectP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x).c_is_true()&Comp4d(y).c_is_true()&m_one);VLEAVE}
-		void r_cq_logic_and				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x).c_is_true()&Quat4d(y).q_is_true()&m_one);VLEAVE}
-		void r_qr_logic_and				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x).q_is_true()&Vect4d(y).r_is_true()&m_one);VLEAVE}
-		void r_qc_logic_and				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x).q_is_true()&Comp4d(y).c_is_true()&m_one);VLEAVE}
-		void r_qq_logic_and				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x).q_is_true()&Quat4d(y).q_is_true()&m_one);VLEAVE}
+		void r_rr_logic_and				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x).r_is_true()&Vect4d(y).r_is_true()&m_one);VLEAVE;}
+		void r_rc_logic_and				(VectP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x).r_is_true()&Comp4d(y).c_is_true()&m_one);VLEAVE;}
+		void r_rq_logic_and				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x).r_is_true()&Quat4d(y).q_is_true()&m_one);VLEAVE;}
+		void r_cr_logic_and				(VectP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x).c_is_true()&Vect4d(y).r_is_true()&m_one);VLEAVE;}
+		void r_cc_logic_and				(VectP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x).c_is_true()&Comp4d(y).c_is_true()&m_one);VLEAVE;}
+		void r_cq_logic_and				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x).c_is_true()&Quat4d(y).q_is_true()&m_one);VLEAVE;}
+		void r_qr_logic_and				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x).q_is_true()&Vect4d(y).r_is_true()&m_one);VLEAVE;}
+		void r_qc_logic_and				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x).q_is_true()&Comp4d(y).c_is_true()&m_one);VLEAVE;}
+		void r_qq_logic_and				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x).q_is_true()&Quat4d(y).q_is_true()&m_one);VLEAVE;}
 	
-		void r_rr_logic_or				(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x).r_is_true()|Vect4d(y).r_is_true())&m_one);VLEAVE}
-		void r_rc_logic_or				(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x).r_is_true()|Comp4d(y).c_is_true())&m_one);VLEAVE}
-		void r_rq_logic_or				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x).r_is_true()|Quat4d(y).q_is_true())&m_one);VLEAVE}
-		void r_cr_logic_or				(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x).c_is_true()|Vect4d(y).r_is_true())&m_one);VLEAVE}
-		void r_cc_logic_or				(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x).c_is_true()|Comp4d(y).c_is_true())&m_one);VLEAVE}
-		void r_cq_logic_or				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x).c_is_true()|Quat4d(y).q_is_true())&m_one);VLEAVE}
-		void r_qr_logic_or				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x).q_is_true()|Vect4d(y).r_is_true())&m_one);VLEAVE}
-		void r_qc_logic_or				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x).q_is_true()|Comp4d(y).c_is_true())&m_one);VLEAVE}
-		void r_qq_logic_or				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x).q_is_true()|Quat4d(y).q_is_true())&m_one);VLEAVE}
+		void r_rr_logic_or				(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x).r_is_true()|Vect4d(y).r_is_true())&m_one);VLEAVE;}
+		void r_rc_logic_or				(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x).r_is_true()|Comp4d(y).c_is_true())&m_one);VLEAVE;}
+		void r_rq_logic_or				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x).r_is_true()|Quat4d(y).q_is_true())&m_one);VLEAVE;}
+		void r_cr_logic_or				(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x).c_is_true()|Vect4d(y).r_is_true())&m_one);VLEAVE;}
+		void r_cc_logic_or				(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x).c_is_true()|Comp4d(y).c_is_true())&m_one);VLEAVE;}
+		void r_cq_logic_or				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x).c_is_true()|Quat4d(y).q_is_true())&m_one);VLEAVE;}
+		void r_qr_logic_or				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x).q_is_true()|Vect4d(y).r_is_true())&m_one);VLEAVE;}
+		void r_qc_logic_or				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x).q_is_true()|Comp4d(y).c_is_true())&m_one);VLEAVE;}
+		void r_qq_logic_or				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x).q_is_true()|Quat4d(y).q_is_true())&m_one);VLEAVE;}
 	
-		void r_rr_logic_xor				(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x).r_is_true()^Vect4d(y).r_is_true())&m_one);VLEAVE}
-		void r_rc_logic_xor				(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x).r_is_true()^Comp4d(y).c_is_true())&m_one);VLEAVE}
-		void r_rq_logic_xor				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x).r_is_true()^Quat4d(y).q_is_true())&m_one);VLEAVE}
-		void r_cr_logic_xor				(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x).c_is_true()^Vect4d(y).r_is_true())&m_one);VLEAVE}
-		void r_cc_logic_xor				(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x).c_is_true()^Comp4d(y).c_is_true())&m_one);VLEAVE}
-		void r_cq_logic_xor				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x).c_is_true()^Quat4d(y).q_is_true())&m_one);VLEAVE}
-		void r_qr_logic_xor				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x).q_is_true()^Vect4d(y).r_is_true())&m_one);VLEAVE}
-		void r_qc_logic_xor				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x).q_is_true()^Comp4d(y).c_is_true())&m_one);VLEAVE}
-		void r_qq_logic_xor				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x).q_is_true()^Quat4d(y).q_is_true())&m_one);VLEAVE}
+		void r_rr_logic_xor				(VectP &r, VectP const &x, VectP const &y)	{assign(r, (Vect4d(x).r_is_true()^Vect4d(y).r_is_true())&m_one);VLEAVE;}
+		void r_rc_logic_xor				(VectP &r, VectP const &x, CompP const &y)	{assign(r, (Vect4d(x).r_is_true()^Comp4d(y).c_is_true())&m_one);VLEAVE;}
+		void r_rq_logic_xor				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, (Vect4d(x).r_is_true()^Quat4d(y).q_is_true())&m_one);VLEAVE;}
+		void r_cr_logic_xor				(VectP &r, CompP const &x, VectP const &y)	{assign(r, (Comp4d(x).c_is_true()^Vect4d(y).r_is_true())&m_one);VLEAVE;}
+		void r_cc_logic_xor				(VectP &r, CompP const &x, CompP const &y)	{assign(r, (Comp4d(x).c_is_true()^Comp4d(y).c_is_true())&m_one);VLEAVE;}
+		void r_cq_logic_xor				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, (Comp4d(x).c_is_true()^Quat4d(y).q_is_true())&m_one);VLEAVE;}
+		void r_qr_logic_xor				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, (Quat4d(x).q_is_true()^Vect4d(y).r_is_true())&m_one);VLEAVE;}
+		void r_qc_logic_xor				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, (Quat4d(x).q_is_true()^Comp4d(y).c_is_true())&m_one);VLEAVE;}
+		void r_qq_logic_xor				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, (Quat4d(x).q_is_true()^Quat4d(y).q_is_true())&m_one);VLEAVE;}
 	
-		void r_rr_condition_zero	(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, mask=rx.r_is_true();	assign(r, rx&mask|Vect4d(y)&mask.complement());VLEAVE}
-		void c_rc_condition_zero	(CompP &r, VectP const &x, CompP const &y)	{Vect4d rx=x, mask=rx.r_is_true();	assign(r, rx&mask|and(Comp4d(y), mask.complement()));VLEAVE}
-		void q_rq_condition_zero	(QuatP &r, VectP const &x, QuatP const &y)	{Vect4d rx=x, mask=rx.r_is_true();	assign(r, rx&mask|and(Quat4d(y), mask.complement()));VLEAVE}
-		void c_cr_condition_zero	(CompP &r, CompP const &x, VectP const &y)	{Comp4d cx=x; Vect4d mask=cx.c_is_true();	assign(r, and(cx, mask)|Vect4d(y)&mask.complement());VLEAVE}
-		void c_cc_condition_zero	(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; Vect4d mask=cx.c_is_true();	assign(r, and(cx, mask)|and(Comp4d(y), mask.complement()));VLEAVE}
-		void q_cq_condition_zero	(QuatP &r, CompP const &x, QuatP const &y)	{Comp4d cx=x; Vect4d mask=cx.c_is_true();	assign(r, and(cx, mask)|and(Quat4d(y), mask.complement()));VLEAVE}
-		void q_qr_condition_zero	(QuatP &r, QuatP const &x, VectP const &y)	{Quat4d qx=x; Vect4d mask=qx.q_is_true();	assign(r, and(qx, mask)|Vect4d(y)&mask.complement());VLEAVE}
-		void q_qc_condition_zero	(QuatP &r, QuatP const &x, CompP const &y)	{Quat4d qx=x; Vect4d mask=qx.q_is_true();	assign(r, and(qx, mask)|and(Comp4d(y), mask.complement()));VLEAVE}
-		void q_qq_condition_zero	(QuatP &r, QuatP const &x, QuatP const &y)	{Quat4d qx=x; Vect4d mask=qx.q_is_true();	assign(r, and(qx, mask)|and(Quat4d(y), mask.complement()));VLEAVE}
+		void r_rr_condition_zero	(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, mask=rx.r_is_true();	assign(r, rx&mask|Vect4d(y)&mask.complement());VLEAVE;}
+		void c_rc_condition_zero	(CompP &r, VectP const &x, CompP const &y)	{Vect4d rx=x, mask=rx.r_is_true();	assign(r, rx&mask|and(Comp4d(y), mask.complement()));VLEAVE;}
+		void q_rq_condition_zero	(QuatP &r, VectP const &x, QuatP const &y)	{Vect4d rx=x, mask=rx.r_is_true();	assign(r, rx&mask|and(Quat4d(y), mask.complement()));VLEAVE;}
+		void c_cr_condition_zero	(CompP &r, CompP const &x, VectP const &y)	{Comp4d cx=x; Vect4d mask=cx.c_is_true();	assign(r, and(cx, mask)|Vect4d(y)&mask.complement());VLEAVE;}
+		void c_cc_condition_zero	(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; Vect4d mask=cx.c_is_true();	assign(r, and(cx, mask)|and(Comp4d(y), mask.complement()));VLEAVE;}
+		void q_cq_condition_zero	(QuatP &r, CompP const &x, QuatP const &y)	{Comp4d cx=x; Vect4d mask=cx.c_is_true();	assign(r, and(cx, mask)|and(Quat4d(y), mask.complement()));VLEAVE;}
+		void q_qr_condition_zero	(QuatP &r, QuatP const &x, VectP const &y)	{Quat4d qx=x; Vect4d mask=qx.q_is_true();	assign(r, and(qx, mask)|Vect4d(y)&mask.complement());VLEAVE;}
+		void q_qc_condition_zero	(QuatP &r, QuatP const &x, CompP const &y)	{Quat4d qx=x; Vect4d mask=qx.q_is_true();	assign(r, and(qx, mask)|and(Comp4d(y), mask.complement()));VLEAVE;}
+		void q_qq_condition_zero	(QuatP &r, QuatP const &x, QuatP const &y)	{Quat4d qx=x; Vect4d mask=qx.q_is_true();	assign(r, and(qx, mask)|and(Quat4d(y), mask.complement()));VLEAVE;}
 
-		void  r_r_percent				(VectP &r, VectP const &x)					{assign(r, Vect4d(x)*m_one_percent);VLEAVE}
-		void  c_c_percent				(CompP &r, CompP const &x)					{assign(r, Comp4d(x)*m_one_percent);VLEAVE}
-		void  q_q_percent				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)*m_one_percent);VLEAVE}
+		void  r_r_percent				(VectP &r, VectP const &x)					{assign(r, Vect4d(x)*m_one_percent);VLEAVE;}
+		void  c_c_percent				(CompP &r, CompP const &x)					{assign(r, Comp4d(x)*m_one_percent);VLEAVE;}
+		void  q_q_percent				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)*m_one_percent);VLEAVE;}
 	
-		void r_rr_modulo				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)%Vect4d(y));VLEAVE}
-		void c_rc_modulo				(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)%Comp4d(y));VLEAVE}
-		void q_rq_modulo				(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)%Quat4d(y));VLEAVE}
-		void c_cr_modulo				(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)%Vect4d(y));VLEAVE}
-		void c_cc_modulo				(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)%Comp4d(y));VLEAVE}
-		void q_cq_modulo				(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)%Quat4d(y));VLEAVE}
-		void q_qr_modulo				(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)%Vect4d(y));VLEAVE}
-		void q_qc_modulo				(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)%Comp4d(y));VLEAVE}
-		void q_qq_modulo				(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)%Quat4d(y));VLEAVE}
+		void r_rr_modulo				(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(x)%Vect4d(y));VLEAVE;}
+		void c_rc_modulo				(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect4d(x)%Comp4d(y));VLEAVE;}
+		void q_rq_modulo				(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, Vect4d(x)%Quat4d(y));VLEAVE;}
+		void c_cr_modulo				(CompP &r, CompP const &x, VectP const &y)	{assign(r, Comp4d(x)%Vect4d(y));VLEAVE;}
+		void c_cc_modulo				(CompP &r, CompP const &x, CompP const &y)	{assign(r, Comp4d(x)%Comp4d(y));VLEAVE;}
+		void q_cq_modulo				(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, Comp4d(x)%Quat4d(y));VLEAVE;}
+		void q_qr_modulo				(QuatP &r, QuatP const &x, VectP const &y)	{assign(r, Quat4d(x)%Vect4d(y));VLEAVE;}
+		void q_qc_modulo				(QuatP &r, QuatP const &x, CompP const &y)	{assign(r, Quat4d(x)%Comp4d(y));VLEAVE;}
+		void q_qq_modulo				(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, Quat4d(x)%Quat4d(y));VLEAVE;}
 
-		void  r_r_sgn					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, ((rx>m_zero)&m_one)-((rx<m_zero)&m_one));VLEAVE}
-		void  c_c_sgn					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mag=cx.abs(); assign(r, and((cx/mag), mag.r_is_true()));VLEAVE}
-		void  q_q_sgn					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mag=qx.abs(); assign(r, and((qx/mag), mag.r_is_true()));VLEAVE}
+		void  r_r_sgn					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, ((rx>m_zero)&m_one)-((rx<m_zero)&m_one));VLEAVE;}
+		void  c_c_sgn					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mag=cx.abs(); assign(r, and((cx/mag), mag.r_is_true()));VLEAVE;}
+		void  q_q_sgn					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mag=qx.abs(); assign(r, and((qx/mag), mag.r_is_true()));VLEAVE;}
 		
 		__forceinline Comp4d sq(Comp4d const &x){Vect4d ri=x.r*x.i; return Comp4d(x.r*x.r-x.i*x.i, ri+ri);}
 		//__forceinline Comp4d sq(Comp4d const &x){return Comp4d(x.r*x.r-x.i*x.i, m_two*x.r*x.i);}
@@ -1553,12 +1553,12 @@ namespace	G2
 			auto _2r=x.r+x.r;
 			return Quat4d(x.r*x.r-x.i*x.i-x.j*x.j-x.k*x.k, x.i*_2r, x.j*_2r, x.k*_2r);
 		}
-		void  r_r_sq					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, rx*rx);VLEAVE}
-		void  c_c_sq					(CompP &r, CompP const &x)					{assign(r, sq(Comp4d(x)));VLEAVE}
-		void  q_q_sq					(QuatP &r, QuatP const &x)					{assign(r, sq(Quat4d(x)));VLEAVE}
+		void  r_r_sq					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, rx*rx);VLEAVE;}
+		void  c_c_sq					(CompP &r, CompP const &x)					{assign(r, sq(Comp4d(x)));VLEAVE;}
+		void  q_q_sq					(QuatP &r, QuatP const &x)					{assign(r, sq(Quat4d(x)));VLEAVE;}
 
-		void  c_c_sqrt					(CompP &r, CompP const &x)					{assign(r, sqrt(Comp4d(x)));VLEAVE}
-		void  q_q_sqrt					(QuatP &r, QuatP const &x)					{assign(r, sqrt(Quat4d(x)));VLEAVE}
+		void  c_c_sqrt					(CompP &r, CompP const &x)					{assign(r, sqrt(Comp4d(x)));VLEAVE;}
+		void  q_q_sqrt					(QuatP &r, QuatP const &x)					{assign(r, sqrt(Quat4d(x)));VLEAVE;}
 
 		void  r_r_invsqrt				(VectP &r, VectP const &x)
 		{
@@ -1582,11 +1582,11 @@ namespace	G2
 			Vect4d t0=t;
 #endif
 			assign(r, t0*(m_one_and_half-m_half*rx*t0*t0));
-			VLEAVE
+			VLEAVE;
 		}
 
-		void  r_r_cbrt					(VectP &r, VectP const &x)					{assign(r, Vect4d(::cbrt(Vect4d(x).v)));VLEAVE}
-		void  c_c_cbrt					(CompP &r, CompP const &x)					{assign(r, exp(m_third*log(Comp4d(x))));VLEAVE}//optimize
+		void  r_r_cbrt					(VectP &r, VectP const &x)					{assign(r, Vect4d(::cbrt(Vect4d(x).v)));VLEAVE;}
+		void  c_c_cbrt					(CompP &r, CompP const &x)					{assign(r, exp(m_third*log(Comp4d(x))));VLEAVE;}//optimize
 		void  q_q_cbrt					(QuatP &r, QuatP const &x)
 		{
 			Quat4d qx=x;
@@ -1603,12 +1603,12 @@ namespace	G2
 			assign(r, Quat4d(rr&real|result.r&real_c, result.i&real_c, result.j&real_c, result.k&real_c));
 
 		//	assign(r, exp(m_third*log(Quat4d(x))));
-			VLEAVE
+			VLEAVE;
 		}
 
-		void  r_r_gauss					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, Vect4d(::exp((-rx*rx).v)));VLEAVE}
-		void  c_c_gauss					(CompP &r, CompP const &x)					{assign(r, exp(-sq(Comp4d(x))));VLEAVE}
-		void  q_q_gauss					(QuatP &r, QuatP const &x)					{assign(r, exp(-sq(Quat4d(x))));VLEAVE}
+		void  r_r_gauss					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, Vect4d(::exp((-rx*rx).v)));VLEAVE;}
+		void  c_c_gauss					(CompP &r, CompP const &x)					{assign(r, exp(-sq(Comp4d(x))));VLEAVE;}
+		void  q_q_gauss					(QuatP &r, QuatP const &x)					{assign(r, exp(-sq(Quat4d(x))));VLEAVE;}
 
 	/*	void  r_r_erf					(VectP &r, VectP const &x)					{assign(r, Vect4d(boost::math::erf(x.lo()), boost::math::erf(x.hi()));}
 
@@ -1708,7 +1708,7 @@ namespace	G2
 				denom+=m_one;
 			}
 			assign(r, Vect4d(_mm256_set1_pd(_ln_sqrt_2pi))+(rx+m_half)*Vect4d(::log(y.v))-y+Vect4d(::log((series/rx).v)));
-			VLEAVE
+			VLEAVE;
 		}
 
 	/*	Vect4d  r_r_factorial				(Vect4d const &x)					{return Vect4d(tgamma(x.lo()+1), tgamma(x.hi()+1));}
@@ -1957,14 +1957,14 @@ namespace	G2
 			Vect4d w=-Vect4d(cos_xr)*sinhc(z);
 			return Quat4d(Vect4d(sin_xr)*Vect4d(::cosh(z.v)), w*x.i, w*x.j, w*x.k);
 		}
-		void  r_r_cos					(VectP &r, VectP const &x)					{assign(r, Vect4d(::cos(Vect4d(x).v)));VLEAVE}
-		void  c_c_cos					(CompP &r, CompP const &x)					{assign(r, cos(Comp4d(x)));VLEAVE}
-		void  q_q_cos					(QuatP &r, QuatP const &x)					{assign(r, cos(Quat4d(x)));VLEAVE}
+		void  r_r_cos					(VectP &r, VectP const &x)					{assign(r, Vect4d(::cos(Vect4d(x).v)));VLEAVE;}
+		void  c_c_cos					(CompP &r, CompP const &x)					{assign(r, cos(Comp4d(x)));VLEAVE;}
+		void  q_q_cos					(QuatP &r, QuatP const &x)					{assign(r, cos(Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d acos(Comp4d const &x){return -m_i*log(x+sqrt(sq(x)-m_one));}
 		__forceinline Quat4d acos(Quat4d const &x){return -sgnu(x)*acosh(x);}
-		void  c_c_acos					(CompP &r, CompP const &x)					{assign(r, acos(Comp4d(x)));VLEAVE}
-		void  q_q_acos					(QuatP &r, QuatP const &x)					{assign(r, acos(Quat4d(x)));VLEAVE}
+		void  c_c_acos					(CompP &r, CompP const &x)					{assign(r, acos(Comp4d(x)));VLEAVE;}
+		void  q_q_acos					(QuatP &r, QuatP const &x)					{assign(r, acos(Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d cosh(Comp4d const &x)
 		{
@@ -1978,40 +1978,40 @@ namespace	G2
 			return m_half*exp_x+m_half/exp_x;
 		//	return (exp(x)+exp(-x))*m_half;
 		}
-		void  r_r_cosh					(VectP &r, VectP const &x)					{assign(r, Vect4d(::cosh(Vect4d(x).v)));VLEAVE}
-		void  c_c_cosh					(CompP &r, CompP const &x)					{assign(r, cosh(Comp4d(x)));VLEAVE}
-		void  q_q_cosh					(QuatP &r, QuatP const &x)					{assign(r, cosh(Quat4d(x)));VLEAVE}
+		void  r_r_cosh					(VectP &r, VectP const &x)					{assign(r, Vect4d(::cosh(Vect4d(x).v)));VLEAVE;}
+		void  c_c_cosh					(CompP &r, CompP const &x)					{assign(r, cosh(Comp4d(x)));VLEAVE;}
+		void  q_q_cosh					(QuatP &r, QuatP const &x)					{assign(r, cosh(Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d acosh(Comp4d const &x){return log(x+sqrt(sq(x)-m_one));}
-		void  c_c_acosh					(CompP &r, CompP const &x)					{assign(r, acosh(Comp4d(x)));VLEAVE}
-		void  q_q_acosh					(QuatP &r, QuatP const &x)					{assign(r, acosh(Quat4d(x)));VLEAVE}
+		void  c_c_acosh					(CompP &r, CompP const &x)					{assign(r, acosh(Comp4d(x)));VLEAVE;}
+		void  q_q_acosh					(QuatP &r, QuatP const &x)					{assign(r, acosh(Quat4d(x)));VLEAVE;}
 
-		void  r_r_cosc					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, Vect4d(::cos(rx.v))/rx);VLEAVE}
-		void  c_c_cosc					(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, cos(cx)/cx);VLEAVE}
-		void  q_q_cosc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, cos(qx)/qx);VLEAVE}
+		void  r_r_cosc					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, Vect4d(::cos(rx.v))/rx);VLEAVE;}
+		void  c_c_cosc					(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, cos(cx)/cx);VLEAVE;}
+		void  q_q_cosc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, cos(qx)/qx);VLEAVE;}
 
-		void  r_r_sec					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::cos(Vect4d(x).v)));VLEAVE}
-		void  c_c_sec					(CompP &r, CompP const &x)					{assign(r, m_one/cos(Comp4d(x)));VLEAVE}
-		void  q_q_sec					(QuatP &r, QuatP const &x)					{assign(r, m_one/cos(Quat4d(x)));VLEAVE}
+		void  r_r_sec					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::cos(Vect4d(x).v)));VLEAVE;}
+		void  c_c_sec					(CompP &r, CompP const &x)					{assign(r, m_one/cos(Comp4d(x)));VLEAVE;}
+		void  q_q_sec					(QuatP &r, QuatP const &x)					{assign(r, m_one/cos(Quat4d(x)));VLEAVE;}
 
-		void  c_c_asec					(CompP &r, CompP const &x)					{assign(r, acos(m_one/Comp4d(x)));VLEAVE}
-		void  q_q_asec					(QuatP &r, QuatP const &x)					{assign(r, acos(m_one/Quat4d(x)));VLEAVE}
+		void  c_c_asec					(CompP &r, CompP const &x)					{assign(r, acos(m_one/Comp4d(x)));VLEAVE;}
+		void  q_q_asec					(QuatP &r, QuatP const &x)					{assign(r, acos(m_one/Quat4d(x)));VLEAVE;}
 
-		void  r_r_sech					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::cosh(Vect4d(x).v)));VLEAVE}
-		void  c_c_sech					(CompP &r, CompP const &x)					{assign(r, m_one/cosh(Comp4d(x)));VLEAVE}
-		void  q_q_sech					(QuatP &r, QuatP const &x)					{assign(r, m_one/cosh(Quat4d(x)));VLEAVE}
+		void  r_r_sech					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::cosh(Vect4d(x).v)));VLEAVE;}
+		void  c_c_sech					(CompP &r, CompP const &x)					{assign(r, m_one/cosh(Comp4d(x)));VLEAVE;}
+		void  q_q_sech					(QuatP &r, QuatP const &x)					{assign(r, m_one/cosh(Quat4d(x)));VLEAVE;}
 
-		void  c_c_asech					(CompP &r, CompP const &x)					{assign(r, acosh(m_one/Comp4d(x)));VLEAVE}
-		void  q_q_asech					(QuatP &r, QuatP const &x)					{assign(r, acosh(m_one/Quat4d(x)));VLEAVE}
+		void  c_c_asech					(CompP &r, CompP const &x)					{assign(r, acosh(m_one/Comp4d(x)));VLEAVE;}
+		void  q_q_asech					(QuatP &r, QuatP const &x)					{assign(r, acosh(m_one/Quat4d(x)));VLEAVE;}
 
-		void  r_r_sin					(VectP &r, VectP const &x)					{assign(r, Vect4d(::sin(Vect4d(x).v)));VLEAVE}
-		void  c_c_sin					(CompP &r, CompP const &x)					{assign(r, sin(Comp4d(x)));VLEAVE}
-		void  q_q_sin					(QuatP &r, QuatP const &x)					{assign(r, sin(Quat4d(x)));VLEAVE}
+		void  r_r_sin					(VectP &r, VectP const &x)					{assign(r, Vect4d(::sin(Vect4d(x).v)));VLEAVE;}
+		void  c_c_sin					(CompP &r, CompP const &x)					{assign(r, sin(Comp4d(x)));VLEAVE;}
+		void  q_q_sin					(QuatP &r, QuatP const &x)					{assign(r, sin(Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d asin(Comp4d const &x){return -m_i*log(m_i*x+sqrt(m_one-sq(x)));}
 		__forceinline Quat4d asin(Quat4d const &x){Quat4d t=sgnu(x); return -t*asinh(x*t);}
-		void  c_c_asin					(CompP &r, CompP const &x)					{assign(r, asin(Comp4d(x)));VLEAVE}
-		void  q_q_asin					(QuatP &r, QuatP const &x)					{assign(r, asin(Quat4d(x)));VLEAVE}
+		void  c_c_asin					(CompP &r, CompP const &x)					{assign(r, asin(Comp4d(x)));VLEAVE;}
+		void  q_q_asin					(QuatP &r, QuatP const &x)					{assign(r, asin(Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d sinh(Comp4d const &x)
 		{
@@ -2025,36 +2025,36 @@ namespace	G2
 			return m_half*exp_x-m_half/exp_x;
 		//	return (exp(x)-exp(-x))*m_half;
 		}
-		void  r_r_sinh					(VectP &r, VectP const &x)					{assign(r, Vect4d(::sinh(Vect4d(x).v)));VLEAVE}
-		void  c_c_sinh					(CompP &r, CompP const &x)					{assign(r, sinh(Comp4d(x)));VLEAVE}
-		void  q_q_sinh					(QuatP &r, QuatP const &x)					{assign(r, sinh(Quat4d(x)));VLEAVE}
+		void  r_r_sinh					(VectP &r, VectP const &x)					{assign(r, Vect4d(::sinh(Vect4d(x).v)));VLEAVE;}
+		void  c_c_sinh					(CompP &r, CompP const &x)					{assign(r, sinh(Comp4d(x)));VLEAVE;}
+		void  q_q_sinh					(QuatP &r, QuatP const &x)					{assign(r, sinh(Quat4d(x)));VLEAVE;}
 
-		void  r_r_asinh					(VectP &r, VectP const &x)					{assign(r, Vect4d(::asinh(Vect4d(x).v)));VLEAVE}
-		void  c_c_asinh					(CompP &r, CompP const &x)					{assign(r, asinh(Comp4d(x)));VLEAVE}
-		void  q_q_asinh					(QuatP &r, QuatP const &x)					{assign(r, asinh(Quat4d(x)));VLEAVE}
+		void  r_r_asinh					(VectP &r, VectP const &x)					{assign(r, Vect4d(::asinh(Vect4d(x).v)));VLEAVE;}
+		void  c_c_asinh					(CompP &r, CompP const &x)					{assign(r, asinh(Comp4d(x)));VLEAVE;}
+		void  q_q_asinh					(QuatP &r, QuatP const &x)					{assign(r, asinh(Quat4d(x)));VLEAVE;}
 
-		void  r_r_sinc					(VectP &r, VectP const &x)					{Vect4d rx=x, mask=rx==m_zero; assign(r, Vect4d(::sin(rx.v))/rx&mask.complement()|m_one&mask);VLEAVE}
-		void  c_c_sinc					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mask=cx.r==m_zero&cx.i==m_zero; assign(r, and(sin(cx)/cx, mask.complement())|m_one&mask);VLEAVE}
-		void  q_q_sinc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mask=qx.r==m_zero&qx.i==m_zero&qx.j==m_zero&qx.k==m_zero; assign(r, and(sin(qx)/qx, mask.complement())|m_one&mask);VLEAVE}
+		void  r_r_sinc					(VectP &r, VectP const &x)					{Vect4d rx=x, mask=rx==m_zero; assign(r, Vect4d(::sin(rx.v))/rx&mask.complement()|m_one&mask);VLEAVE;}
+		void  c_c_sinc					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mask=cx.r==m_zero&cx.i==m_zero; assign(r, and(sin(cx)/cx, mask.complement())|m_one&mask);VLEAVE;}
+		void  q_q_sinc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mask=qx.r==m_zero&qx.i==m_zero&qx.j==m_zero&qx.k==m_zero; assign(r, and(sin(qx)/qx, mask.complement())|m_one&mask);VLEAVE;}
 
-		void  r_r_sinhc					(VectP &r, VectP const &x)					{Vect4d rx=x, mask=rx==m_zero; assign(r, Vect4d(::sinh(rx.v))/rx&mask.complement()|m_one&mask);VLEAVE}
-		void  c_c_sinhc					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mask=cx.r==m_zero&cx.i==m_zero; assign(r, and(sinh(cx)/cx, mask.complement())|m_one&mask);VLEAVE}
-		void  q_q_sinhc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mask=qx.r==m_zero&qx.i==m_zero&qx.j==m_zero&qx.k==m_zero; assign(r, and(sinh(qx)/qx, mask.complement())|m_one&mask);VLEAVE}
+		void  r_r_sinhc					(VectP &r, VectP const &x)					{Vect4d rx=x, mask=rx==m_zero; assign(r, Vect4d(::sinh(rx.v))/rx&mask.complement()|m_one&mask);VLEAVE;}
+		void  c_c_sinhc					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mask=cx.r==m_zero&cx.i==m_zero; assign(r, and(sinh(cx)/cx, mask.complement())|m_one&mask);VLEAVE;}
+		void  q_q_sinhc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mask=qx.r==m_zero&qx.i==m_zero&qx.j==m_zero&qx.k==m_zero; assign(r, and(sinh(qx)/qx, mask.complement())|m_one&mask);VLEAVE;}
 
-		void  r_r_csc					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::sin(Vect4d(x).v)));VLEAVE}
-		void  c_c_csc					(CompP &r, CompP const &x)					{assign(r, m_one/sin(Comp4d(x)));VLEAVE}
-		void  q_q_csc					(QuatP &r, QuatP const &x)					{assign(r, m_one/sin(Quat4d(x)));VLEAVE}
+		void  r_r_csc					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::sin(Vect4d(x).v)));VLEAVE;}
+		void  c_c_csc					(CompP &r, CompP const &x)					{assign(r, m_one/sin(Comp4d(x)));VLEAVE;}
+		void  q_q_csc					(QuatP &r, QuatP const &x)					{assign(r, m_one/sin(Quat4d(x)));VLEAVE;}
 
-		void  c_c_acsc					(CompP &r, CompP const &x)					{assign(r, asin(m_one/Comp4d(x)));VLEAVE}
-		void  q_q_acsc					(QuatP &r, QuatP const &x)					{assign(r, asin(m_one/Quat4d(x)));VLEAVE}
+		void  c_c_acsc					(CompP &r, CompP const &x)					{assign(r, asin(m_one/Comp4d(x)));VLEAVE;}
+		void  q_q_acsc					(QuatP &r, QuatP const &x)					{assign(r, asin(m_one/Quat4d(x)));VLEAVE;}
 
-		void  r_r_csch					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::sinh(Vect4d(x).v)));VLEAVE}
-		void  c_c_csch					(CompP &r, CompP const &x)					{assign(r, m_one/sinh(Comp4d(x)));VLEAVE}
-		void  q_q_csch					(QuatP &r, QuatP const &x)					{assign(r, m_one/sinh(Quat4d(x)));VLEAVE}
+		void  r_r_csch					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::sinh(Vect4d(x).v)));VLEAVE;}
+		void  c_c_csch					(CompP &r, CompP const &x)					{assign(r, m_one/sinh(Comp4d(x)));VLEAVE;}
+		void  q_q_csch					(QuatP &r, QuatP const &x)					{assign(r, m_one/sinh(Quat4d(x)));VLEAVE;}
 
-		void  r_r_acsch					(VectP &r, VectP const &x)					{assign(r, Vect4d(::asinh((m_one/Vect4d(x)).v)));VLEAVE}
-		void  c_c_acsch					(CompP &r, CompP const &x)					{assign(r, asinh(m_one/Comp4d(x)));VLEAVE}
-		void  q_q_acsch					(QuatP &r, QuatP const &x)					{assign(r, asinh(m_one/Quat4d(x)));VLEAVE}
+		void  r_r_acsch					(VectP &r, VectP const &x)					{assign(r, Vect4d(::asinh((m_one/Vect4d(x)).v)));VLEAVE;}
+		void  c_c_acsch					(CompP &r, CompP const &x)					{assign(r, asinh(m_one/Comp4d(x)));VLEAVE;}
+		void  q_q_acsch					(QuatP &r, QuatP const &x)					{assign(r, asinh(m_one/Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d tan(Comp4d const &x)
 		{
@@ -2068,16 +2068,16 @@ namespace	G2
 			Quat4d exp_2ix=exp(m_two_i*x);
 			return (exp_2ix-m_one)/((exp_2ix+m_one)*m_i);
 		}
-		void  r_r_tan					(VectP &r, VectP const &x)					{assign(r, Vect4d(::tan(Vect4d(x).v)));VLEAVE}
-		void  c_c_tan					(CompP &r, CompP const &x)					{assign(r, tan(Comp4d(x)));VLEAVE}
-		void  q_q_tan					(QuatP &r, QuatP const &x)					{assign(r, tan(Quat4d(x)));VLEAVE}
+		void  r_r_tan					(VectP &r, VectP const &x)					{assign(r, Vect4d(::tan(Vect4d(x).v)));VLEAVE;}
+		void  c_c_tan					(CompP &r, CompP const &x)					{assign(r, tan(Comp4d(x)));VLEAVE;}
+		void  q_q_tan					(QuatP &r, QuatP const &x)					{assign(r, tan(Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d atan(Comp4d const &x){return (m_i*m_half)*log((m_i+x)/(m_i-x));}
 		__forceinline Quat4d atan(Quat4d const &x){return (m_i*m_half)*log((m_i+x)/(m_i-x));}
-		void  r_r_atan					(VectP &r, VectP const &x)					{assign(r, Vect4d(::atan(Vect4d(x).v)));VLEAVE}
-		void  c_c_atan					(CompP &r, CompP const &x)					{assign(r, atan(Comp4d(x)));VLEAVE}
-		void  q_q_atan					(QuatP &r, QuatP const &x)					{assign(r, atan(Quat4d(x)));VLEAVE}
-		void r_rr_atan					(VectP &r, VectP const &y, VectP const &x)	{assign(r, Vect4d(::atan2(Vect4d(y).v, Vect4d(x).v)));VLEAVE}
+		void  r_r_atan					(VectP &r, VectP const &x)					{assign(r, Vect4d(::atan(Vect4d(x).v)));VLEAVE;}
+		void  c_c_atan					(CompP &r, CompP const &x)					{assign(r, atan(Comp4d(x)));VLEAVE;}
+		void  q_q_atan					(QuatP &r, QuatP const &x)					{assign(r, atan(Quat4d(x)));VLEAVE;}
+		void r_rr_atan					(VectP &r, VectP const &y, VectP const &x)	{assign(r, Vect4d(::atan2(Vect4d(y).v, Vect4d(x).v)));VLEAVE;}
 		void c_rc_atan					(CompP &r, VectP const &y, CompP const &x)
 		{
 			Comp4d cx=x;	Vect4d ry=y;
@@ -2087,7 +2087,7 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_rq_atan					(QuatP &r, VectP const &y, QuatP const &x)
 		{
@@ -2098,7 +2098,7 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 		void c_cr_atan					(CompP &r, CompP const &y, VectP const &x)
 		{
@@ -2109,7 +2109,7 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 		void c_cc_atan					(CompP &r, CompP const &y, CompP const &x)
 		{
@@ -2120,7 +2120,7 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_cq_atan					(QuatP &r, CompP const &y, QuatP const &x)
 		{
@@ -2131,7 +2131,7 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_qr_atan					(QuatP &r, QuatP const &y, VectP const &x)
 		{
@@ -2142,7 +2142,7 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_qc_atan					(QuatP &r, QuatP const &y, CompP const &x)
 		{
@@ -2153,7 +2153,7 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_qq_atan					(QuatP &r, QuatP const &y, QuatP const &x)
 		{
@@ -2164,67 +2164,67 @@ namespace	G2
 			Vect4d add_sign=m_sign_mask_complement&mask_x;
 			addition^=add_sign;
 			assign(r, tr+addition);
-			VLEAVE
+			VLEAVE;
 		}
 
 		__forceinline Comp4d tanh(Comp4d const &x){Comp4d e2x=exp(x+x); return (e2x-m_one)/(e2x+m_one);}
 		__forceinline Quat4d tanh(Quat4d const &x){Quat4d e2x=exp(x+x); return (e2x-m_one)/(e2x+m_one);}
 		void  r_r_tanh					(VectP &r, VectP const &x)					{assign(r, Vect4d(::tanh(Vect4d(x).v)));}
-		void  c_c_tanh					(CompP &r, CompP const &x)					{assign(r, tanh(Comp4d(x)));VLEAVE}
-		void  q_q_tanh					(QuatP &r, QuatP const &x)					{assign(r, tanh(Quat4d(x)));VLEAVE}
+		void  c_c_tanh					(CompP &r, CompP const &x)					{assign(r, tanh(Comp4d(x)));VLEAVE;}
+		void  q_q_tanh					(QuatP &r, QuatP const &x)					{assign(r, tanh(Quat4d(x)));VLEAVE;}
 
 		__forceinline Comp4d atanh(Comp4d const &x){return m_half*log((m_one+x)/(m_one-x));}
 		__forceinline Quat4d atanh(Quat4d const &x){return m_half*log((m_one+x)/(m_one-x));}
-		void  c_c_atanh					(CompP &r, CompP const &x)					{assign(r, atanh(Comp4d(x)));VLEAVE}
-		void  q_q_atanh					(QuatP &r, QuatP const &x)					{assign(r, atanh(Quat4d(x)));VLEAVE}
+		void  c_c_atanh					(CompP &r, CompP const &x)					{assign(r, atanh(Comp4d(x)));VLEAVE;}
+		void  q_q_atanh					(QuatP &r, QuatP const &x)					{assign(r, atanh(Quat4d(x)));VLEAVE;}
 
-		void  r_r_tanc					(VectP &r, VectP const &x)					{Vect4d rx=x, mask=rx==m_zero; assign(r, Vect4d(::tan(rx.v))/rx&mask.complement()|m_one&mask);VLEAVE}
-		void  c_c_tanc					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mask=cx.r==m_zero&cx.i==m_zero; assign(r, and(tan(cx)/cx, mask.complement())|m_one&mask);VLEAVE}
-		void  q_q_tanc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mask=qx.r==m_zero&qx.i==m_zero&qx.j==m_zero&qx.k==m_zero; assign(r, and(tan(qx)/qx, mask.complement())|m_one&mask);VLEAVE}
+		void  r_r_tanc					(VectP &r, VectP const &x)					{Vect4d rx=x, mask=rx==m_zero; assign(r, Vect4d(::tan(rx.v))/rx&mask.complement()|m_one&mask);VLEAVE;}
+		void  c_c_tanc					(CompP &r, CompP const &x)					{Comp4d cx=x; Vect4d mask=cx.r==m_zero&cx.i==m_zero; assign(r, and(tan(cx)/cx, mask.complement())|m_one&mask);VLEAVE;}
+		void  q_q_tanc					(QuatP &r, QuatP const &x)					{Quat4d qx=x; Vect4d mask=qx.r==m_zero&qx.i==m_zero&qx.j==m_zero&qx.k==m_zero; assign(r, and(tan(qx)/qx, mask.complement())|m_one&mask);VLEAVE;}
 
-		void  r_r_cot					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::tan(Vect4d(x).v)));VLEAVE}
-		void  c_c_cot					(CompP &r, CompP const &x)					{assign(r, m_one/tan(Comp4d(x)));VLEAVE}
-		void  q_q_cot					(QuatP &r, QuatP const &x)					{assign(r, m_one/tan(Quat4d(x)));VLEAVE}
+		void  r_r_cot					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::tan(Vect4d(x).v)));VLEAVE;}
+		void  c_c_cot					(CompP &r, CompP const &x)					{assign(r, m_one/tan(Comp4d(x)));VLEAVE;}
+		void  q_q_cot					(QuatP &r, QuatP const &x)					{assign(r, m_one/tan(Quat4d(x)));VLEAVE;}
 
 		void  r_r_acot					(VectP &r, VectP const &x)
 		{
 			Vect4d rx=x, mask=rx==m_zero;
 			assign(r, Vect4d(::atan((m_one/rx).v))&mask.complement()|m_pi_2&mask);
-			VLEAVE
+			VLEAVE;
 		}
 		void  c_c_acot					(CompP &r, CompP const &x)
 		{
 			Comp4d cx=x;
 			Vect4d mask=(cx.r==m_zero)&(cx.i==m_zero);
 			assign(r, and(atan(m_one/cx), mask.complement())|m_pi_2&mask);
-			VLEAVE
+			VLEAVE;
 		}
 		void  q_q_acot					(QuatP &r, QuatP const &x)
 		{
 			Quat4d qx=x;
 			Vect4d mask=(qx.r==m_zero)&(qx.i==m_zero)&(qx.j==m_zero)&(qx.k==m_zero);
 			assign(r, and(atan(m_one/qx), mask.complement())|m_pi_2&mask);
-			VLEAVE
+			VLEAVE;
 		}
 
-		void  r_r_coth					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::tanh(Vect4d(x).v)));VLEAVE}
-		void  c_c_coth					(CompP &r, CompP const &x)					{assign(r, m_one/tanh(Comp4d(x)));VLEAVE}
-		void  q_q_coth					(QuatP &r, QuatP const &x)					{assign(r, m_one/tanh(Quat4d(x)));VLEAVE}
+		void  r_r_coth					(VectP &r, VectP const &x)					{assign(r, m_one/Vect4d(::tanh(Vect4d(x).v)));VLEAVE;}
+		void  c_c_coth					(CompP &r, CompP const &x)					{assign(r, m_one/tanh(Comp4d(x)));VLEAVE;}
+		void  q_q_coth					(QuatP &r, QuatP const &x)					{assign(r, m_one/tanh(Quat4d(x)));VLEAVE;}
 
-		void  c_c_acoth					(CompP &r, CompP const &x)					{assign(r, atanh(m_one/Comp4d(x)));VLEAVE}
-		void  q_q_acoth					(QuatP &r, QuatP const &x)					{assign(r, atanh(m_one/Quat4d(x)));VLEAVE}
+		void  c_c_acoth					(CompP &r, CompP const &x)					{assign(r, atanh(m_one/Comp4d(x)));VLEAVE;}
+		void  q_q_acoth					(QuatP &r, QuatP const &x)					{assign(r, atanh(m_one/Quat4d(x)));VLEAVE;}
 
-		void  r_r_exp					(VectP &r, VectP const &x)					{assign(r, Vect4d(::exp(Vect4d(x).v)));VLEAVE}
-		void  c_c_exp					(CompP &r, CompP const &x)					{assign(r, exp(Comp4d(x)));VLEAVE}
-		void  q_q_exp					(QuatP &r, QuatP const &x)					{assign(r, exp(Quat4d(x)));VLEAVE}
+		void  r_r_exp					(VectP &r, VectP const &x)					{assign(r, Vect4d(::exp(Vect4d(x).v)));VLEAVE;}
+		void  c_c_exp					(CompP &r, CompP const &x)					{assign(r, exp(Comp4d(x)));VLEAVE;}
+		void  q_q_exp					(QuatP &r, QuatP const &x)					{assign(r, exp(Quat4d(x)));VLEAVE;}
 	
 		__forceinline Vect4d pow(Vect4d const &x, Vect4d const &y){return Vect4d(::exp((y*Vect4d(::log(x.v))).v));}
-		void  r_r_fib					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, (Vect4d(::exp((rx*m_ln_phi).v))-Vect4d(::cos((m_pi*rx).v))*Vect4d(::exp((-rx*m_ln_phi).v)))*m_inv_sqrt5);VLEAVE}
+		void  r_r_fib					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, (Vect4d(::exp((rx*m_ln_phi).v))-Vect4d(::cos((m_pi*rx).v))*Vect4d(::exp((-rx*m_ln_phi).v)))*m_inv_sqrt5);VLEAVE;}
 	//	void  r_r_fib						(Vect4d const &x)					{return (pow(m_phi, x)-Vect4d(::cos((m_pi*x).v))*pow(m_phi, -x))/m_sqrt5;}
 	//	void  r_r_fib						(Vect4d const &x)					{return (Vect4d(::pow(m_phi.v, x.v))-Vect4d(::cos((m_pi*x).v))*Vect4d(::pow(m_phi.v, (-x).v)))/m_sqrt5;}
-		void  c_c_fib					(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, (exp(cx*m_ln_phi)-cos(m_pi*cx)*exp(-cx*m_ln_phi))*m_inv_sqrt5);VLEAVE}
+		void  c_c_fib					(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, (exp(cx*m_ln_phi)-cos(m_pi*cx)*exp(-cx*m_ln_phi))*m_inv_sqrt5);VLEAVE;}
 	//	void  c_c_fib					(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, ((m_phi^cx)-cos(m_pi*cx)*(m_phi^-cx))/m_sqrt5;}
-		void  q_q_fib					(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, (exp(qx*m_ln_phi)-cos(m_pi*qx)*exp(-qx*m_ln_phi))*m_inv_sqrt5);VLEAVE}
+		void  q_q_fib					(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, (exp(qx*m_ln_phi)-cos(m_pi*qx)*exp(-qx*m_ln_phi))*m_inv_sqrt5);VLEAVE;}
 	
 	/*	const double rand_norm=9.31322574615479e-010;
 		Vect4d my_rand(){return Vect4d((rand()<<15|rand())*rand_norm, (rand()<<15|rand())*rand_norm);}
@@ -2307,34 +2307,34 @@ namespace	G2
 		__forceinline Vect4d step(Vect4d const &x){return m_half+m_half*sgn(x);}
 		__forceinline Comp4d step(Comp4d const &x){return m_half+m_half*sgn(x);}
 		__forceinline Quat4d step(Quat4d const &x){return m_half+m_half*sgn(x);}
-		void  r_r_step					(VectP &r, VectP const &x)					{assign(r, step(Vect4d(x)));VLEAVE}
-		void  c_c_step					(CompP &r, CompP const &x)					{assign(r, step(Comp4d(x)));VLEAVE}
-		void  q_q_step					(QuatP &r, QuatP const &x)					{assign(r, step(Quat4d(x)));VLEAVE}
+		void  r_r_step					(VectP &r, VectP const &x)					{assign(r, step(Vect4d(x)));VLEAVE;}
+		void  c_c_step					(CompP &r, CompP const &x)					{assign(r, step(Comp4d(x)));VLEAVE;}
+		void  q_q_step					(QuatP &r, QuatP const &x)					{assign(r, step(Quat4d(x)));VLEAVE;}
 
-		void  r_r_rect					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, step(rx+m_half)-step(rx-m_half));VLEAVE}
-		void  c_c_rect					(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, step(cx+m_half)-step(cx-m_half));VLEAVE}
-		void  q_q_rect					(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, step(qx+m_half)-step(qx-m_half));VLEAVE}
+		void  r_r_rect					(VectP &r, VectP const &x)					{Vect4d rx=x; assign(r, step(rx+m_half)-step(rx-m_half));VLEAVE;}
+		void  c_c_rect					(CompP &r, CompP const &x)					{Comp4d cx=x; assign(r, step(cx+m_half)-step(cx-m_half));VLEAVE;}
+		void  q_q_rect					(QuatP &r, QuatP const &x)					{Quat4d qx=x; assign(r, step(qx+m_half)-step(qx-m_half));VLEAVE;}
 
-		void  r_r_trgl					(VectP &r, VectP const &x)					{Vect4d t=Vect4d(x).abs(); assign(r, (m_one-t)&t<m_one);VLEAVE}
-		void  r_c_trgl					(VectP &r, CompP const &x)					{Vect4d t=Comp4d(x).abs(); assign(r, and(m_one-t, t<m_one));VLEAVE}
-		void  r_q_trgl					(VectP &r, QuatP const &x)					{Vect4d t=Quat4d(x).abs(); assign(r, and(m_one-t, t<m_one));VLEAVE}
+		void  r_r_trgl					(VectP &r, VectP const &x)					{Vect4d t=Vect4d(x).abs(); assign(r, (m_one-t)&t<m_one);VLEAVE;}
+		void  r_c_trgl					(VectP &r, CompP const &x)					{Vect4d t=Comp4d(x).abs(); assign(r, and(m_one-t, t<m_one));VLEAVE;}
+		void  r_q_trgl					(VectP &r, QuatP const &x)					{Vect4d t=Quat4d(x).abs(); assign(r, and(m_one-t, t<m_one));VLEAVE;}
 
-		void  r_r_sqwv					(VectP &r, VectP const &x)					{Vect4d rx=x;	assign(r, rx-rx.floor()<m_half&m_one);VLEAVE}
-		void  r_c_sqwv					(VectP &r, CompP const &x)					{Vect4d rx=x.r; assign(r, rx-rx.floor()<m_half&m_one);VLEAVE}
-		void  r_q_sqwv					(VectP &r, QuatP const &x)					{Vect4d rx=x.r; assign(r, rx-rx.floor()<m_half&m_one);VLEAVE}
-		void r_rr_sqwv					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x;	assign(r, rx-rx.floor()<Vect4d(y)&m_one);VLEAVE}
-		void r_rc_sqwv					(VectP &r, VectP const &x, CompP const &y)	{Vect4d rx=x;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE}
-		void r_rq_sqwv					(VectP &r, VectP const &x, QuatP const &y)	{Vect4d rx=x;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE}
-		void r_cr_sqwv					(VectP &r, CompP const &x, VectP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y)&m_one);VLEAVE}
-		void r_cc_sqwv					(VectP &r, CompP const &x, CompP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE}
-		void r_cq_sqwv					(VectP &r, CompP const &x, QuatP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE}
-		void r_qr_sqwv					(VectP &r, QuatP const &x, VectP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y)&m_one);VLEAVE}
-		void r_qc_sqwv					(VectP &r, QuatP const &x, CompP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE}
-		void r_qq_sqwv					(VectP &r, QuatP const &x, QuatP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE}
+		void  r_r_sqwv					(VectP &r, VectP const &x)					{Vect4d rx=x;	assign(r, rx-rx.floor()<m_half&m_one);VLEAVE;}
+		void  r_c_sqwv					(VectP &r, CompP const &x)					{Vect4d rx=x.r; assign(r, rx-rx.floor()<m_half&m_one);VLEAVE;}
+		void  r_q_sqwv					(VectP &r, QuatP const &x)					{Vect4d rx=x.r; assign(r, rx-rx.floor()<m_half&m_one);VLEAVE;}
+		void r_rr_sqwv					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x;	assign(r, rx-rx.floor()<Vect4d(y)&m_one);VLEAVE;}
+		void r_rc_sqwv					(VectP &r, VectP const &x, CompP const &y)	{Vect4d rx=x;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
+		void r_rq_sqwv					(VectP &r, VectP const &x, QuatP const &y)	{Vect4d rx=x;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
+		void r_cr_sqwv					(VectP &r, CompP const &x, VectP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y)&m_one);VLEAVE;}
+		void r_cc_sqwv					(VectP &r, CompP const &x, CompP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
+		void r_cq_sqwv					(VectP &r, CompP const &x, QuatP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
+		void r_qr_sqwv					(VectP &r, QuatP const &x, VectP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y)&m_one);VLEAVE;}
+		void r_qc_sqwv					(VectP &r, QuatP const &x, CompP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
+		void r_qq_sqwv					(VectP &r, QuatP const &x, QuatP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
 
-		void  r_r_trwv					(VectP &r, VectP const &x)					{Vect4d rx=x; Vect4d t=(rx-rx.floor()-m_half).abs(); assign(r, t+t);VLEAVE}
-		void  r_c_trwv					(VectP &r, CompP const &x)					{Comp4d cx=x; Vect4d t=(cx-cx.floor()-m_half).abs(); assign(r, t+t);VLEAVE}
-		void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat4d qx=x; Vect4d t=(qx-qx.floor()-m_half).abs(); assign(r, t+t);VLEAVE}
+		void  r_r_trwv					(VectP &r, VectP const &x)					{Vect4d rx=x; Vect4d t=(rx-rx.floor()-m_half).abs(); assign(r, t+t);VLEAVE;}
+		void  r_c_trwv					(VectP &r, CompP const &x)					{Comp4d cx=x; Vect4d t=(cx-cx.floor()-m_half).abs(); assign(r, t+t);VLEAVE;}
+		void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat4d qx=x; Vect4d t=(qx-qx.floor()-m_half).abs(); assign(r, t+t);VLEAVE;}
 		void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)
 		{
 			Vect4d rx=x;	Vect4d ry=y;
@@ -2346,7 +2346,7 @@ namespace	G2
 			Vect4d d2=m_one-d;
 			Vect4d t_d=t/d, t2_d2=t2/d2;
 			assign(r, ((t_d<m_one)&t_d)+((t2_d2<m_one)&t2_d2));
-			VLEAVE
+			VLEAVE;
 		}
 		void c_cr_trwv					(CompP &r, CompP const &x, VectP const &y)
 		{
@@ -2359,7 +2359,7 @@ namespace	G2
 			auto d2=m_one-d;
 			auto t_d=t/d, t2_d2=t2/d2;
 			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-			VLEAVE
+			VLEAVE;
 		}
 		void c_cc_trwv					(CompP &r, CompP const &x, CompP const &y)
 		{
@@ -2372,7 +2372,7 @@ namespace	G2
 			Comp4d d2=m_one-d;
 			Comp4d t_d=t/d, t2_d2=t2/d2;
 			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-			VLEAVE
+			VLEAVE;
 		}
 		void q_qq_trwv					(QuatP &r, QuatP const &x, QuatP const &y)
 		{
@@ -2385,7 +2385,7 @@ namespace	G2
 			Quat4d d2=m_one-d;
 			Quat4d t_d=t/d, t2_d2=t2/d2;
 			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-			VLEAVE
+			VLEAVE;
 		}
 
 		void  r_r_saw					(VectP &r, VectP const &x)
@@ -2393,28 +2393,28 @@ namespace	G2
 			Vect4d rx=x;
 			Vect4d t=rx-rx.floor(), t2=(m_one-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t));
-			VLEAVE
+			VLEAVE;
 		}
 		void  c_c_saw					(CompP &r, CompP const &x)
 		{
 			Comp4d cx=x;
 			auto t=cx-cx.floor(), t2=(m_one-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t));
-			VLEAVE
+			VLEAVE;
 		}
 		void  q_q_saw					(QuatP &r, QuatP const &x)
 		{
 			Quat4d qx=x;
 			auto t=qx-qx.floor(), t2=(m_one-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t));
-			VLEAVE
+			VLEAVE;
 		}
 		void r_rr_saw					(VectP &r, VectP const &x, VectP const &y)
 		{
 			Vect4d rx=x;	Vect4d ry=y;
 			auto t=rx-rx.floor(), t2=(ry-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-			VLEAVE
+			VLEAVE;
 		}
 		void c_rc_saw					(CompP &r, VectP const &x, CompP const &y)
 		{
@@ -2422,7 +2422,7 @@ namespace	G2
 			auto t=rx-rx.floor();
 			auto t2=(cy-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_rq_saw					(QuatP &r, VectP const &x, QuatP const &y)
 		{
@@ -2430,7 +2430,7 @@ namespace	G2
 			auto t=rx-rx.floor();
 			auto t2=(qy-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-			VLEAVE
+			VLEAVE;
 		}
 		void c_cr_saw					(CompP &r, CompP const &x, VectP const &y)
 		{
@@ -2438,7 +2438,7 @@ namespace	G2
 			auto t=cx-cx.floor();
 			auto t2=(ry-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-			VLEAVE
+			VLEAVE;
 		}
 		void c_cc_saw					(CompP &r, CompP const &x, CompP const &y)
 		{
@@ -2446,7 +2446,7 @@ namespace	G2
 			auto t=cx-cx.floor();
 			auto t2=(cy-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_cq_saw					(QuatP &r, CompP const &x, QuatP const &y)
 		{
@@ -2454,7 +2454,7 @@ namespace	G2
 			auto t=cx-cx.floor();
 			auto t2=(qy-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_qr_saw					(QuatP &r, QuatP const &x, VectP const &y)
 		{
@@ -2462,7 +2462,7 @@ namespace	G2
 			auto t=qx-qx.floor();
 			auto t2=(ry-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_qc_saw					(QuatP &r, QuatP const &x, CompP const &y)
 		{
@@ -2470,7 +2470,7 @@ namespace	G2
 			auto t=qx-qx.floor();
 			auto t2=(cy-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-			VLEAVE
+			VLEAVE;
 		}
 		void q_qq_saw					(QuatP &r, QuatP const &x, QuatP const &y)
 		{
@@ -2478,10 +2478,10 @@ namespace	G2
 			auto t=qx-qx.floor();
 			auto t2=(qy-t).floor();
 			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-			VLEAVE
+			VLEAVE;
 		}
 
-		void r_rr_hypot					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, ry=y; assign(r, sqrt(rx*rx+ry*ry));VLEAVE}
+		void r_rr_hypot					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, ry=y; assign(r, sqrt(rx*rx+ry*ry));VLEAVE;}
 	//	void c_cc_hypot					(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; assign(r, sqrt(sq(x)+sq(y));}
 	//	void q_qq_hypot					(QuatP &r, QuatP const &x, QuatP const &y)	{Quat4d qx=x; assign(r, sqrt(sq(x)+sq(y));}
 		
@@ -2536,35 +2536,35 @@ namespace	G2
 		void r_rr_mandelbrot			(VectP &r, VectP const &x, VectP const &y)	{assign(r, mandelbrot(x, y));}
 		void r_cr_mandelbrot			(VectP &r, CompP const &x, VectP const &y)	{assign(r, mandelbrot(Comp4d(x), Vect4d(y)));}
 
-		void r_rr_min					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, ry=y;			assign(r, (rx+ry-(rx-ry).abs())*m_half);VLEAVE}
-		void c_cr_min					(CompP &r, CompP const &x, VectP const &y)	{Comp4d cx=x; Vect4d ry=y;	assign(r, (cx+ry-(cx-ry).abs())*m_half);VLEAVE}
-		void c_cc_min					(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; Comp4d cy=y;	assign(r, (cx+cy-(cx-cy).abs())*m_half);VLEAVE}
-		void q_qq_min					(QuatP &r, QuatP const &x, QuatP const &y)	{Quat4d qx=x, qy=y;			assign(r, (qx+qy-(qx-qy).abs())*m_half);VLEAVE}
+		void r_rr_min					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, ry=y;			assign(r, (rx+ry-(rx-ry).abs())*m_half);VLEAVE;}
+		void c_cr_min					(CompP &r, CompP const &x, VectP const &y)	{Comp4d cx=x; Vect4d ry=y;	assign(r, (cx+ry-(cx-ry).abs())*m_half);VLEAVE;}
+		void c_cc_min					(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; Comp4d cy=y;	assign(r, (cx+cy-(cx-cy).abs())*m_half);VLEAVE;}
+		void q_qq_min					(QuatP &r, QuatP const &x, QuatP const &y)	{Quat4d qx=x, qy=y;			assign(r, (qx+qy-(qx-qy).abs())*m_half);VLEAVE;}
 
-		void r_rr_max					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, ry=y;			assign(r, (rx+ry+(rx-ry).abs())*m_half);VLEAVE}
-		void c_cr_max					(CompP &r, CompP const &x, VectP const &y)	{Comp4d cx=x; Vect4d ry=y;	assign(r, (cx+ry+(cx-ry).abs())*m_half);VLEAVE}
-		void c_cc_max					(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; Comp4d cy=y;	assign(r, (cx+cy+(cx-cy).abs())*m_half);VLEAVE}
-		void q_qq_max					(QuatP &r, QuatP const &x, QuatP const &y)	{Quat4d qx=x, qy=y;			assign(r, (qx+qy+(qx-qy).abs())*m_half);VLEAVE}
+		void r_rr_max					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, ry=y;			assign(r, (rx+ry+(rx-ry).abs())*m_half);VLEAVE;}
+		void c_cr_max					(CompP &r, CompP const &x, VectP const &y)	{Comp4d cx=x; Vect4d ry=y;	assign(r, (cx+ry+(cx-ry).abs())*m_half);VLEAVE;}
+		void c_cc_max					(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; Comp4d cy=y;	assign(r, (cx+cy+(cx-cy).abs())*m_half);VLEAVE;}
+		void q_qq_max					(QuatP &r, QuatP const &x, QuatP const &y)	{Quat4d qx=x, qy=y;			assign(r, (qx+qy+(qx-qy).abs())*m_half);VLEAVE;}
 
-		void r_rr_conditional_110		(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(y)&Vect4d(x)!=m_zero);VLEAVE}
-		void c_rc_conditional_110		(CompP &r, VectP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Vect4d(x)!=m_zero));VLEAVE}
-		void q_rq_conditional_110		(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Vect4d(x)!=m_zero));VLEAVE}
-		void r_cr_conditional_110		(VectP &r, CompP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Comp4d(x)!=m_zero));VLEAVE}
-		void c_cc_conditional_110		(CompP &r, CompP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Comp4d(x)!=m_zero));VLEAVE}
-		void q_cq_conditional_110		(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Comp4d(x)!=m_zero));VLEAVE}
-		void r_qr_conditional_110		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Quat4d(x)!=m_zero));VLEAVE}
-		void c_qc_conditional_110		(CompP &r, QuatP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Quat4d(x)!=m_zero));VLEAVE}
-		void q_qq_conditional_110		(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Quat4d(x)!=m_zero));VLEAVE}
+		void r_rr_conditional_110		(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(y)&Vect4d(x)!=m_zero);VLEAVE;}
+		void c_rc_conditional_110		(CompP &r, VectP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Vect4d(x)!=m_zero));VLEAVE;}
+		void q_rq_conditional_110		(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Vect4d(x)!=m_zero));VLEAVE;}
+		void r_cr_conditional_110		(VectP &r, CompP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Comp4d(x)!=m_zero));VLEAVE;}
+		void c_cc_conditional_110		(CompP &r, CompP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Comp4d(x)!=m_zero));VLEAVE;}
+		void q_cq_conditional_110		(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Comp4d(x)!=m_zero));VLEAVE;}
+		void r_qr_conditional_110		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Quat4d(x)!=m_zero));VLEAVE;}
+		void c_qc_conditional_110		(CompP &r, QuatP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Quat4d(x)!=m_zero));VLEAVE;}
+		void q_qq_conditional_110		(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Quat4d(x)!=m_zero));VLEAVE;}
 	
-		void r_rr_conditional_101		(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(y)&Vect4d(x)==m_zero);VLEAVE}
-		void c_rc_conditional_101		(CompP &r, VectP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Vect4d(x)==m_zero));VLEAVE}
-		void q_rq_conditional_101		(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Vect4d(x)==m_zero));VLEAVE}
-		void r_cr_conditional_101		(VectP &r, CompP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Comp4d(x)==m_zero));VLEAVE}
-		void c_cc_conditional_101		(CompP &r, CompP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Comp4d(x)==m_zero));VLEAVE}
-		void q_cq_conditional_101		(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Comp4d(x)==m_zero));VLEAVE}
-		void r_qr_conditional_101		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Quat4d(x)==m_zero));VLEAVE}
-		void c_qc_conditional_101		(CompP &r, QuatP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Quat4d(x)==m_zero));VLEAVE}
-		void q_qq_conditional_101		(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Quat4d(x)==m_zero));VLEAVE}
+		void r_rr_conditional_101		(VectP &r, VectP const &x, VectP const &y)	{assign(r, Vect4d(y)&Vect4d(x)==m_zero);VLEAVE;}
+		void c_rc_conditional_101		(CompP &r, VectP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Vect4d(x)==m_zero));VLEAVE;}
+		void q_rq_conditional_101		(QuatP &r, VectP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Vect4d(x)==m_zero));VLEAVE;}
+		void r_cr_conditional_101		(VectP &r, CompP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Comp4d(x)==m_zero));VLEAVE;}
+		void c_cc_conditional_101		(CompP &r, CompP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Comp4d(x)==m_zero));VLEAVE;}
+		void q_cq_conditional_101		(QuatP &r, CompP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Comp4d(x)==m_zero));VLEAVE;}
+		void r_qr_conditional_101		(VectP &r, QuatP const &x, VectP const &y)	{assign(r, and(Vect4d(y), Quat4d(x)==m_zero));VLEAVE;}
+		void c_qc_conditional_101		(CompP &r, QuatP const &x, CompP const &y)	{assign(r, and(Comp4d(y), Quat4d(x)==m_zero));VLEAVE;}
+		void q_qq_conditional_101		(QuatP &r, QuatP const &x, QuatP const &y)	{assign(r, and(Quat4d(y), Quat4d(x)==m_zero));VLEAVE;}
 
 		void conditional_111			(QuatP &res, QuatP const &op1, QuatP const &op2, QuatP const &op3, int idx, int op1_ms, int op_ms)
 		{
@@ -2584,20 +2584,20 @@ namespace	G2
 			case 7:assign(QuatP(res.r+idx, res.i+idx, res.j+idx, res.k+idx),	and(Comp4d(op2.r+idx, op2.i+idx), second.complement())						|and(Quat4d(op3.r+idx, op3.i+idx, op3.j+idx, op3.k+idx), second));break;//q_qc
 			case 8:assign(QuatP(res.r+idx, res.i+idx, res.j+idx, res.k+idx),	and(Quat4d(op2.r+idx, op2.i+idx, op2.j+idx, op2.k+idx), second.complement())|and(Quat4d(op3.r+idx, op3.i+idx, op3.j+idx, op3.k+idx), second));break;//q_qq
 			}
-			VLEAVE
+			VLEAVE;
 		}
 
-		void  r_r_increment				(VectP &r, VectP const &x)					{assign(r, Vect4d(x)+m_one);VLEAVE}
-		void  c_c_increment				(CompP &r, CompP const &x)					{assign(r, Comp4d(x)+m_one);VLEAVE}
-		void  q_q_increment				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)+m_one);VLEAVE}
+		void  r_r_increment				(VectP &r, VectP const &x)					{assign(r, Vect4d(x)+m_one);VLEAVE;}
+		void  c_c_increment				(CompP &r, CompP const &x)					{assign(r, Comp4d(x)+m_one);VLEAVE;}
+		void  q_q_increment				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)+m_one);VLEAVE;}
 
-		void  r_r_decrement				(VectP &r, VectP const &x)					{assign(r, Vect4d(x)-m_one);VLEAVE}
-		void  c_c_decrement				(CompP &r, CompP const &x)					{assign(r, Comp4d(x)-m_one);VLEAVE}
-		void  q_q_decrement				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)-m_one);VLEAVE}
+		void  r_r_decrement				(VectP &r, VectP const &x)					{assign(r, Vect4d(x)-m_one);VLEAVE;}
+		void  c_c_decrement				(CompP &r, CompP const &x)					{assign(r, Comp4d(x)-m_one);VLEAVE;}
+		void  q_q_decrement				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x)-m_one);VLEAVE;}
 
-		void  r_r_assign				(VectP &r, VectP const &x)					{assign(r, Vect4d(x));VLEAVE}
-		void  c_c_assign				(CompP &r, CompP const &x)					{assign(r, Comp4d(x));VLEAVE}
-		void  q_q_assign				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x));VLEAVE}
+		void  r_r_assign				(VectP &r, VectP const &x)					{assign(r, Vect4d(x));VLEAVE;}
+		void  c_c_assign				(CompP &r, CompP const &x)					{assign(r, Comp4d(x));VLEAVE;}
+		void  q_q_assign				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x));VLEAVE;}
 	}//namespace sse2
 }//namespace G2
 namespace	modes
@@ -2667,7 +2667,7 @@ namespace	modes
 		p[ 4]=unsigned char(blue.v1()), p[ 5]=unsigned char(green.v1()), p[ 6]=unsigned char(red.v1()), p[ 7]=0;
 		p[ 8]=unsigned char(blue.v2()), p[ 9]=unsigned char(green.v2()), p[10]=unsigned char(red.v2()), p[11]=0;
 		p[12]=unsigned char(blue.v3()), p[13]=unsigned char(green.v3()), p[14]=unsigned char(red.v3()), p[15]=0;//*/
-		VLEAVE
+		VLEAVE;
 	}
 	void colorFunction_bc_l_avx(CompP const &_v, int *rgb)
 //	void colorFunction_avx(VectP const &pr, VectP const &pi, int *c)
@@ -2705,7 +2705,7 @@ namespace	modes
 		p[ 4]=unsigned char(blue.v1()), p[ 5]=unsigned char(green.v1()), p[ 6]=unsigned char(red.v1()), p[ 7]=0;
 		p[ 8]=unsigned char(blue.v2()), p[ 9]=unsigned char(green.v2()), p[10]=unsigned char(red.v2()), p[11]=0;
 		p[12]=unsigned char(blue.v3()), p[13]=unsigned char(green.v3()), p[14]=unsigned char(red.v3()), p[15]=0;
-		VLEAVE
+		VLEAVE;
 
 	//	memset(c, -1, 4*sizeof(int));
 	/*	c[0]=c[1]=c[2]=c[3]=-1;

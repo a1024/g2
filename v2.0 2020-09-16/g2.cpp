@@ -6981,6 +6981,7 @@ namespace	G2
 	auto disc_q_tan_i				=disc_q_sec_i;
 
 	inline Comp1d atan(Comp1d const &x){return (_i*0.5)*log((_i+x)/(_i-x));}
+	inline double atan_addition(double x, double y){return x<0?y<0?-_pi:_pi:0;}
 	void  r_r_atan					(VectP &r, VectP const &x)					{r=::atan(x);}
 	void  c_c_atan					(CompP &r, CompP const &x)					{r=atan(x);}
 	void  q_q_atan					(QuatP &r, QuatP const &x)					{r=atan(x);}
@@ -6988,45 +6989,45 @@ namespace	G2
 	void c_rc_atan					(CompP &r, VectP const &x, CompP const &y)
 	{
 		double rx=x;
-		Comp1d t=std::atan((Comp1d)y/rx);
+		Comp1d t=std::atan(rx/(Comp1d)y);
 		r=rx<0?*y.r<0?t-_pi:t+_pi:t;
 	}
 	void q_rq_atan					(QuatP &r, VectP const &x, QuatP const &y)
 	{
 		double rx=x;
-		Quat1d t=atan((Quat1d)y/rx);
+		Quat1d t=atan(rx/(Quat1d)y);
 		r=rx<0?*y.r<0?t-_pi:t+_pi:t;
 	}
 	void c_cr_atan					(CompP &r, CompP const &x, VectP const &y)
 	{
 		double ry=y;
-		Comp1d t=std::atan(ry/(Comp1d)x);
+		Comp1d t=std::atan((Comp1d)x/ry);
 		r=*x.r<0?ry<0?t-_pi:t+_pi:t;
 	}
 	void c_cc_atan					(CompP &r, CompP const &x, CompP const &y)
 	{
-		Comp1d t=std::atan((Comp1d)y/(Comp1d)x);
+		Comp1d t=std::atan((Comp1d)x/(Comp1d)y);
 		r=*x.r<0?*y.r<0?t-_pi:t+_pi:t;
 	}
 	void q_cq_atan					(QuatP &r, CompP const &x, QuatP const &y)
 	{
-		Quat1d t=atan((Quat1d)y/(Comp1d)x);
+		Quat1d t=atan((Comp1d)x/(Quat1d)y);
 		r=*x.r<0?*y.r<0?t-_pi:t+_pi:t;
 	}
 	void q_qr_atan					(QuatP &r, QuatP const &x, VectP const &y)
 	{
 		double ry=y;
-		Quat1d t=atan(ry/(Quat1d)x);
+		Quat1d t=atan((Quat1d)x/ry);
 		r=*x.r<0?ry<0?t-_pi:t+_pi:t;
 	}
 	void q_qc_atan					(QuatP &r, QuatP const &x, CompP const &y)
 	{
-		Quat1d t=atan((Comp1d)y/(Quat1d)x);
+		Quat1d t=atan((Quat1d)x/(Comp1d)y);
 		r=*x.r<0?*y.r<0?t-_pi:t+_pi:t;
 	}
 	void q_qq_atan					(QuatP &r, QuatP const &y, QuatP const &x)
 	{
-		Quat1d t=atan((Quat1d)y/(Quat1d)x);
+		Quat1d t=atan((Quat1d)x/(Quat1d)y);
 		r=*x.r<0?*y.r<0?t-_pi:t+_pi:t;
 	}
 	bool disc_c_atan_i				(Value const &x0, Value const &x1)
@@ -14808,7 +14809,7 @@ namespace	modes
 		{
 			int Xs, Ys;
 			double A;
-			if(arrowLabel_infiniteRay(dvec3(x1, y1, z1), dvec3(x1, y1, z1), Xs, Ys, A))
+			if(arrowLabel_infiniteRay(dvec3(x1, y1, z1), dvec3(x2, y2, z2), Xs, Ys, A))
 		//	if(arrowLabel_infiniteRay(x1, y1, z1, x2, y2, z2, Xs, Ys, A))
 			{
 			//	for(auto &label:labels)
@@ -35536,6 +35537,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 			render();
 		return 0;
 	case WM_LBUTTONDOWN:
+	case WM_LBUTTONDBLCLK:
 		kb[VK_LBUTTON]=1;
 		if(modes::active)
 			modes::mode->inputLButtonDown(lParam);
@@ -35565,6 +35567,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 		var_menu_drag=0;
 		return 0;
 	case WM_RBUTTONDOWN:
+	case WM_RBUTTONDBLCLK:
 #ifdef BUILD_1_7
 		if(!modes::active)
 		{
