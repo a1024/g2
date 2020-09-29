@@ -7164,10 +7164,9 @@ namespace	G2
 	void  q_q_exp					(QuatP &r, QuatP const &x)					{r=exp((Quat1d)x);}
 	
 	inline double pow(double const &x, double const &y){return ::exp(y*::log(x));}
-	const double _ln_phi=::log(_phi), inv_sqrt5=1/_sqrt5;
-	void  r_r_fib					(VectP &r, VectP const &x)					{r=(::exp(x*_ln_phi)-::cos(_pi*x)*::exp(-x*_ln_phi))*inv_sqrt5;}
-	void  c_c_fib					(CompP &r, CompP const &x)					{Comp1d cx=x; r=(exp(cx*_ln_phi)-cos(_pi*cx)*exp(-cx*_ln_phi))*inv_sqrt5;}
-	void  q_q_fib					(QuatP &r, QuatP const &x)					{Quat1d qx=x; r=(exp(qx*_ln_phi)-cos(_pi*qx)*exp(-qx*_ln_phi))*inv_sqrt5;}
+	void  r_r_fib					(VectP &r, VectP const &x)					{double phi_p_x=::exp(x*_ln_phi); r=(phi_p_x-::cos(_pi*x)/phi_p_x)*inv_sqrt5;}
+	void  c_c_fib					(CompP &r, CompP const &x)					{Comp1d cx=x, phi_p_x=exp(cx*_ln_phi); r=(phi_p_x-cos(_pi*cx)/phi_p_x)*inv_sqrt5;}
+	void  q_q_fib					(QuatP &r, QuatP const &x)					{Quat1d qx=x, phi_p_x=exp(qx*_ln_phi); r=(phi_p_x-cos(_pi*qx)/phi_p_x)*inv_sqrt5;}
 	
 	const double rand_norm=9.31322574615479e-010;
 	inline double my_rand(){return (rand()<<15|rand())*rand_norm;}

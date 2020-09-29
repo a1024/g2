@@ -30,7 +30,8 @@ namespace	G2
 					_R		=8.3144621,			_qnan	=std::numeric_limits<double>::quiet_NaN(),
 
 					_ln2	=::log(2.),			_ln10	=::log(10.),	inv_ln10=1/_ln10,	_sqrt2=::sqrt(2.),	_sqrt3=::sqrt(3.),	_sqrt5=::sqrt(5.),
-					_pi_2=_pi*0.5,	_2pi=2*_pi,	_sqrt_2pi=::sqrt(_2pi),	_ln_sqrt_2pi=::log(_sqrt_2pi),	_1_2pi=1/_2pi, _1_pi=1/_pi, _pi_180=_pi/180;
+					_pi_2=_pi*0.5,	_2pi=2*_pi,	_sqrt_2pi=::sqrt(_2pi),	_ln_sqrt_2pi=::log(_sqrt_2pi),	_1_2pi=1/_2pi, _1_pi=1/_pi, _pi_180=_pi/180,
+					_ln_phi=::log(_phi), inv_sqrt5=1/_sqrt5;
 #pragma			warning(push)
 #pragma			warning(disable:4723)
 	const float		s_zero=0, s_infinity=1/s_zero;

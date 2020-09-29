@@ -71,7 +71,8 @@ namespace	G2
 
 		_ln2,	_ln10,	inv_ln10,	_sqrt2,		_sqrt3,			_sqrt5,
 		_pi_2,	_2pi,	_sqrt_2pi,	_ln_sqrt_2pi,	_1_2pi,		_1_pi,
-		_pi_180;
+		_pi_180,
+		_ln_phi, inv_sqrt5;
 	extern const float		s_zero, s_infinity;
 //	extern const double		zero=0, infinity=1/zero;
 }
