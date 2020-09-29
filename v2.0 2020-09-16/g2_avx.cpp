@@ -42,6 +42,17 @@
 #endif
 	#define	VLEAVE	_mm256_zeroupper()
 //	#define	VLEAVE
+#ifdef ALIGNED_INTRINSICS
+#define		LOAD256D	_mm256_load_pd
+#define		STORE256D	_mm256_store_pd
+#define		LOAD128D	_mm_load_pd
+#define		STORE128D	_mm_store_pd
+#else
+#define		LOAD256D	_mm256_loadu_pd
+#define		STORE256D	_mm256_storeu_pd
+#define		LOAD128D	_mm_loadu_pd
+#define		STORE128D	_mm_storeu_pd
+#endif
 bool		avx_supported=false;
 static __m256d minus_one, sign_mask;
 struct Vect4d
@@ -49,13 +60,17 @@ struct Vect4d
 	__declspec(align(32)) __m256d v;
 	Vect4d(){}
 //	Vect4d():v(_mm256_setzero_pd()){}//CRASH on non-AVX CPU
-#ifdef ALIGNED_INTRINSICS
-	Vect4d(VectP const &x):v(_mm256_load_pd(x.r)){}
-	Vect4d(double const *x):v(_mm256_load_pd(x)){}
+	Vect4d(VectP const &x):v(LOAD256D(x.r)){}
+#ifdef CHECK_NULL_POINTERS
+	Vect4d(double const *x)
+	{
+		if(x)
+			v=LOAD256D(x);
+		else
+			v=_mm256_setzero_pd();
+	}
 #else
-	Vect4d(VectP const &x):v(_mm256_loadu_pd(x.r)){}
-	Vect4d(double const *x):v(_mm256_loadu_pd(x)){}
-//	Vect4d(double *a):v(_mm256_loadu_pd(a)){}
+	Vect4d(double const *x):v(LOAD256D(x)){}
 #endif
 	Vect4d(__m256d const &v)
 	{
@@ -602,10 +617,10 @@ void minmax_avx(double *a, int size, double *lo_hi)//size multiple of 4, 32 byte
 	//if((int)a&31)
 	//	return;
 
-	__m256d min=_mm256_load_pd(a), max=min;
+	__m256d min=LOAD256D(a), max=min;
 	for(int k=4;k+3<size;k+=4)
 	{
-		__m256d vk=_mm256_load_pd(a+k);		//1.576 c/v on R7 2700
+		__m256d vk=LOAD256D(a+k);		//1.576 c/v on R7 2700
 		min=_mm256_min_pd(min, vk);
 		max=_mm256_max_pd(max, vk);
 	}
@@ -620,7 +635,7 @@ void minmax_avx(double *a, int size, double *lo_hi)//size multiple of 4, 32 byte
 	__m128d u1=_mm256_castpd256_pd128(t5);//{maxb3, minb2}
 	__m128d u2=_mm_min_pd(u0, u1), u3=_mm_max_pd(u0, u1),//{~, minc0}	{maxc1, ~}
 		u_minmax=_mm_shuffle_pd(u2, u3, 2);//{maxc1, minc0}
-	_mm_store_pd(lo_hi, u_minmax);
+	STORE128D(lo_hi, u_minmax);
 	//lo=min.m256d_f64[0];
 	//if(lo>min.m256d_f64[1])
 	//	lo=min.m256d_f64[1];
@@ -643,10 +658,10 @@ namespace	G2
 	{
 		void zeroall(){_mm256_zeroall();}
 		void zeroupper(){_mm256_zeroupper();}
-		__forceinline void assign(VectP &p, Vect4d const &v){_mm256_storeu_pd(p.r, v);}
-		//__forceinline void assign(double *p, Vect4d const &v){_mm256_storeu_pd(p, v.v);}
-		__forceinline void assign(CompP &p, Comp4d const &v){_mm256_storeu_pd(p.r, v.r), _mm256_storeu_pd(p.i, v.i);}
-		__forceinline void assign(QuatP &p, Quat4d const &v){_mm256_storeu_pd(p.r, v.r), _mm256_storeu_pd(p.i, v.i), _mm256_storeu_pd(p.j, v.j), _mm256_storeu_pd(p.k, v.k);}
+		__forceinline void assign(VectP &p, Vect4d const &v){STORE256D(p.r, v);}
+		//__forceinline void assign(double *p, Vect4d const &v){STORE256D(p, v.v);}
+		__forceinline void assign(CompP &p, Comp4d const &v){STORE256D(p.r, v.r), STORE256D(p.i, v.i);}
+		__forceinline void assign(QuatP &p, Quat4d const &v){STORE256D(p.r, v.r), STORE256D(p.i, v.i), STORE256D(p.j, v.j), STORE256D(p.k, v.k);}
 
 		void r_r_setzero				(VectP &r, VectP const&)					{assign(r, _mm256_setzero_pd());VLEAVE;}
 		void c_c_setzero				(CompP &r, CompP const&)					{assign(r, Comp4d(_mm256_setzero_pd(), _mm256_setzero_pd()));VLEAVE;}

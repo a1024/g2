@@ -33,6 +33,7 @@
 #pragma warning(pop)
 #endif
 
+	#define	CHECK_NULL_POINTERS
 	#define	ALIGNED_INTRINSICS//load/store vs loadu/storeu
 
 inline float		clamp_positive(float x){return (x+abs(x))*0.5f;}
@@ -192,9 +193,9 @@ namespace	G2
 	inline Quat1d	acos		(Quat1d	const &x){return -sgnu(x)*acosh(x);}
 	inline Quat1d	asin		(Quat1d	const &x){Quat1d q2=sgnu(x); return -q2*asinh(x*q2);}
 	inline Quat1d	atan		(Quat1d	const &x){Quat1d q2=sgnu(x); return -q2*atanh(x*q2);}
-	inline double	step		(double const &x){return .5+.5*sgn(x);}
-	inline Comp1d	step		(Comp1d const &x){return .5+.5*sgn(x);}
-	inline Quat1d	step		(Quat1d	const &x){return .5+.5*sgn(x);}
+	inline double	step		(double const &x){return 0.5+0.5*sgn(x);}
+	inline Comp1d	step		(Comp1d const &x){return 0.5+0.5*sgn(x);}
+	inline Quat1d	step		(Quat1d	const &x){return 0.5+0.5*sgn(x);}
 }
 struct VectP
 {

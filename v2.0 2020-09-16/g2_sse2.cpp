@@ -36,12 +36,18 @@
 #ifdef _DEBUG
 #pragma warning(pop)
 #endif
+#ifdef ALIGNED_INTRINSICS
+#define		LOAD128D	_mm_load_pd
+#define		STORE128D	_mm_store_pd
+#else
+#define		LOAD128D	_mm_loadu_pd
+#define		STORE128D	_mm_storeu_pd
+#endif
 const __m128d zero=_mm_setzero_pd(), minus_one=_mm_castsi128_pd(_mm_set1_epi32(-1)), sign_mask=_mm_castsi128_pd(_mm_set_epi32(0x7FFFFFFF, -1, 0x7FFFFFFF, -1));
 struct Vect2d
 {
 	__declspec(align(16)) __m128d v;
 	Vect2d():v(zero){}
-#ifdef ALIGNED_INTRINSICS
 	//Vect2d(VectP const &x)
 	//{
 	//	if((int&)x.r&31)
@@ -49,11 +55,24 @@ struct Vect2d
 	//	else
 	//		v=_mm_load_pd(x.r);
 	//}
-	Vect2d(VectP const &x):v(_mm_load_pd(x.r)){}
-	Vect2d(double const *x):v(_mm_load_pd(x)){}
+#ifdef CHECK_NULL_POINTERS
+	Vect2d(VectP const &x)
+	{
+		if(x.r)
+			v=LOAD128D(x.r);
+		else
+			v=_mm_setzero_pd();
+	}
+	Vect2d(double const *x)
+	{
+		if(x)
+			v=LOAD128D(x);
+		else
+			v=_mm_setzero_pd();
+	}
 #else
-	Vect2d(VectP const &x):v(_mm_loadu_pd(x.r)){}
-	Vect2d(double const *x):v(_mm_loadu_pd(x)){}
+	Vect2d(VectP const &x):v(LOAD128D(x.r)){}
+	Vect2d(double const *x):v(LOAD128D(x)){}
 #endif
 	Vect2d(double v):v(_mm_set1_pd(v)){}
 	Vect2d(double v0, double v1):v(_mm_set_pd(v1, v0)){}
@@ -190,11 +209,6 @@ struct Comp2d
 	Comp2d(){}
 	Comp2d(CompP const &x):r(x.r), i(x.i){}
 	Comp2d(double const *r, double const *i):r(r), i(i){}
-//#ifdef ALIGNED_INTRINSICS
-//	Comp2d(double const *r, double const *i):r(_mm_load_pd(r)), i(_mm_load_pd(i)){}
-//#else
-//	Comp2d(double const *r, double const *i):r(_mm_loadu_pd(r)), i(_mm_loadu_pd(i)){}
-//#endif
 	Comp2d(__m128d const &r, __m128d const &i):r(r), i(i){}
 	Comp2d(Vect2d const &r, Vect2d const &i):r(r), i(i){}
 	//Comp2d(Vect2d *pr, Vect2d *pi):r(*pr), i(*pi){}
@@ -364,11 +378,6 @@ struct Quat2d
 	Quat2d(){}
 	Quat2d(QuatP const &x):r(x.r), i(x.i), j(x.j), k(x.k){}
 	Quat2d(double const *r, double const *i, double const *j, double const *k):r(r), i(i), j(j), k(k){}
-//#ifdef ALIGNED_INTRINSICS
-//	Quat2d(double const *r, double const *i, double const *j, double const *k):r(_mm_load_pd(r)), i(_mm_load_pd(i)), j(_mm_load_pd(j)), k(_mm_load_pd(k)){}
-//#else
-//	Quat2d(double const *r, double const *i, double const *j, double const *k):r(_mm_loadu_pd(r)), i(_mm_loadu_pd(i)), j(_mm_loadu_pd(j)), k(_mm_loadu_pd(k)){}
-//#endif
 	Quat2d(__m128d const &r, __m128d const &i, __m128d const &j, __m128d const &k):r(r), i(i), j(j), k(k){}
 	Quat2d(Vect2d const &r, Vect2d const &i, Vect2d const &j, Vect2d const &k):r(r), i(i), j(j), k(k){}
 	//Quat2d(Vect2d *pr, Vect2d *pi, Vect2d *pj, Vect2d *pk):r(*pr), i(*pi), j(*pj), k(*pk), pr(pr), pi(pi), pj(pj), pk(pk){}
@@ -697,10 +706,10 @@ void minmax_sse2(double *a, int size, double *lo_hi)//{min, max}, even size, 16 
 	//if((int)a&15)
 	//	return;
 
-	__m128d min=_mm_load_pd(a), max=min;
+	__m128d min=LOAD128D(a), max=min;
 	for(int k=2;k+1<size;k+=2)				//1.487 c/v on R7 2700 (fastest)
 	{
-		__m128d vk=_mm_load_pd(a+k);		//3.494 cycles/value
+		__m128d vk=LOAD128D(a+k);		//3.494 cycles/value
 		min=_mm_min_pd(min, vk);
 		max=_mm_max_pd(max, vk);
 	}
@@ -709,7 +718,7 @@ void minmax_sse2(double *a, int size, double *lo_hi)//{min, max}, even size, 16 
 		t1=_mm_shuffle_pd(min, max, 3);//{max[1], min[1]}
 	__m128d t_min=_mm_min_pd(t0, t1), t_max=_mm_max_pd(t0, t1),
 		t_minmax=_mm_shuffle_pd(t_min, t_max, 2);
-	_mm_store_pd(lo_hi, t_minmax);
+	STORE128D(lo_hi, t_minmax);
 	//lo=min.m128d_f64[0]<min.m128d_f64[1]?min.m128d_f64[0]:min.m128d_f64[1];
 	//hi=max.m128d_f64[0]>max.m128d_f64[1]?max.m128d_f64[0]:max.m128d_f64[1];
 
@@ -718,7 +727,7 @@ void minmax_sse2(double *a, int size, double *lo_hi)//{min, max}, even size, 16 
 	else				lo2[0]=a[1], hi2[0]=a[0];
 		 if(a[2]<a[3])	lo2[1]=a[2], hi2[1]=a[3];
 	else				lo2[1]=a[3], hi2[1]=a[2];
-	//__m128d min=_mm_load_pd(lo2), max=_mm_load_pd(hi2);					//17.462 cycles/value [sic]
+	//__m128d min=LOAD128D(lo2), max=LOAD128D(hi2);					//17.462 cycles/value [sic]
 	__m128d min=_mm_set_pd(lo2[1], lo2[0]), max=_mm_set_pd(hi2[1], hi2[0]);	// 7.220 7.277 cycles/value
 	for(int k=4;k+3<size;k+=2)
 	{
@@ -730,8 +739,8 @@ void minmax_sse2(double *a, int size, double *lo_hi)//{min, max}, even size, 16 
 			lo2[1]=a[k+2], hi2[1]=a[k+3];
 		else
 			lo2[1]=a[k+3], hi2[1]=a[k+2];
-		//min=_mm_min_pd(min, _mm_load_pd(lo2));
-		//max=_mm_max_pd(max, _mm_load_pd(hi2));
+		//min=_mm_min_pd(min, LOAD128D(lo2));
+		//max=_mm_max_pd(max, LOAD128D(hi2));
 		min=_mm_min_pd(min, _mm_set_pd(lo2[1], lo2[0]));
 		max=_mm_max_pd(max, _mm_set_pd(hi2[1], hi2[0]));
 	}
@@ -966,20 +975,20 @@ namespace	G2
 			//	_mm_storeu_pd(p.r, v);
 			//else
 			//	_mm_store_pd(p.r, v);
-			_mm_store_pd(p.r, v);
+			STORE128D(p.r, v);
 		}
 		//__forceinline void assign(double *p, Vect2d const &v){_mm_store_pd(p, v.v);}
 		__forceinline void assign(CompP &p, Comp2d const &v)
 		{
-			_mm_store_pd(p.r, v.r);//VS2010 bug
-			_mm_store_pd(p.i, v.i);
+			STORE128D(p.r, v.r);//VS2010 bug
+			STORE128D(p.i, v.i);
 		}
 		__forceinline void assign(QuatP &p, Quat2d const &v)
 		{
-			_mm_store_pd(p.r, v.r);//VS2010 bug
-			_mm_store_pd(p.i, v.i);
-			_mm_store_pd(p.j, v.j);
-			_mm_store_pd(p.k, v.k);
+			STORE128D(p.r, v.r);//VS2010 bug
+			STORE128D(p.i, v.i);
+			STORE128D(p.j, v.j);
+			STORE128D(p.k, v.k);
 		}
 
 		void r_r_setzero				(VectP &r, VectP const&)					{assign(r, m_zero);}
@@ -1090,7 +1099,7 @@ namespace	G2
 
 		void r_rr_multiply				(VectP &r, VectP const &x, VectP const &y)
 		{
-			_mm_store_pd(r.r, _mm_mul_pd(_mm_load_pd(x.r), _mm_load_pd(y.r)));
+			STORE128D(r.r, _mm_mul_pd(LOAD128D(x.r), LOAD128D(y.r)));
 		//	assign(r, Vect2d(x)*Vect2d(y));
 		}
 		void c_rc_multiply				(CompP &r, VectP const &x, CompP const &y)	{assign(r, Vect2d(x)*Comp2d(y));}

@@ -1020,21 +1020,21 @@ namespace MP
 {
 	union	FP//multiprecision function pointer
 	{
-		enum	Type
-		{
-			NOOP_FUNCTION,
-			UNARY__R_R_FUNC, UNARY__C_C_FUNC, UNARY__Q_Q_FUNC,
-			BINARY_R_RR_FUNC, BINARY_C_RC_FUNC, BINARY_Q_RQ_FUNC,
-			BINARY_C_CR_FUNC, BINARY_C_CC_FUNC, BINARY_Q_CQ_FUNC,
-			BINARY_Q_QR_FUNC, BINARY_Q_QC_FUNC, BINARY_Q_QQ_FUNC,
-			UNARY__C_R_FUNC, UNARY__C_Q_FUNC,
-			UNARY__R_C_FUNC, UNARY__R_Q_FUNC,
-			BINARY_C_RR_FUNC, BINARY_R_RC_FUNC, BINARY_R_RQ_FUNC,
-			BINARY_R_CR_FUNC, BINARY_R_CC_FUNC, BINARY_R_CQ_FUNC,
-			BINARY_R_QR_FUNC, BINARY_R_QC_FUNC, BINARY_R_QQ_FUNC,
-			BINARY_C_QC_FUNC,
-			INLINE_IF
-		};
+		//enum	Type
+		//{
+		//	NOOP_FUNCTION,
+		//	UNARY__R_R_FUNC, UNARY__C_C_FUNC, UNARY__Q_Q_FUNC,
+		//	BINARY_R_RR_FUNC, BINARY_C_RC_FUNC, BINARY_Q_RQ_FUNC,
+		//	BINARY_C_CR_FUNC, BINARY_C_CC_FUNC, BINARY_Q_CQ_FUNC,
+		//	BINARY_Q_QR_FUNC, BINARY_Q_QC_FUNC, BINARY_Q_QQ_FUNC,
+		//	UNARY__C_R_FUNC, UNARY__C_Q_FUNC,
+		//	UNARY__R_C_FUNC, UNARY__R_Q_FUNC,
+		//	BINARY_C_RR_FUNC, BINARY_R_RC_FUNC, BINARY_R_RQ_FUNC,
+		//	BINARY_R_CR_FUNC, BINARY_R_CC_FUNC, BINARY_R_CQ_FUNC,
+		//	BINARY_R_QR_FUNC, BINARY_R_QC_FUNC, BINARY_R_QQ_FUNC,
+		//	BINARY_C_QC_FUNC,
+		//	INLINE_IF
+		//};
 		typedef void (*UF)(Quat &r, Quat const &x);//1, 2, 3, 13, 14, 15, 16
 		typedef void (*BF)(Quat &r, Quat const &x, Quat const &y);//4,5,6,7,8,9,10,11,12, 17, 18,19,20,21,22,23,24,25, 26
 		UF uf;
@@ -1390,7 +1390,7 @@ namespace	MP
 
 		//inline if
 		Instruction(int op1, char op1_ms, int op2, char op2_ms, int op3, char op3_ms, int result, char r_ms):
-			fp(0), type(FP::INLINE_IF), op1(op1), op1_ms(op1_ms), op2(op2), op2_ms(op2_ms), op3(op3), op3_ms(op3_ms), result(result), r_ms(r_ms){}
+			fp(0), type(::FP::INLINE_IF), op1(op1), op1_ms(op1_ms), op2(op2), op2_ms(op2_ms), op3(op3), op3_ms(op3_ms), result(result), r_ms(r_ms){}
 	};
 }
 struct Instruction
@@ -1463,7 +1463,7 @@ struct Instruction
 
 	//inline if
 	Instruction(int op1, char op1_ms, int op2, char op2_ms, int op3, char op3_ms, int result, char r_ms, DiscontinuityFunction &d):
-		d(d), type(27), simd(true), op1(op1), op1_ms(op1_ms), op2(op2), op2_ms(op2_ms), op3(op3), op3_ms(op3_ms), result(result), r_ms(r_ms){}
+		d(d), type(FP::INLINE_IF), simd(true), op1(op1), op1_ms(op1_ms), op2(op2), op2_ms(op2_ms), op3(op3), op3_ms(op3_ms), result(result), r_ms(r_ms){}
 };
 struct Variable
 {
@@ -7263,7 +7263,7 @@ namespace	G2
 	void  q_q_rect					(QuatP &r, QuatP const &x)					{Quat1d qx=x; r=step(qx+0.5)-step(qx-0.5);}
 	bool disc_rect(double x0, double x1)
 	{
-		double const d[2]={-.5, .5};
+		double const d[2]={-0.5, 0.5};
 		if(x0<d[0])		return x1>=d[0];
 		if(x0==d[0])	return x1<d[0]||x1>d[0];
 		if(x0<d[1])		return x1>=d[1];
@@ -7296,52 +7296,57 @@ namespace	G2
 	void r_qr_sqwv					(VectP &r, QuatP const &x, VectP const &y)	{r=*x.r-::floor(*x.r)<*y.r;}
 	void r_qc_sqwv					(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r-::floor(*x.r)<*y.r;}
 	void r_qq_sqwv					(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r-::floor(*x.r)<*y.r;}
-	bool disc_r_sqwv_i				(Value const &x0, Value const &x1)
-	{
-		if(x0.r==x1.r)	return false;
-		double t0=2*x0.r, t1=2*x1.r;
-		if(t0==std::floor(t0)||t1==std::floor(t1))
-			return true;
-		return std::floor(t0)!=std::floor(t1);
-	}
-	bool disc_c_sqwv_i				(Value const &x0, Value const &x1)
-	{
-		if(std::floor(x0.r)!=std::floor(x1.r)||std::floor(x0.i)!=std::floor(x1.i))
-			return true;
-		if(x0.r==x1.r&&x0.i==x1.i)
-			return true;
-		{
-			double r0=2*x0.r;
-			if(r0==std::floor(r0)&&x0.i==std::floor(x0.i))
-				return true;
-		}
-		{
-			double r1=2*x1.r;
-			if(r1==std::floor(r1)&&x1.i==std::floor(x1.i))
-				return true;
-		}
-		return false;
-	}
-	bool disc_q_sqwv_i				(Value const &x0, Value const &x1){return false;}//
-	bool disc_rr_sqwv_o				(Value const &o0, Value const &o1){return o0.r!=o1.r;}
-	bool disc_rc_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_rq_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cr_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cc_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cq_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qr_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qc_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qq_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_r_sqwv_o				(Value const &o0, Value const &o1)			{return o0.r!=o0.r;}
+	//bool disc_r_sqwv_i				(Value const &x0, Value const &x1)
+	//{
+	//	if(x0.r==x1.r)	return false;
+	//	double t0=x0.r+x0.r, t1=x1.r+x1.r;
+	//	if(t0==std::floor(t0)||t1==std::floor(t1))
+	//		return true;
+	//	return std::floor(t0)!=std::floor(t1);
+	//}
+	//bool disc_c_sqwv_i				(Value const &x0, Value const &x1)
+	//{
+	//	if(std::floor(x0.r)!=std::floor(x1.r)||std::floor(x0.i)!=std::floor(x1.i))
+	//		return true;
+	//	if(x0.r==x1.r&&x0.i==x1.i)
+	//		return true;
+	//	{
+	//		double r0=2*x0.r;
+	//		if(r0==std::floor(r0)&&x0.i==std::floor(x0.i))
+	//			return true;
+	//	}
+	//	{
+	//		double r1=2*x1.r;
+	//		if(r1==std::floor(r1)&&x1.i==std::floor(x1.i))
+	//			return true;
+	//	}
+	//	return false;
+	//}
+	//bool disc_q_sqwv_i				(Value const &x0, Value const &x1){return false;}//
+	//bool disc_rr_sqwv_o				(Value const &o0, Value const &o1){return o0.r!=o1.r;}
+	//bool disc_rc_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	//bool disc_rq_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	//bool disc_cr_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	//bool disc_cc_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	//bool disc_cq_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	//bool disc_qr_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	//bool disc_qc_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	//bool disc_qq_sqwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 
-	void  r_r_trwv					(VectP &r, VectP const &x)					{r=2*abs(x-::floor(x)-0.5);}
-	void  r_c_trwv					(VectP &r, CompP const &x)					{Comp1d cx=x; r=2*abs(cx-floor(cx)-0.5);}
-	void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat1d qx=x; r=2*abs(qx-floor(qx)-0.5);}
+	inline double clamp01(double x)
+	{
+		double temp=x+abs(x);//max(0, x)
+		return (temp+1-abs(temp-1))*0.25;//min(x, 1)
+	}
+	void  r_r_trwv					(VectP &r, VectP const &x)					{double t=abs(x-::floor(x)-0.5); r=t+t;}
+	void  r_c_trwv					(VectP &r, CompP const &x)					{Comp1d cx=x; double t=abs(cx-floor(cx)-0.5); r=t+t;}
+	void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat1d qx=x; double t=abs(qx-floor(qx)-0.5); r=t+t;}
 	void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)
 	{
 		double t=x-::floor(x), t2=1-x;
 		t2-=::floor(t2);
-		double dc=clamp_positive((double)y);
-		dc=dc>1?1:dc;
+		double dc=clamp01(y);
 		double dc2=1-dc, t_d=t/dc, t2_d2=t2/dc2;
 		r=(t_d<1)*t_d+(t2_d2<1)*t2_d2;
 	}
@@ -7349,8 +7354,7 @@ namespace	G2
 	{
 		Comp1d cx=x, t=cx-floor(cx), t2=1.-cx;
 		t2-=floor(t2);
-		double dc=clamp_positive(y);
-		dc=dc>1?1:dc;
+		double dc=clamp01(y);
 		double dc2=1-dc;
 		auto t_d=t/dc, t2_d2=t2/dc2;
 		r=double(t_d.real()<1)*t_d+double(t2_d2.real()<1)*t2_d2;
@@ -7359,9 +7363,10 @@ namespace	G2
 	{
 		Comp1d cx=x, cy=y, t=cx-floor(cx), t2=1.-cx;
 		t2-=floor(t2);
-		Comp1d dc=cy;
-		dc.real(clamp_positive(dc.real()));
-		dc.real(dc.real()>1?1:dc.real());
+		Comp1d dc(clamp01(*y.r), 0);
+		//Comp1d dc=cy;
+		//dc.real(clamp_positive(dc.real()));
+		//dc.real(dc.real()>1?1:dc.real());
 		Comp1d dc2=1.-dc;
 		auto t_d=t/dc, t2_d2=t2/dc2;
 		r=double(t_d.real()<1)*t_d+double(t2_d2.real()<1)*t2_d2;
@@ -7370,9 +7375,10 @@ namespace	G2
 	{
 		Quat1d cx=x, cy=y, t=cx-floor(cx), t2=1.-cx;
 		t2-=floor(t2);
-		Quat1d dc=cy;
-		dc=Quat1d(clamp_positive(dc.real()), dc.R_component_2(), dc.R_component_3(), dc.R_component_4());
-		dc=Quat1d(dc.real()>1?1:dc.real(), dc.R_component_2(), dc.R_component_3(), dc.R_component_4());
+		Quat1d dc(clamp01(*y.r));
+		//Quat1d dc=cy;
+		//dc=Quat1d(clamp_positive(dc.real()), dc.R_component_2(), dc.R_component_3(), dc.R_component_4());
+		//dc=Quat1d(dc.real()>1?1:dc.real(), dc.R_component_2(), dc.R_component_3(), dc.R_component_4());
 		Quat1d dc2=1.-dc;
 		auto t_d=t/dc, t2_d2=t2/dc2;
 		r=double(t_d.real()<1)*t_d+double(t2_d2.real()<1)*t2_d2;
@@ -8893,7 +8899,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_GAUSS:				function.set(SIMD(r_r_gauss)),			umts=returns_rcq,		d();								return;
 		case M_PERMUTATION:			function.set(SCALAR(r_r_permutation)),	umts=returns_rcq,		d();								return;
 		case M_COMBINATION:			function.set(SCALAR(r_r_combination)),	umts=returns_rcq,		d();								return;
-		case M_SQWV:				function.set(SIMD2(r_r_sqwv)),			umts=returns_rcq,		d(disc_r_sqwv_i, true);				return;
+		case M_SQWV:				function.set(SIMD2(r_r_sqwv)),			umts=returns_rcq,		d(disc_r_sqwv_o, false);			return;
 		case M_TRWV:				function.set(SIMD2(r_r_trwv)),			umts=returns_rcq,		d();								return;
 		case M_SAW:					function.set(SIMD2(r_r_saw)),			umts=returns_rcq,		d(disc_r_saw_i, true);				return;
 		case M_HYPOT:				function.set(SIMD(r_r_abs)),			umts=returns_rrr,		d();								return;
@@ -8997,7 +9003,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_GAUSS:				function.set(SIMD(c_c_gauss)),			umts=returns_rcq,		d();								return;
 		case M_COMBINATION:			function.set(SCALAR(c_c_combination)),	umts=returns_rcq,		d();								return;
 		case M_PERMUTATION:			function.set(SCALAR(c_c_permutation)),	umts=returns_rcq,		d();								return;
-		case M_SQWV:				function.set(SIMD2(r_c_sqwv)),			umts=returns_rcq,		d(disc_c_sqwv_i, true);				return;
+		case M_SQWV:				function.set(SIMD2(r_c_sqwv)),			umts=returns_rcq,		d(disc_r_sqwv_o, false);			return;
 		case M_TRWV:				function.set(SIMD2(r_c_trwv)),			umts=returns_rcq,		d(disc_c_trwv_i, true);				return;
 		case M_SAW:					function.set(SIMD2(c_c_saw)),			umts=returns_rcq,		d(disc_c_saw_i, true);				return;
 		case M_MANDELBROT:			function.set(SIMD(r_c_mandelbrot));		umts=returns_rrr,		d();								return;
@@ -9100,7 +9106,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_GAUSS:				function.set(SIMD(q_q_gauss)),			umts=returns_rcq,		d();								return;
 		case M_PERMUTATION:			function.set(SCALAR(q_q_permutation)),	umts=returns_rcq,		d();								return;
 		case M_COMBINATION:			function.set(SCALAR(q_q_combination)),	umts=returns_rcq,		d();								return;
-		case M_SQWV:				function.set(SIMD2(r_q_sqwv)),			umts=returns_rcq,		d(disc_q_sqwv_i, true);				return;
+		case M_SQWV:				function.set(SIMD2(r_q_sqwv)),			umts=returns_rcq,		d(disc_r_sqwv_o, false);			return;
 		case M_TRWV:				function.set(SIMD2(r_q_trwv)),			umts=returns_rcq,		d(disc_q_trwv_i, true);				return;
 		case M_SAW:					function.set(SIMD2(q_q_saw)),			umts=returns_rcq,		d(disc_q_saw_i, true);				return;
 	//	case M_MIN:					function.set(SCALAR(q_q_min)),			umts=returns_rcq,		d();								return;
@@ -9165,7 +9171,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
 			case M_RAND:				function.set(SCALAR(r_rr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(r_rr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_rr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_sqwv_o, false);			return;
+			case M_SQWV:				function.set(SIMD2(r_rr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_rr_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_trwv_i);					return;
 			case M_SAW:					function.set(SIMD2(r_rr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_saw_i);					return;
 			case M_HYPOT:				function.set(SIMD(r_rr_hypot)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9227,7 +9233,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(c_rc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_random, false);			return;
 			case M_ATAN:				function.set(SIMD(c_rc_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_atan_i);					return;
-			case M_SQWV:				function.set(SIMD(r_rc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD(r_rc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 		//	case M_TRWV:				function.set(SIMD(c_rc_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_trwv_i);					return;
 			case M_TRWV:				function.set(SIMD(c_cc_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_trwv_i);					return;
 			case M_SAW:					function.set(SIMD(c_rc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_saw_i);					return;
@@ -9291,7 +9297,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_rq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_rq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_rq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_rq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 		//	case M_TRWV:				function.set(SCALAR(q_rq_trwv)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_trwv_i);					return;
 			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_trwv_i);					return;//
 			case M_SAW:					function.set(SIMD2(q_rq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_saw_i);					return;
@@ -9360,7 +9366,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
 			case M_RAND:				function.set(SCALAR(c_cr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(c_cr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_cr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_cr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(c_cr_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_trwv_i);					return;
 			case M_SAW:					function.set(SIMD2(c_cr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_saw_i);					return;
 			case M_MANDELBROT:			function.set(SIMD(r_cr_mandelbrot)),			bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -9419,7 +9425,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(c_cc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_log_i);					return;
 			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
 			case M_ATAN:				function.set(SCALAR(c_cc_atan)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_cc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cc_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_cc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(c_cc_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cc_trwv_i);					return;
 			case M_SAW:					function.set(SIMD2(c_cc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cc_saw_i);					return;
 			case M_MIN:					function.set(SIMD(c_cc_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9478,7 +9484,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_cq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_cq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_cq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_cq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 		//	case M_TRWV:				function.set(SCALAR(q_cq_trwv)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_trwv_i);					return;
 			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_trwv_i);					return;
 			case M_SAW:					function.set(SIMD2(q_cq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_saw_i);					return;
@@ -9547,7 +9553,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_qr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_qr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_qr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 		//	case M_TRWV:				function.set(SIMD(q_qr_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_trwv_i);					return;
 			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_trwv_i);					return;
 			case M_SAW:					function.set(SIMD2(q_qr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_saw_i);					return;
@@ -9611,7 +9617,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_qc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qc_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_qc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_qc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 		//	case M_TRWV:				function.set(SCALAR(q_qc_trwv)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_trwv_i);					return;
 			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_trwv_i);					return;
 			case M_SAW:					function.set(SIMD2(q_qc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_saw_i);					return;
@@ -9674,7 +9680,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(q_qq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qq_log_i);					return;
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_atan_i);					return;
-			case M_SQWV:				function.set(SIMD(r_qq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_sqwv_i);					return;
+			case M_SQWV:				function.set(SIMD(r_qq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_trwv_i);					return;
 			case M_SAW:					function.set(SIMD(q_qq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_saw_i);					return;
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -11835,200 +11841,79 @@ void Compile::compile_expression_global(Expression &expr)
 	free(term);
 }
 
+#ifdef CHECK_NULL_POINTERS
+#define		NPA(pointer, idx)	(pointer?pointer[idx]:0)//null pointer access
+#define		NPO(vec, mask)		(vec.p+(k2&mask))		//null pointer offset
+//#define	NPO(vec, idx)		(vec.p+(idx&-(vec.p!=nullptr)))
+//#define	NPO(pointer, idx)	(pointer+(idx&-(pointer!=nullptr)))
+//#define	NPO(pointer, idx)	(pointer?pointer+idx:nullptr)
+#else
+#define		NPA(pointer, idx)	(pointer[idx])
+#define		NPO(vec, mask)		(vec.p+k2)
+#endif
 bool disc_conditional(Value const &x0, Value const &x1)
 {
 	using namespace G2;
-	return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);
+	return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i)&&_1d_zero_in_range(x0.j, x1.j)&&_1d_zero_in_range(x0.k, x1.k);
+//	return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);
 }
 void disc_1d_in_u	(Expression &ex, Instruction &in, int offset, int disc_offset, int x1, int x2, int y1, int y2, int z1, int z2, int Xplaces, int Yplaces, int Zplaces)
-{
+{//discontinuity function: 1D, input, unary instruction
 	auto &op1=ex.n[in.op1];
 	auto op1_r=(double*)op1.r.p, op1_i=(double*)op1.i.p, op1_j=(double*)op1.j.p, op1_k=(double*)op1.k.p;
-	switch(in.type)
+	for(int v=x1, vEnd=x2-1;v<vEnd;++v)
 	{
-	case 1://r
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.ud_i(Value(op1_r[v]), Value(op1_r[v+1]));
-		}
-		break;
-	case 2://c
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.ud_i(Value(op1_r[v], op1_i[v]), Value(op1_r[v+1], op1_i[v+1]));
-		}
-		break;
-	case 3://q
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.ud_i(Value(op1_r[v], op1_i[v], op1_j[v], op1_k[v]), Value(op1_r[v+1], op1_i[v+1], op1_j[v+1], op1_k[v+1]));
-		}
-		break;
-	//case 4://rr
-	//	break;
-	//case 5://rc
-	//	break;
-	//case 6://rq
-	//	break;
-	//case 7://cr
-	//	break;
-	//case 8://cc
-	//	break;
-	//case 9://cq
-	//	break;
-	//case 10://qr
-	//	break;
-	//case 11://qc
-	//	break;
-	//case 12://qq
-	//	break;
-	//case 13://a ? b : c
-	//	break;
+		auto &condition=ex.discontinuities[v];
+		condition=condition||in.d.ud_i
+		(
+			Value(op1_r[v], NPA(op1_i, v), NPA(op1_j, v), NPA(op1_k, v)),
+			Value(op1_r[v+1], NPA(op1_i, v+1), NPA(op1_j, v+1), NPA(op1_k, v+1))
+		);
 	}
 }
 void disc_1d_in_b	(Expression &ex, Instruction &in, int offset, int disc_offset, int x1, int x2, int y1, int y2, int z1, int z2, int Xplaces, int Yplaces, int Zplaces)
-{
+{//discontinuity function: 1D, input, binary instruction
 	auto &op1=ex.n[in.op1], &op2=ex.n[in.op2];
 	auto op1_r=(double*)op1.r.p, op1_i=(double*)op1.i.p, op1_j=(double*)op1.j.p, op1_k=(double*)op1.k.p;
 	auto op2_r=(double*)op2.r.p, op2_i=(double*)op2.i.p, op2_j=(double*)op2.j.p, op2_k=(double*)op2.k.p;
-	switch(in.type)
+	for(int v=x1, vEnd=x2-1;v<vEnd;++v)
 	{
-	//case 1://r
-	//	break;
-	//case 2://c
-	//	break;
-	//case 3://q
-	//	break;
-	case 4://rr
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v]), Value(op2_r[v]), Value(op1_r[v+1]), Value(op2_r[v+1]));
-		}
-		break;
-	case 5://rc
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v]), Value(op2_r[v], op2_i[v]), Value(op1_r[v+1]), Value(op2_r[v+1], op2_i[v+1]));
-		}
-		break;
-	case 6://rq
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v]), Value(op2_r[v], op2_i[v], op2_j[v], op2_k[v]), Value(op1_r[v+1]), Value(op2_r[v+1], op2_i[v+1], op2_j[v+1], op2_k[v+1]));
-		}
-		break;
-	case 7://cr
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i[v]), Value(op2_r[v]), Value(op1_r[v+1], op1_i[v+1]), Value(op2_r[v+1]));
-		}
-		break;
-	case 8://cc
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i[v]), Value(op2_r[v], op2_i[v]), Value(op1_r[v+1], op1_i[v+1]), Value(op2_r[v+1], op2_i[v+1]));
-		}
-		break;
-	case 9://cq
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i[v]), Value(op2_r[v], op2_i[v], op2_j[v], op2_k[v]), Value(op1_r[v+1], op1_i[v+1]), Value(op2_r[v+1], op2_i[v+1], op2_j[v+1], op2_k[v+1]));
-		}
-		break;
-	case 10://qr
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i[v], op1_j[v], op1_k[v]), Value(op2_r[v]), Value(op1_r[v+1], op1_i[v+1], op1_j[v+1], op1_k[v+1]), Value(op2_r[v+1]));
-		}
-		break;
-	case 11://qc
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i[v], op1_j[v], op1_k[v]), Value(op2_r[v], op2_i[v]), Value(op1_r[v+1], op1_i[v+1], op1_j[v+1], op1_k[v+1]), Value(op2_r[v+1], op2_i[v+1]));
-		}
-		break;
-	case 12://qq
-		for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i[v], op1_j[v], op1_k[v]), Value(op2_r[v], op2_i[v], op2_j[v], op2_k[v]), Value(op1_r[v+1], op1_i[v+1], op1_j[v+1], op1_k[v+1]), Value(op2_r[v+1], op2_i[v+1], op2_j[v+1], op2_k[v+1]));
-		}
-		break;
-	//case 13://a ? b : c
-	//	break;
+		auto &condition=ex.discontinuities[v];
+		condition=condition||in.d.bd_i
+		(
+			Value(op1_r[v], NPA(op1_i, v), NPA(op1_j, v), NPA(op1_k, v)),
+			Value(op2_r[v], NPA(op2_i, v), NPA(op2_j, v), NPA(op2_k, v)),
+			Value(op1_r[v+1], NPA(op1_i, v+1), NPA(op1_j, v+1), NPA(op1_k, v+1)),
+			Value(op2_r[v+1], NPA(op2_i, v+1), NPA(op2_j, v+1), NPA(op2_k, v+1))
+		);
 	}
 }
 void disc_1d_in_t	(Expression &ex, Instruction &in, int offset, int disc_offset, int x1, int x2, int y1, int y2, int z1, int z2, int Xplaces, int Yplaces, int Zplaces)
-{
+{//discontinuity function: 1D, input, triary (only inline if is a default triary function)
 	auto &op1=ex.n[in.op1];
 	auto op1_r=(double*)op1.r.p, op1_i=(double*)op1.i.p, op1_j=(double*)op1.j.p, op1_k=(double*)op1.k.p;
-	switch(in.type)
+	for(int v=x1, vEnd=x2-1;v<vEnd;++v)
 	{
-	case 13://a ? b : c
-		switch(maximum(in.op2_ms, in.op3_ms))
-		{
-		case 'R':
-			for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-			{
-				auto &condition=ex.discontinuities[v];
-				condition=condition||disc_conditional(Value(op1_r[v]), Value(op1_r[v+1]));
-			}
-			break;
-		case 'c':
-			for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-			{
-				auto &condition=ex.discontinuities[v];
-				condition=condition||disc_conditional(Value(op1_r[v], op1_i[v]), Value(op1_r[v+1], op1_i[v+1]));
-			}
-			break;
-		case 'h':
-			for(int v=x1, vEnd=x2-1;v<vEnd;++v)
-			{
-				auto &condition=ex.discontinuities[v];
-				condition=condition||disc_conditional(Value(op1_r[v], op1_i[v], op1_j[v], op1_k[v]), Value(op1_r[v+1], op1_i[v+1], op1_j[v+1], op1_k[v+1]));
-			}
-		break;
-		}
+		auto &condition=ex.discontinuities[v];
+		condition=condition||disc_conditional
+		(
+			Value(op1_r[v], NPA(op1_i, v), NPA(op1_j, v), NPA(op1_k, v)),
+			Value(op1_r[v+1], NPA(op1_i, v+1), NPA(op1_j, v+1), NPA(op1_k, v+1))
+		);
 	}
 }
 void disc_1d_out	(Expression &ex, Instruction &in, int offset, int disc_offset, int x1, int x2, int y1, int y2, int z1, int z2, int Xplaces, int Yplaces, int Zplaces)
-{
+{//discontinuity function: 1D, output, (always unary)
 	auto &op1=ex.n[in.result];
 	auto op1_r=(double*)op1.r.p, op1_i=(double*)op1.i.p, op1_j=(double*)op1.j.p, op1_k=(double*)op1.k.p;
-	switch(in.r_ms)
+	for(int v=x1;v<x2-1;++v)
 	{
-	case 'R':
-		for(int v=x1;v<x2-1;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.d_o(Value(op1_r[v]), Value(op1_r[v+1]));
-		}
-		break;
-	case 'c':
-		for(int v=x1;v<x2-1;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i[v]), Value(op1_r[v+1], op1_i[v+1]));
-		}
-		break;
-	case 'h':
-		for(int v=x1;v<x2-1;++v)
-		{
-			auto &condition=ex.discontinuities[v];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i[v], op1_j[v], op1_k[v]), Value(op1_r[v+1], op1_i[v+1], op1_j[v+1], op1_k[v+1]));
-		}
-		break;
+		auto &condition=ex.discontinuities[v];
+		condition=condition||in.d.d_o
+		(
+			Value(op1_r[v], NPA(op1_i, v), NPA(op1_j, v), NPA(op1_k, v)),
+			Value(op1_r[v+1], NPA(op1_i, v+1), NPA(op1_j, v+1), NPA(op1_k, v+1))
+		);
 	}
 }
 
@@ -12045,7 +11930,11 @@ void disc_i2d_in_u	(Expression &ex, Instruction &in, int offset, int disc_offset
 			//if(v>=op1.ndr.size()||(Xplaces+1)*y+x>=ex.discontinuities.size())
 			//	int LOL_1=0;
 			auto &condition=ex.discontinuities[(Xplaces+1)*y+x];
-			condition=condition||in.d.ud_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0), Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||in.d.ud_i
+			(
+				Value(op1_r[v], NPA(op1_i, v), NPA(op1_j, v), NPA(op1_k, v)),
+				Value(op1_r[v+1], NPA(op1_i, v+1), NPA(op1_j, v+1), NPA(op1_k, v+1))
+			);
 		}
 	}
 	for(int y=y1;y<y2-1;++y)
@@ -12054,7 +11943,11 @@ void disc_i2d_in_u	(Expression &ex, Instruction &in, int offset, int disc_offset
 		{
 			unsigned v=(Xplaces+2)*y+x;
 			auto &condition=ex.discontinuities[disc_offset+v];
-			condition=condition||in.d.ud_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0), Value(op1_r[v+Xplaces+2], op1_i?op1_i[v+Xplaces+2]:0, op1_j?op1_j[v+Xplaces+2]:0, op1_k?op1_k[v+Xplaces+2]:0));
+			condition=condition||in.d.ud_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+Xplaces+2], op1_i?op1_i[v+Xplaces+2]:0, op1_j?op1_j[v+Xplaces+2]:0, op1_k?op1_k[v+Xplaces+2]:0)
+			);
 		}
 	}
 }
@@ -12070,10 +11963,13 @@ void disc_i2d_in_b	(Expression &ex, Instruction &in, int offset, int disc_offset
 		{
 			unsigned v=(Xplaces+2)*y+x;
 			auto &condition=ex.discontinuities[(Xplaces+1)*y+x];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+			condition=condition||in.d.bd_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
 				Value(op2_r[v], op2_i?op2_i[v]:0, op2_j?op2_j[v]:0, op2_k?op2_k[v]:0),
 				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0),
-				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0));
+				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0)
+			);
 		}
 	}
 	for(int y=y1;y<y2-1;++y)
@@ -12082,10 +11978,13 @@ void disc_i2d_in_b	(Expression &ex, Instruction &in, int offset, int disc_offset
 		{
 			unsigned v=(Xplaces+2)*y+x;
 			auto &condition=ex.discontinuities[disc_offset+v];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+			condition=condition||in.d.bd_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
 				Value(op2_r[v], op2_i?op2_i[v]:0, op2_j?op2_j[v]:0, op2_k?op2_k[v]:0),
 				Value(op1_r[v+Xplaces+2], op1_i?op1_i[v+Xplaces+2]:0, op1_j?op1_j[v+Xplaces+2]:0, op1_k?op1_k[v+Xplaces+2]:0),
-				Value(op2_r[v+Xplaces+2], op2_i?op2_i[v+Xplaces+2]:0, op2_j?op2_j[v+Xplaces+2]:0, op2_k?op2_k[v+Xplaces+2]:0));
+				Value(op2_r[v+Xplaces+2], op2_i?op2_i[v+Xplaces+2]:0, op2_j?op2_j[v+Xplaces+2]:0, op2_k?op2_k[v+Xplaces+2]:0)
+			);
 		}
 	}
 }
@@ -12100,8 +11999,11 @@ void disc_i2d_in_t	(Expression &ex, Instruction &in, int offset, int disc_offset
 		{
 			unsigned v=(Xplaces+2)*y+x;
 			auto &condition=ex.discontinuities[(Xplaces+1)*y+x];
-			condition=condition||disc_conditional(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||disc_conditional
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		}
 	}
 	for(int y=y1;y<y2-1;++y)
@@ -12110,8 +12012,11 @@ void disc_i2d_in_t	(Expression &ex, Instruction &in, int offset, int disc_offset
 		{
 			unsigned v=(Xplaces+2)*y+x;
 			auto &condition=ex.discontinuities[disc_offset+v];
-			condition=condition||disc_conditional(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+Xplaces+2], op1_i?op1_i[v+Xplaces+2]:0, op1_j?op1_j[v+Xplaces+2]:0, op1_k?op1_k[v+Xplaces+2]:0));
+			condition=condition||disc_conditional
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+Xplaces+2], op1_i?op1_i[v+Xplaces+2]:0, op1_j?op1_j[v+Xplaces+2]:0, op1_k?op1_k[v+Xplaces+2]:0)
+			);
 		}
 	}
 }
@@ -12126,8 +12031,11 @@ void disc_i2d_out	(Expression &ex, Instruction &in, int offset, int disc_offset,
 		{
 			unsigned v=(Xplaces+2)*y+x;
 			auto &condition=ex.discontinuities[(Xplaces+1)*y+x];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||in.d.d_o
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		}
 	}
 	for(int y=y1;y<y2-1;++y)
@@ -12136,8 +12044,11 @@ void disc_i2d_out	(Expression &ex, Instruction &in, int offset, int disc_offset,
 		{
 			unsigned v=(Xplaces+2)*y+x;
 			auto &condition=ex.discontinuities[disc_offset+v];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+Xplaces+2], op1_i?op1_i[v+Xplaces+2]:0, op1_j?op1_j[v+Xplaces+2]:0, op1_k?op1_k[v+Xplaces+2]:0));
+			condition=condition||in.d.d_o
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+Xplaces+2], op1_i?op1_i[v+Xplaces+2]:0, op1_j?op1_j[v+Xplaces+2]:0, op1_k?op1_k[v+Xplaces+2]:0)
+			);
 		}
 	}
 }
@@ -12182,10 +12093,13 @@ void disc_2d_in_b	(Expression &ex, Instruction &in, int offset, int disc_offset,
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[(Xplaces-1)*y+x];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+			condition=condition||in.d.bd_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
 				Value(op2_r[v], op2_i?op2_i[v]:0, op2_j?op2_j[v]:0, op2_k?op2_k[v]:0),
 				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0),
-				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0));
+				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0)
+			);
 		}
 	}
 	for(int x=x1;x<x2;++x)
@@ -12194,10 +12108,13 @@ void disc_2d_in_b	(Expression &ex, Instruction &in, int offset, int disc_offset,
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[disc_offset+(Yplaces-1)*x+y];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+			condition=condition||in.d.bd_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
 				Value(op2_r[v], op2_i?op2_i[v]:0, op2_j?op2_j[v]:0, op2_k?op2_k[v]:0),
 				Value(op1_r[v+Xplaces], op1_i?op1_i[v+Xplaces]:0, op1_j?op1_j[v+Xplaces]:0, op1_k?op1_k[v+Xplaces]:0),
-				Value(op2_r[v+Xplaces], op2_i?op2_i[v+Xplaces]:0, op2_j?op2_j[v+Xplaces]:0, op2_k?op2_k[v+Xplaces]:0));
+				Value(op2_r[v+Xplaces], op2_i?op2_i[v+Xplaces]:0, op2_j?op2_j[v+Xplaces]:0, op2_k?op2_k[v+Xplaces]:0)
+			);
 		}
 	}
 }
@@ -12212,8 +12129,11 @@ void disc_2d_in_t	(Expression &ex, Instruction &in, int offset, int disc_offset,
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[(Xplaces-1)*y+x];
-			condition=condition||disc_conditional(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||disc_conditional
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		}
 	}
 	for(int x=x1;x<x2;++x)
@@ -12222,8 +12142,11 @@ void disc_2d_in_t	(Expression &ex, Instruction &in, int offset, int disc_offset,
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[disc_offset+(Yplaces-1)*x+y];
-			condition=condition||disc_conditional(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+Xplaces], op1_i?op1_i[v+Xplaces]:0, op1_j?op1_j[v+Xplaces]:0, op1_k?op1_k[v+Xplaces]:0));
+			condition=condition||disc_conditional
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+Xplaces], op1_i?op1_i[v+Xplaces]:0, op1_j?op1_j[v+Xplaces]:0, op1_k?op1_k[v+Xplaces]:0)
+			);
 		}
 	}
 }
@@ -12238,8 +12161,11 @@ void disc_2d_out	(Expression &ex, Instruction &in, int offset, int disc_offset, 
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[(Xplaces-1)*y+x];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||in.d.d_o
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		}
 	}
 	for(int x=x1;x<x2;++x)
@@ -12248,8 +12174,11 @@ void disc_2d_out	(Expression &ex, Instruction &in, int offset, int disc_offset, 
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[disc_offset+(Yplaces-1)*x+y];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+Xplaces], op1_i?op1_i[v+Xplaces]:0, op1_j?op1_j[v+Xplaces]:0, op1_k?op1_k[v+Xplaces]:0));
+			condition=condition||in.d.d_o
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+Xplaces], op1_i?op1_i[v+Xplaces]:0, op1_j?op1_j[v+Xplaces]:0, op1_k?op1_k[v+Xplaces]:0)
+			);
 		}
 	}
 }
@@ -12264,8 +12193,11 @@ void disc_l2d_X_in_u(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[(Xplaces-1)*y+x];
-			condition=condition||in.d.ud_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||in.d.ud_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		//	condition=condition||in.d.ud_i(op1.ndr[v], op1.ndr[v+1]);
 		}
 	}
@@ -12280,8 +12212,11 @@ void disc_l2d_Y_in_u(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=offset+Yplaces*x+y;
 			auto &condition=ex.discontinuities[disc_offset+(Yplaces-1)*x+y];
-			condition=condition||in.d.ud_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||in.d.ud_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		//	condition=condition||in.d.ud_i(op1.ndr[v], op1.ndr[v+1]);
 		}
 	}
@@ -12297,10 +12232,13 @@ void disc_l2d_X_in_b(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[(Xplaces-1)*y+x];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+			condition=condition||in.d.bd_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
 				Value(op2_r[v], op2_i?op2_i[v]:0, op2_j?op2_j[v]:0, op2_k?op2_k[v]:0),
 				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0),
-				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0));
+				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0)
+			);
 		//	condition=condition||in.d.bd_i(op1.ndr[v], op2.ndr[v], op1.ndr[v+1], op2.ndr[v+1]);
 		}
 	}
@@ -12316,10 +12254,13 @@ void disc_l2d_Y_in_b(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=offset+Yplaces*x+y;
 			auto &condition=ex.discontinuities[disc_offset+(Yplaces-1)*x+y];
-			condition=condition||in.d.bd_i(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+			condition=condition||in.d.bd_i
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
 				Value(op2_r[v], op2_i?op2_i[v]:0, op2_j?op2_j[v]:0, op2_k?op2_k[v]:0),
 				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0),
-				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0));
+				Value(op2_r[v+1], op2_i?op2_i[v+1]:0, op2_j?op2_j[v+1]:0, op2_k?op2_k[v+1]:0)
+			);
 		//	condition=condition||in.d.bd_i(op1.ndr[v], op2.ndr[v], op1.ndr[v+1], op2.ndr[v+1]);
 		}
 	}
@@ -12334,8 +12275,11 @@ void disc_l2d_X_in_t(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[(Xplaces-1)*y+x];
-			condition=condition||disc_conditional(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||disc_conditional
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		//	condition=condition||in.d.td_i(op1.ndr[v], op2.ndr[v], op3.ndr[v], op1.ndr[v+1], op2.ndr[v+1], op3.ndr[v+1]);
 		}
 	}
@@ -12350,8 +12294,11 @@ void disc_l2d_Y_in_t(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=offset+Yplaces*x+y;
 			auto &condition=ex.discontinuities[disc_offset+(Yplaces-1)*x+y];
-			condition=condition||disc_conditional(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||disc_conditional
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		//	condition=in.d.td_i(op1.ndr[v], op2.ndr[v], op3.ndr[v], op1.ndr[v+1], op2.ndr[v+1], op3.ndr[v+1]);
 		}
 	}
@@ -12366,8 +12313,11 @@ void disc_l2d_X_out	(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=Xplaces*y+x;
 			auto &condition=ex.discontinuities[(Xplaces-1)*y+x];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||in.d.d_o
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		//	condition=condition||in.d.d_o(result.ndr[v], result.ndr[v+1]);
 		}
 	}
@@ -12382,8 +12332,11 @@ void disc_l2d_Y_out	(Expression &ex, Instruction &in, int offset, int disc_offse
 		{
 			unsigned v=offset+Yplaces*x+y;
 			auto &condition=ex.discontinuities[disc_offset+(Yplaces-1)*x+y];
-			condition=condition||in.d.d_o(Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
-				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0));
+			condition=condition||in.d.d_o
+			(
+				Value(op1_r[v], op1_i?op1_i[v]:0, op1_j?op1_j[v]:0, op1_k?op1_k[v]:0),
+				Value(op1_r[v+1], op1_i?op1_i[v+1]:0, op1_j?op1_j[v+1]:0, op1_k?op1_k[v+1]:0)
+			);
 		//	condition=in.d.d_o(result.ndr[v], result.ndr[v+1]);
 		}
 	}
@@ -12402,46 +12355,50 @@ void solve(Expression &ex, int offset, int x1, int x2, int y1, int y2, int z1, i
 #ifdef _DEBUG
 	for(int k=0, kEnd=workSize_n;k<kEnd;++k)
 #else
-	Concurrency::parallel_for(0, workSize_n, [&](int k)
+	Concurrency::parallel_for(0, workSize_n, [&](int k)//for each SIMD group
 #endif
 	{
 		int ka=k<<logstep;
 		int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
-		for(int i=0, iEnd=ex.i.size();i<iEnd;++i)
+		for(int i=0, iEnd=ex.i.size();i<iEnd;++i)//for each instruction
 		{
 			auto &in=ex.i[i];
 			auto &res=ex.n[in.result], &op1=ex.n[in.op1], &op2=ex.n[in.type>=4&&in.type<=12||in.type>=18&&in.type<=27?in.op2:in.op1];
-			for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
+			unsigned
+				mrr=-(res.r.p!=nullptr), mri=-(res.i.p!=nullptr), mrj=-(res.j.p!=nullptr), mrk=-(res.k.p!=nullptr),
+				m1r=-(op1.r.p!=nullptr), m1i=-(op1.i.p!=nullptr), m1j=-(op1.j.p!=nullptr), m1k=-(op1.k.p!=nullptr),
+				m2r=-(op2.r.p!=nullptr), m2i=-(op2.i.p!=nullptr), m2j=-(op2.j.p!=nullptr), m2k=-(op2.k.p!=nullptr);
+			for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)//for each element in SIMD group (for non-SIMD instructions)
 			{
 				switch(in.type)
 				{
 				case 'c':Solve_UserFunction(ex, in, false)(k2);break;
-				case FP::_R_R_FUNCTION:(&in.ia32)[logstep]. r_r(VectP(&res.r[k2]),										VectP(&op1.r[k2]));										break;//r_r
-				case FP::_C_C_FUNCTION:(&in.ia32)[logstep]. c_c(CompP(&res.r[k2], &res.i[k2]),							CompP(&op1.r[k2], &op1.i[k2]));							break;//c_c
-				case FP::_Q_Q_FUNCTION:(&in.ia32)[logstep]. q_q(QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.j[k2]),	QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]));	break;//q_q
-				case FP::R_RR_FUNCTION:(&in.ia32)[logstep].r_rr(VectP(&res.r[k2]),										VectP(&op1.r[k2]),										VectP(&op2.r[k2]));										break;//r_rr
-				case FP::C_RC_FUNCTION:(&in.ia32)[logstep].c_rc(CompP(&res.r[k2], &res.i[k2]),							VectP(&op1.r[k2]),										CompP(&op2.r[k2], &op2.i[k2]));							break;//c_rc
-				case FP::Q_RQ_FUNCTION:(&in.ia32)[logstep].q_rq(QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2]),	VectP(&op1.r[k2]),										QuatP(&op2.r[k2], &op2.i[k2], &op2.j[k2], &op2.k[k2]));	break;//q_rq
-				case FP::C_CR_FUNCTION:(&in.ia32)[logstep].c_cr(CompP(&res.r[k2], &res.i[k2]),							CompP(&op1.r[k2], &op1.i[k2]),							VectP(&op2.r[k2]));										break;//c_cr
-				case FP::C_CC_FUNCTION:(&in.ia32)[logstep].c_cc(CompP(&res.r[k2], &res.i[k2]),							CompP(&op1.r[k2], &op1.i[k2]),							CompP(&op2.r[k2], &op2.i[k2]));							break;//c_cc
-				case FP::Q_CQ_FUNCTION:(&in.ia32)[logstep].q_cq(QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2]),	CompP(&op1.r[k2], &op1.i[k2]),							QuatP(&op2.r[k2], &op2.i[k2], &op2.j[k2], &op2.k[k2]));	break;//q_cq
-				case FP::Q_QR_FUNCTION:(&in.ia32)[logstep].q_qr(QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2]),	QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]),	VectP(&op2.r[k2]));										break;//q_qr
-				case FP::Q_QC_FUNCTION:(&in.ia32)[logstep].q_qc(QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2]),	QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]),	CompP(&op2.r[k2], &op2.i[k2]));							break;//q_qc
-				case FP::Q_QQ_FUNCTION:(&in.ia32)[logstep].q_qq(QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2]),	QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]),	QuatP(&op2.r[k2], &op2.i[k2], &op2.j[k2], &op2.k[k2]));	break;//q_qq
-				case FP::_C_R_FUNCTION:(&in.ia32)[logstep]. c_r(CompP(&res.r[k2], &res.i[k2]),	VectP(&op1.r[k2]));										break;//c_r
-				case FP::_C_Q_FUNCTION:(&in.ia32)[logstep]. c_q(CompP(&res.r[k2], &res.i[k2]),	QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]));	break;//c_q
-				case FP::_R_C_FUNCTION:(&in.ia32)[logstep]. r_c(VectP(&res.r[k2]),				CompP(&op1.r[k2], &op1.i[k2]));							break;//r_c
-				case FP::_R_Q_FUNCTION:(&in.ia32)[logstep]. r_q(VectP(&res.r[k2]),				QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]));	break;//r_q
-				case FP::C_RR_FUNCTION:(&in.ia32)[logstep].c_rr(CompP(&res.r[k2], &res.i[k2]),	VectP(&op1.r[k2]),										VectP(&op2.r[k2]));										break;//c_rr
-				case FP::R_RC_FUNCTION:(&in.ia32)[logstep].r_rc(VectP(&res.r[k2]),				VectP(&op1.r[k2]),										CompP(&op2.r[k2], &op2.i[k2]));							break;//r_rc
-				case FP::R_RQ_FUNCTION:(&in.ia32)[logstep].r_rq(VectP(&res.r[k2]),				VectP(&op1.r[k2]),										QuatP(&op2.r[k2], &op2.i[k2], &op2.j[k2], &op2.k[k2]));	break;//r_rq
-				case FP::R_CR_FUNCTION:(&in.ia32)[logstep].r_cr(VectP(&res.r[k2]),				CompP(&op1.r[k2], &op1.i[k2]),							VectP(&op2.r[k2]));										break;//r_cr
-				case FP::R_CC_FUNCTION:(&in.ia32)[logstep].r_cc(VectP(&res.r[k2]),				CompP(&op1.r[k2], &op1.i[k2]),							CompP(&op2.r[k2], &op2.i[k2]));							break;//r_cc
-				case FP::R_CQ_FUNCTION:(&in.ia32)[logstep].r_cq(VectP(&res.r[k2]),				CompP(&op1.r[k2], &op1.i[k2]),							QuatP(&op2.r[k2], &op2.i[k2], &op2.j[k2], &op2.k[k2]));	break;//r_cq
-				case FP::R_QR_FUNCTION:(&in.ia32)[logstep].r_qr(VectP(&res.r[k2]),				QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]),	VectP(&op2.r[k2]));										break;//r_qr
-				case FP::R_QC_FUNCTION:(&in.ia32)[logstep].r_qc(VectP(&res.r[k2]),				QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]),	CompP(&op2.r[k2], &op2.i[k2]));							break;//r_qc
-				case FP::R_QQ_FUNCTION:(&in.ia32)[logstep].r_qq(VectP(&res.r[k2]),				QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]),	QuatP(&op2.r[k2], &op2.i[k2], &op2.j[k2], &op2.k[k2]));	break;//r_qq
-				case FP::C_QC_FUNCTION:(&in.ia32)[logstep].c_qc(CompP(&res.r[k2], &res.i[k2]),	QuatP(&op1.r[k2], &op1.i[k2], &op1.j[k2], &op1.k[k2]),	CompP(&op2.r[k2], &op2.i[k2]));							break;//c_qc
+				case FP::_R_R_FUNCTION:(&in.ia32)[logstep]. r_r(VectP(NPO(res.r, mrr)),														VectP(NPO(op1.r, m1r)));													break;//r_r
+				case FP::_C_C_FUNCTION:(&in.ia32)[logstep]. c_c(CompP(NPO(res.r, mrr), NPO(res.i, mri)),									CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)));									break;//c_c
+				case FP::_Q_Q_FUNCTION:(&in.ia32)[logstep]. q_q(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)),	QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)));	break;//q_q
+				case FP::R_RR_FUNCTION:(&in.ia32)[logstep].r_rr(VectP(NPO(res.r, mrr)),														VectP(NPO(op1.r, m1r)),														VectP(NPO(op2.r, m2r)));													break;//r_rr
+				case FP::C_RC_FUNCTION:(&in.ia32)[logstep].c_rc(CompP(NPO(res.r, mrr), NPO(res.i, mri)),									VectP(NPO(op1.r, m1r)),														CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));									break;//c_rc
+				case FP::Q_RQ_FUNCTION:(&in.ia32)[logstep].q_rq(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)),	VectP(NPO(op1.r, m1r)),														QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));	break;//q_rq
+				case FP::C_CR_FUNCTION:(&in.ia32)[logstep].c_cr(CompP(NPO(res.r, mrr), NPO(res.i, mri)),									CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)),									VectP(NPO(op2.r, m2r)));													break;//c_cr
+				case FP::C_CC_FUNCTION:(&in.ia32)[logstep].c_cc(CompP(NPO(res.r, mrr), NPO(res.i, mri)),									CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)),									CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));									break;//c_cc
+				case FP::Q_CQ_FUNCTION:(&in.ia32)[logstep].q_cq(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)),	CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)),									QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));	break;//q_cq
+				case FP::Q_QR_FUNCTION:(&in.ia32)[logstep].q_qr(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)),	QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)),	VectP(NPO(op2.r, m2r)));													break;//q_qr
+				case FP::Q_QC_FUNCTION:(&in.ia32)[logstep].q_qc(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)),	QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)),	CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));									break;//q_qc
+				case FP::Q_QQ_FUNCTION:(&in.ia32)[logstep].q_qq(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)),	QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)),	QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));	break;//q_qq
+				case FP::_C_R_FUNCTION:(&in.ia32)[logstep]. c_r(CompP(NPO(res.r, mrr), NPO(res.i, mri)),	VectP(NPO(op1.r, m1r)));													break;//c_r
+				case FP::_C_Q_FUNCTION:(&in.ia32)[logstep]. c_q(CompP(NPO(res.r, mrr), NPO(res.i, mri)),	QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)));	break;//c_q
+				case FP::_R_C_FUNCTION:(&in.ia32)[logstep]. r_c(VectP(NPO(res.r, mrr)),						CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)));									break;//r_c
+				case FP::_R_Q_FUNCTION:(&in.ia32)[logstep]. r_q(VectP(NPO(res.r, mrr)),						QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)));	break;//r_q
+				case FP::C_RR_FUNCTION:(&in.ia32)[logstep].c_rr(CompP(NPO(res.r, mrr), NPO(res.i, mri)),	VectP(NPO(op1.r, m1r)),														VectP(NPO(op2.r, m2r)));													break;//c_rr
+				case FP::R_RC_FUNCTION:(&in.ia32)[logstep].r_rc(VectP(NPO(res.r, mrr)),						VectP(NPO(op1.r, m1r)),														CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));									break;//r_rc
+				case FP::R_RQ_FUNCTION:(&in.ia32)[logstep].r_rq(VectP(NPO(res.r, mrr)),						VectP(NPO(op1.r, m1r)),														QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));	break;//r_rq
+				case FP::R_CR_FUNCTION:(&in.ia32)[logstep].r_cr(VectP(NPO(res.r, mrr)),						CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)),									VectP(NPO(op2.r, m2r)));													break;//r_cr
+				case FP::R_CC_FUNCTION:(&in.ia32)[logstep].r_cc(VectP(NPO(res.r, mrr)),						CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)),									CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));									break;//r_cc
+				case FP::R_CQ_FUNCTION:(&in.ia32)[logstep].r_cq(VectP(NPO(res.r, mrr)),						CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)),									QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));	break;//r_cq
+				case FP::R_QR_FUNCTION:(&in.ia32)[logstep].r_qr(VectP(NPO(res.r, mrr)),						QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)),	VectP(NPO(op2.r, m2r)));													break;//r_qr
+				case FP::R_QC_FUNCTION:(&in.ia32)[logstep].r_qc(VectP(NPO(res.r, mrr)),						QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)),	CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));									break;//r_qc
+				case FP::R_QQ_FUNCTION:(&in.ia32)[logstep].r_qq(VectP(NPO(res.r, mrr)),						QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)),	QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));	break;//r_qq
+				case FP::C_QC_FUNCTION:(&in.ia32)[logstep].c_qc(CompP(NPO(res.r, mrr), NPO(res.i, mri)),	QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)),	CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));									break;//c_qc
 				case FP::INLINE_IF://a ? b : c
 					{
 						auto &op3=ex.n[in.op3];
@@ -12462,14 +12419,14 @@ void solve(Expression &ex, int offset, int x1, int x2, int y1, int y2, int z1, i
 							switch(op_ms)
 							{
 							case 0:res.r[k2]=first?op2.r[k2]:op3.r[k2];break;//r_rr
-							case 1:CompP(&res.r[k2], &res.i[k2])						=first?Comp1d(op2.r[k2])									:Comp1d(op3.r[k2], op3.i[k2]);						break;//c_rc
-							case 2:QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2])=first?Quat1d(op2.r[k2])									:Quat1d(op3.r[k2], op3.i[k2], op3.j[k2], op3.k[k2]);break;//q_rq
-							case 3:CompP(&res.r[k2], &res.i[k2])						=first?Comp1d(op2.r[k2], op2.i[k2])							:Comp1d(op3.r[k2]);									break;//c_cr
-							case 4:CompP(&res.r[k2], &res.i[k2])						=first?Comp1d(op2.r[k2], op2.i[k2])							:Comp1d(op3.r[k2], op3.i[k2]);						break;//c_cc
-							case 5:QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2])=first?Quat1d(op2.r[k2], op2.i[k2])							:Quat1d(op3.r[k2], op3.i[k2], op3.j[k2], op3.k[k2]);break;//q_cq
-							case 6:QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2])=first?Quat1d(op2.r[k2], op2.i[k2], op2.j[k2], op2.k[k2])	:Quat1d(op3.r[k2]);									break;//q_qr
-							case 7:QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2])=first?Quat1d(op2.r[k2], op2.i[k2], op2.j[k2], op2.k[k2])	:Quat1d(op3.r[k2], op3.i[k2]);						break;//q_qc
-							case 8:QuatP(&res.r[k2], &res.i[k2], &res.j[k2], &res.k[k2])=first?Quat1d(op2.r[k2], op2.i[k2], op2.j[k2], op2.k[k2])	:Quat1d(op3.r[k2], op3.i[k2], op3.j[k2], op3.k[k2]);break;//q_qq
+							case 1:CompP(NPO(res.r, mrr), NPO(res.i, mri))									=first?Comp1d(op2.r[k2])									:Comp1d(op3.r[k2], op3.i[k2]);						break;//c_rc
+							case 2:QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk))=first?Quat1d(op2.r[k2])									:Quat1d(op3.r[k2], op3.i[k2], op3.j[k2], op3.k[k2]);break;//q_rq
+							case 3:CompP(NPO(res.r, mrr), NPO(res.i, mri))									=first?Comp1d(op2.r[k2], op2.i[k2])							:Comp1d(op3.r[k2]);									break;//c_cr
+							case 4:CompP(NPO(res.r, mrr), NPO(res.i, mri))									=first?Comp1d(op2.r[k2], op2.i[k2])							:Comp1d(op3.r[k2], op3.i[k2]);						break;//c_cc
+							case 5:QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk))=first?Quat1d(op2.r[k2], op2.i[k2])							:Quat1d(op3.r[k2], op3.i[k2], op3.j[k2], op3.k[k2]);break;//q_cq
+							case 6:QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk))=first?Quat1d(op2.r[k2], op2.i[k2], op2.j[k2], op2.k[k2])	:Quat1d(op3.r[k2]);									break;//q_qr
+							case 7:QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk))=first?Quat1d(op2.r[k2], op2.i[k2], op2.j[k2], op2.k[k2])	:Quat1d(op3.r[k2], op3.i[k2]);						break;//q_qc
+							case 8:QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk))=first?Quat1d(op2.r[k2], op2.i[k2], op2.j[k2], op2.k[k2])	:Quat1d(op3.r[k2], op3.i[k2], op3.j[k2], op3.k[k2]);break;//q_qq
 							}
 						}
 						else if(logstep==1)//sse2
@@ -12512,6 +12469,21 @@ void solve(Expression &ex, int offset, int x1, int x2, int y1, int y2, int z1, i
 			_mm_empty();
 	}
 }
+unsigned initialize_npmask(Expression const &ex, Instruction const &in, char argument, char component)
+{//null pointer index mask, argument: 0 result, 1 op1, 2 op2
+	if(in.type<32)//printable characters for procedural
+	{
+		if(argument==2)
+		{
+			if(in.is_binary())
+				return -((&ex.n[in.op2].r)[component].p!=nullptr);
+			return 0;
+		}
+		return -((&ex.n[(&in.result)[argument]].r)[component].p!=nullptr);
+	}
+	return 0;
+}
+#define		INP(arg, comp)		initialize_npmask(ex, in, arg, comp)	//initialize null pointer mask
 void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int z1, int z2, int Xplaces, int Yplaces, int Zplaces, Disc_fn disc_in_u, Disc_fn disc_in_b, Disc_fn disc_in_t, Disc_fn disc_out, int disc_offset, bool skip_last_instr)
 {
 //	int ndrSize=Xplaces*Yplaces*Zplaces;
@@ -12541,6 +12513,10 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 #ifdef _DEBUG
 		free(malloc(1));//
 #endif
+		unsigned
+			mrr=INP(0, 0), mri=INP(0, 1), mrj=INP(0, 2), mrk=INP(0, 3),
+			m1r=INP(1, 0), m1i=INP(1, 1), m1j=INP(1, 2), m1k=INP(1, 3),
+			m2r=INP(2, 0), m2i=INP(2, 1), m2j=INP(2, 2), m2k=INP(2, 3);
 		switch(in.type)
 		{
 		case 'c':
@@ -12570,7 +12546,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_r(VectP(res.r.p+k2), VectP(op1.r.p+k2));
+						(&in.ia32)[logstep].r_r(VectP(NPO(res.r, mrr)), VectP(NPO(op1.r, m1r)));
 				}//);
 			}
 			break;
@@ -12587,7 +12563,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
 						//if(idx>=res.r.size())
 						//	int LOL_1=0;
-						(&in.ia32)[logstep].c_c(CompP(res.r.p+k2, res.i.p+k2), CompP(op1.r.p+k2, op1.i.p+k2));
+						(&in.ia32)[logstep].c_c(CompP(NPO(res.r, mrr), NPO(res.i, mri)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)));
 				}//);
 			}
 			break;
@@ -12606,7 +12582,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].q_q(QuatP(res.r.p+k2, res.i.p+k2, res.j.p+k2, res.j.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2));
+						(&in.ia32)[logstep].q_q(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)));
 				}//);
 			}
 			break;
@@ -12619,7 +12595,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_rr(VectP(res.r.p+k2), VectP(op1.r.p+k2), VectP(op2.r.p+k2));
+						(&in.ia32)[logstep].r_rr(VectP(NPO(res.r, mrr)), VectP(NPO(op1.r, m1r)), VectP(NPO(op2.r, m2r)));
 				}//);
 			}
 			break;
@@ -12634,7 +12610,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].c_rc(CompP(res.r.p+k2, res.i.p+k2), VectP(op1.r.p+k2), CompP(op2.r.p+k2, op2.i.p+k2));
+						(&in.ia32)[logstep].c_rc(CompP(NPO(res.r, mrr), NPO(res.i, mri)), VectP(NPO(op1.r, m1r)), CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));
 				}//);
 			}
 			break;
@@ -12653,7 +12629,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].q_rq(QuatP(res.r.p+k2, res.i.p+k2, res.j.p+k2, res.k.p+k2), VectP(op1.r.p+k2), QuatP(op2.r.p+k2, op2.i.p+k2, op2.j.p+k2, op2.k.p+k2));
+						(&in.ia32)[logstep].q_rq(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)), VectP(NPO(op1.r, m1r)), QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));
 				}//);
 			}
 			break;
@@ -12668,7 +12644,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].c_cr(CompP(res.r.p+k2, res.i.p+k2), CompP(op1.r.p+k2, op1.i.p+k2), VectP(op2.r.p+k2));
+						(&in.ia32)[logstep].c_cr(CompP(NPO(res.r, mrr), NPO(res.i, mri)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)), VectP(NPO(op2.r, m2r)));
 				}//);
 			}
 			break;
@@ -12683,7 +12659,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].c_cc(CompP(res.r.p+k2, res.i.p+k2), CompP(op1.r.p+k2, op1.i.p+k2), CompP(op2.r.p+k2, op2.i.p+k2));
+						(&in.ia32)[logstep].c_cc(CompP(NPO(res.r, mrr), NPO(res.i, mri)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)), CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));
 				}//);
 			}
 			break;
@@ -12702,7 +12678,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].q_cq(QuatP(res.r.p+k2, res.i.p+k2, res.j.p+k2, res.k.p+k2), CompP(op1.r.p+k2, op1.i.p+k2), QuatP(op2.r.p+k2, op2.i.p+k2, op2.j.p+k2, op2.k.p+k2));
+						(&in.ia32)[logstep].q_cq(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)), QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));
 				}//);
 			}
 			break;
@@ -12721,7 +12697,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].q_qr(QuatP(res.r.p+k2, res.i.p+k2, res.j.p+k2, res.k.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2), VectP(op2.r.p+k2));
+						(&in.ia32)[logstep].q_qr(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)), VectP(NPO(op2.r, m2r)));
 				}//);
 			}
 			break;
@@ -12740,7 +12716,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].q_qc(QuatP(res.r.p+k2, res.i.p+k2, res.j.p+k2, res.k.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2), CompP(op2.r.p+k2, op2.i.p+k2));
+						(&in.ia32)[logstep].q_qc(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)), CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));
 				}//);
 			}
 			break;
@@ -12759,7 +12735,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].q_qq(QuatP(res.r.p+k2, res.i.p+k2, res.j.p+k2, res.k.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2), QuatP(op2.r.p+k2, op2.i.p+k2, op2.j.p+k2, op2.k.p+k2));
+						(&in.ia32)[logstep].q_qq(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)), QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));
 				}//);
 			}
 			break;
@@ -12773,7 +12749,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].c_r(CompP(res.r.p+k2, res.i.p+k2), VectP(op1.r.p+k2));
+						(&in.ia32)[logstep].c_r(CompP(NPO(res.r, mrr), NPO(res.i, mri)), VectP(NPO(op1.r, m1r)));
 				}//);
 			}
 			break;
@@ -12786,7 +12762,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].c_q(CompP(res.r.p+k2, res.i.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2));
+						(&in.ia32)[logstep].c_q(CompP(NPO(res.r, mrr), NPO(res.i, mri)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)));
 				}//);
 			}
 			break;
@@ -12800,7 +12776,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_c(VectP(res.r.p+k2), CompP(op1.r.p+k2, op1.i.p+k2));
+						(&in.ia32)[logstep].r_c(VectP(NPO(res.r, mrr)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)));
 				}//);
 			}
 			break;
@@ -12813,7 +12789,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_q(VectP(res.r.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2));
+						(&in.ia32)[logstep].r_q(VectP(NPO(res.r, mrr)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)));
 				}//);
 			}
 			break;
@@ -12827,7 +12803,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].c_rr(CompP(res.r.p+k2, res.i.p+k2), VectP(op1.r.p+k2), VectP(op2.r.p+k2));
+						(&in.ia32)[logstep].c_rr(CompP(NPO(res.r, mrr), NPO(res.i, mri)), VectP(NPO(op1.r, m1r)), VectP(NPO(op2.r, m2r)));
 				}//);
 			}
 			break;
@@ -12841,7 +12817,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_rc(VectP(res.r.p+k2), VectP(op1.r.p+k2), CompP(op2.r.p+k2, op2.i.p+k2));
+						(&in.ia32)[logstep].r_rc(VectP(NPO(res.r, mrr)), VectP(NPO(op1.r, m1r)), CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));
 				}//);
 			}
 			break;
@@ -12854,7 +12830,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_rq(VectP(res.r.p+k2), VectP(op1.r.p+k2), QuatP(op2.r.p+k2, op2.i.p+k2, op2.j.p+k2, op2.k.p+k2));
+						(&in.ia32)[logstep].r_rq(VectP(NPO(res.r, mrr)), VectP(NPO(op1.r, m1r)), QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));
 				}//);
 			}
 			break;
@@ -12867,7 +12843,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_cr(VectP(res.r.p+k2), CompP(op1.r.p+k2, op1.i.p+k2), VectP(op2.r.p+k2));
+						(&in.ia32)[logstep].r_cr(VectP(NPO(res.r, mrr)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)), VectP(NPO(op2.r, m2r)));
 				}//);
 			}
 			break;
@@ -12880,7 +12856,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_cc(VectP(res.r.p+k2), CompP(op1.r.p+k2, op1.i.p+k2), CompP(op2.r.p+k2, op2.i.p+k2));
+						(&in.ia32)[logstep].r_cc(VectP(NPO(res.r, mrr)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)), CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));
 				}//);
 			}
 			break;
@@ -12893,7 +12869,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_cq(VectP(res.r.p+k2), CompP(op1.r.p+k2, op1.i.p+k2), QuatP(op2.r.p+k2, op2.i.p+k2, op2.j.p+k2, op2.k.p+k2));
+						(&in.ia32)[logstep].r_cq(VectP(NPO(res.r, mrr)), CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)), QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));
 				}//);
 			}
 			break;
@@ -12906,7 +12882,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_qr(VectP(res.r.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2), op2.r.p+k2);
+						(&in.ia32)[logstep].r_qr(VectP(NPO(res.r, mrr)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)), NPO(op2.r, m2r));
 				}//);
 			}
 			break;
@@ -12919,7 +12895,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_qc(VectP(res.r.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2), CompP(op2.r.p+k2, op2.i.p+k2));
+						(&in.ia32)[logstep].r_qc(VectP(NPO(res.r, mrr)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)), CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));
 				}//);
 			}
 			break;
@@ -12932,7 +12908,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].r_qq(VectP(res.r.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2), QuatP(op2.r.p+k2, op2.i.p+k2, op2.j.p+k2, op2.k.p+k2));
+						(&in.ia32)[logstep].r_qq(VectP(NPO(res.r, mrr)), QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)), QuatP(NPO(op2.r, m2r), NPO(op2.i, m2i), NPO(op2.j, m2j), NPO(op2.k, m2k)));
 				}//);
 			}
 			break;
@@ -12946,7 +12922,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					int ka=k<<logstep;
 					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
 					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
-						(&in.ia32)[logstep].c_qc(CompP(res.r.p+k2, res.i.p+k2), QuatP(op1.r.p+k2, op1.i.p+k2, op1.j.p+k2, op1.k.p+k2), CompP(op2.r.p+k2, op2.i.p+k2));
+						(&in.ia32)[logstep].c_qc(CompP(NPO(res.r, mrr), NPO(res.i, mri)), QuatP(NPO(op1.r, m1r), op1.i.p+k2, NPO(op1.j, m1j), NPO(op1.k, m1k)), CompP(NPO(op2.r, m2r), NPO(op2.i, m2i)));
 				}//);
 			}
 			break;
