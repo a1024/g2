@@ -5853,9 +5853,9 @@ namespace	G2
 	void  r_r_bitwise_not			(VectP &r, VectP const &x)					{r=bitwise_not(x);}
 	void  c_c_bitwise_not			(CompP &r, CompP const &x)					{r=Comp1d(bitwise_not(*x.r), bitwise_not(*x.i));}
 	void  q_q_bitwise_not			(QuatP &r, QuatP const &x)					{r=Quat1d(bitwise_not(*x.r), bitwise_not(*x.i), bitwise_not(*x.j), bitwise_not(*x.k));}
-	auto disc_r_bitwise_not_i		=disc_r_divide_i;
-	auto disc_c_bitwise_not_i		=disc_c_divide_i;
-	bool disc_q_bitwise_not_i		(Value const &x0, Value const &x1){return false;}
+	auto disc_r_bitwise_not_i		=disc_r_arg_i;
+	bool disc_c_bitwise_not_i		(Value const &x0, Value const &x1){return std::signbit(x0.r)!=std::signbit(x1.r)||std::signbit(x0.i)!=std::signbit(x1.i);}
+	bool disc_q_bitwise_not_i		(Value const &x0, Value const &x1){return std::signbit(x0.r)!=std::signbit(x1.r)||std::signbit(x0.i)!=std::signbit(x1.i)||std::signbit(x0.j)!=std::signbit(x1.j)||std::signbit(x0.k)!=std::signbit(x1.k);}
 
 	inline double bitwise_and(double const &x){return std::isnan(x)|std::isinf(x)?0:!~convert_d2ll(x);}
 	inline double bitwise_and(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:double(convert_d2ll(x)&convert_d2ll(y));}
@@ -5903,15 +5903,6 @@ namespace	G2
 	auto disc_r_bitwise_and_o		=disc_r_ceil_o;
 	auto disc_c_bitwise_and_o		=disc_c_ceil_o;
 	auto disc_q_bitwise_and_o		=disc_q_ceil_o;
-	auto disc_rr_bitwise_and_o		=disc_r_ceil_o;//TODO: remove (use disc_[r/c/q]_o instead)
-	auto disc_rc_bitwise_and_o		=disc_c_ceil_o;//
-	auto disc_rq_bitwise_and_o		=disc_q_ceil_o;//
-	auto disc_cr_bitwise_and_o		=disc_c_ceil_o;//
-	auto disc_cc_bitwise_and_o		=disc_c_ceil_o;//
-	auto disc_cq_bitwise_and_o		=disc_q_ceil_o;//
-	auto disc_qr_bitwise_and_o		=disc_q_ceil_o;//
-	auto disc_qc_bitwise_and_o		=disc_q_ceil_o;//
-	auto disc_qq_bitwise_and_o		=disc_q_ceil_o;//
 
 	inline double bitwise_nand(double const &x){return std::isnan(x)|std::isinf(x)?0:!x;}
 	inline double bitwise_nand(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:(double)~(convert_d2ll(x)&convert_d2ll(y));}
@@ -5959,15 +5950,6 @@ namespace	G2
 	auto disc_r_bitwise_nand_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_nand_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_nand_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_nand_o		=disc_rr_bitwise_and_o;//
-	auto disc_rc_bitwise_nand_o		=disc_rc_bitwise_and_o;//
-	auto disc_rq_bitwise_nand_o		=disc_rq_bitwise_and_o;//
-	auto disc_cr_bitwise_nand_o		=disc_cr_bitwise_and_o;//
-	auto disc_cc_bitwise_nand_o		=disc_cc_bitwise_and_o;//
-	auto disc_cq_bitwise_nand_o		=disc_cq_bitwise_and_o;//
-	auto disc_qr_bitwise_nand_o		=disc_qr_bitwise_and_o;//
-	auto disc_qc_bitwise_nand_o		=disc_qc_bitwise_and_o;//
-	auto disc_qq_bitwise_nand_o		=disc_qq_bitwise_and_o;//
 	
 	inline double bitwise_or(double const &x){return std::isnan(x)|std::isinf(x)?0:convert_d2ll(x)!=0;}
 	inline double bitwise_or(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:double(convert_d2ll(x)|convert_d2ll(y));}
@@ -6015,15 +5997,6 @@ namespace	G2
 	auto disc_r_bitwise_or_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_or_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_or_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_or_o		=disc_rr_bitwise_and_o;//
-	auto disc_rc_bitwise_or_o		=disc_rc_bitwise_and_o;//
-	auto disc_rq_bitwise_or_o		=disc_rq_bitwise_and_o;//
-	auto disc_cr_bitwise_or_o		=disc_cr_bitwise_and_o;//
-	auto disc_cc_bitwise_or_o		=disc_cc_bitwise_and_o;//
-	auto disc_cq_bitwise_or_o		=disc_cq_bitwise_and_o;//
-	auto disc_qr_bitwise_or_o		=disc_qr_bitwise_and_o;//
-	auto disc_qc_bitwise_or_o		=disc_qc_bitwise_and_o;//
-	auto disc_qq_bitwise_or_o		=disc_qq_bitwise_and_o;//
 	
 	inline double bitwise_nor(double const &x){return std::isnan(x)|std::isinf(x)?0:!convert_d2ll(x);}
 	inline double bitwise_nor(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(x)|std::isinf(x)?0:(double)~(convert_d2ll(x)|convert_d2ll(y));}
@@ -6071,15 +6044,6 @@ namespace	G2
 	auto disc_r_bitwise_nor_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_nor_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_nor_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_nor_o		=disc_rr_bitwise_and_o;//
-	auto disc_rc_bitwise_nor_o		=disc_rc_bitwise_and_o;//
-	auto disc_rq_bitwise_nor_o		=disc_rq_bitwise_and_o;//
-	auto disc_cr_bitwise_nor_o		=disc_cr_bitwise_and_o;//
-	auto disc_cc_bitwise_nor_o		=disc_cc_bitwise_and_o;//
-	auto disc_cq_bitwise_nor_o		=disc_cq_bitwise_and_o;//
-	auto disc_qr_bitwise_nor_o		=disc_qr_bitwise_and_o;//
-	auto disc_qc_bitwise_nor_o		=disc_qc_bitwise_and_o;//
-	auto disc_qq_bitwise_nor_o		=disc_qq_bitwise_and_o;//
 	
 	//inline double bitwise_xor(double const &x){return std::isnan(x)|std::isinf(x)?0:bitwise_xor(x);}
 	inline double bitwise_xor(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:double(convert_d2ll(x)^convert_d2ll(y));}
@@ -6098,15 +6062,6 @@ namespace	G2
 	auto disc_r_bitwise_xor_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_xor_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_xor_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_xor_o		=disc_rr_bitwise_and_o;//
-	auto disc_rc_bitwise_xor_o		=disc_rc_bitwise_and_o;//
-	auto disc_rq_bitwise_xor_o		=disc_rq_bitwise_and_o;//
-	auto disc_cr_bitwise_xor_o		=disc_cr_bitwise_and_o;//
-	auto disc_cc_bitwise_xor_o		=disc_cc_bitwise_and_o;//
-	auto disc_cq_bitwise_xor_o		=disc_cq_bitwise_and_o;//
-	auto disc_qr_bitwise_xor_o		=disc_qr_bitwise_and_o;//
-	auto disc_qc_bitwise_xor_o		=disc_qc_bitwise_and_o;//
-	auto disc_qq_bitwise_xor_o		=disc_qq_bitwise_and_o;//
 	
 	//inline double bitwise_xnor(double const &x){return std::isnan(x)|std::isinf(x)?0:(double)!bitwise_xor(x);}
 	inline double bitwise_xnor(double const &x, double const &y){return std::isnan(x)|std::isinf(x)|std::isnan(y)|std::isinf(y)?0:(double)~(convert_d2ll(x)^convert_d2ll(y));}
@@ -6125,15 +6080,6 @@ namespace	G2
 	auto disc_r_bitwise_xnor_o		=disc_r_bitwise_and_o;
 	auto disc_c_bitwise_xnor_o		=disc_c_bitwise_and_o;
 	auto disc_q_bitwise_xnor_o		=disc_q_bitwise_and_o;
-	auto disc_rr_bitwise_xnor_o		=disc_rr_bitwise_and_o;//
-	auto disc_rc_bitwise_xnor_o		=disc_rc_bitwise_and_o;//
-	auto disc_rq_bitwise_xnor_o		=disc_rq_bitwise_and_o;//
-	auto disc_cr_bitwise_xnor_o		=disc_cr_bitwise_and_o;//
-	auto disc_cc_bitwise_xnor_o		=disc_cc_bitwise_and_o;//
-	auto disc_cq_bitwise_xnor_o		=disc_cq_bitwise_and_o;//
-	auto disc_qr_bitwise_xnor_o		=disc_qr_bitwise_and_o;//
-	auto disc_qc_bitwise_xnor_o		=disc_qc_bitwise_and_o;//
-	auto disc_qq_bitwise_xnor_o		=disc_qq_bitwise_and_o;//
 	
 	void  r_r_logic_equal			(VectP &r, VectP const &x)					{r=x==0;}
 	void  r_c_logic_equal			(VectP &r, CompP const &x)					{r=!x.c_is_true();}
@@ -6148,24 +6094,6 @@ namespace	G2
 	void r_qc_logic_equal			(VectP &r, QuatP const &x, CompP const &y)	{r=(Quat1d)x==(Comp1d)y;}
 	void r_qq_logic_equal			(VectP &r, QuatP const &x, QuatP const &y)	{r=(Quat1d)x==(Quat1d)y;}
 	auto disc_r_logic_equal_o		=disc_r_logic_divides_o;
-	//bool disc_x_logic_equal			(double x0, double x1)
-	//{
-	//	if(x0<0)	return x1>=0;
-	//	if(x0==0)	return x1<0||x1>0;
-	//				return x1<=0;
-	//}
-	//bool disc_r_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r);}
-	//bool disc_c_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r)&&disc_x_logic_equal(x0.i, x1.i);}
-	//bool disc_q_logic_equal_i		(Value const &x0, Value const &x1){return disc_x_logic_equal(x0.r, x1.r)&&disc_x_logic_equal(x0.i, x1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
-	//bool disc_rr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r);}
-	//bool disc_rc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(-y0.i, -y1.i);}
-	//bool disc_rq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(-y0.i, -y1.i)&&disc_x_logic_equal(-y0.j, -y1.j)&&disc_x_logic_equal(-y0.k, -y1.k);}
-	//bool disc_cr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i, x1.i);}
-	//bool disc_cc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i);}
-	//bool disc_cq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(-y0.j, -y1.j)&&disc_x_logic_equal(-y0.k, -y1.k);}
-	//bool disc_qr_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i, x1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
-	//bool disc_qc_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(x0.j, x1.j)&&disc_x_logic_equal(x0.k, x1.k);}
-	//bool disc_qq_logic_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_equal(x0.r-y0.r, x1.r-y1.r)&&disc_x_logic_equal(x0.i-y0.i, x1.i-y1.i)&&disc_x_logic_equal(x0.j-y0.j, x1.j-y1.j)&&disc_x_logic_equal(x0.k-y0.k, x1.k-y1.k);}
 	
 	void  r_r_logic_not_equal		(VectP &r, VectP const &x)					{r=x.r_is_true();}
 	void  r_c_logic_not_equal		(VectP &r, CompP const &x)					{r=x.c_is_true();}
@@ -6180,18 +6108,6 @@ namespace	G2
 	void r_qc_logic_not_equal		(VectP &r, QuatP const &x, CompP const &y)	{r=(Quat1d)x!=(Comp1d)y;}
 	void r_qq_logic_not_equal		(VectP &r, QuatP const &x, QuatP const &y)	{r=(Quat1d)x!=(Quat1d)y;}
 	auto disc_r_logic_not_equal_o	=disc_r_logic_divides_o;
-	//auto disc_r_logic_not_equal_i		=disc_r_logic_equal_i;
-	//auto disc_c_logic_not_equal_i		=disc_c_logic_equal_i;
-	//auto disc_q_logic_not_equal_i		=disc_q_logic_equal_i;
-	//auto disc_rr_logic_not_equal_i		=disc_rr_logic_equal_i;
-	//auto disc_rc_logic_not_equal_i		=disc_rc_logic_equal_i;
-	//auto disc_rq_logic_not_equal_i		=disc_rq_logic_equal_i;
-	//auto disc_cr_logic_not_equal_i		=disc_cr_logic_equal_i;
-	//auto disc_cc_logic_not_equal_i		=disc_cc_logic_equal_i;
-	//auto disc_cq_logic_not_equal_i		=disc_cq_logic_equal_i;
-	//auto disc_qr_logic_not_equal_i		=disc_qr_logic_equal_i;
-	//auto disc_qc_logic_not_equal_i		=disc_qc_logic_equal_i;
-	//auto disc_qq_logic_not_equal_i		=disc_qq_logic_equal_i;
 	
 	void  r_r_logic_less_l			(VectP &r, VectP const &x)					{r=0<x;}
 	void  r_c_logic_less_l			(VectP &r, CompP const &x)					{r=0<*x.r;}
@@ -6209,22 +6125,6 @@ namespace	G2
 	void r_qc_logic_less			(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r<*y.r;}
 	void r_qq_logic_less			(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r<*y.r;}
 	auto disc_r_logic_less_o		=disc_r_logic_divides_o;
-	//bool disc_x_logic_less			(double x0, double x1){return x0<0?x1>=0:x1<0;}//	__|0__
-	//bool disc_r_logic_less_l_i		(Value const &x0, Value const &x1){return disc_x_logic_less(-x0.r, -x1.r);}
-	//auto disc_c_logic_less_l_i		=disc_r_logic_less_l_i;
-	//auto disc_q_logic_less_l_i		=disc_r_logic_less_l_i;
-	//bool disc_r_logic_less_r_i		(Value const &x0, Value const &x1){return disc_x_logic_less(x0.r, x1.r);}
-	//auto disc_c_logic_less_r_i		=disc_r_logic_less_r_i;
-	//auto disc_q_logic_less_r_i		=disc_r_logic_less_r_i;
-	//bool disc_rr_logic_less_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_less(x0.r-y0.r, x1.r-y1.r);}
-	//auto disc_rc_logic_less_i		=disc_rr_logic_less_i;
-	//auto disc_rq_logic_less_i		=disc_rr_logic_less_i;
-	//auto disc_cr_logic_less_i		=disc_rr_logic_less_i;
-	//auto disc_cc_logic_less_i		=disc_rr_logic_less_i;
-	//auto disc_cq_logic_less_i		=disc_rr_logic_less_i;
-	//auto disc_qr_logic_less_i		=disc_rr_logic_less_i;
-	//auto disc_qc_logic_less_i		=disc_rr_logic_less_i;
-	//auto disc_qq_logic_less_i		=disc_rr_logic_less_i;
 	
 	void  r_r_logic_less_equal_l	(VectP &r, VectP const &x)					{r=0<=x;}
 	void  r_c_logic_less_equal_l	(VectP &r, CompP const &x)					{r=0<=*x.r;}
@@ -6242,22 +6142,6 @@ namespace	G2
 	void r_qc_logic_less_equal		(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r<=*y.r;}
 	void r_qq_logic_less_equal		(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r<=*y.r;}
 	auto disc_r_logic_less_equal_o	=disc_r_logic_divides_o;
-	//bool disc_x_logic_less_equal		(double x0, double x1){return x0<=0?x1>0:x1<=0;}//	__0|__
-	//bool disc_r_logic_less_equal_l_i	(Value const &x0, Value const &x1){return disc_x_logic_less_equal(-x0.r, -x1.r);}
-	//auto disc_c_logic_less_equal_l_i	=disc_r_logic_less_equal_l_i;
-	//auto disc_q_logic_less_equal_l_i	=disc_r_logic_less_equal_l_i;
-	//bool disc_r_logic_less_equal_r_i	(Value const &x0, Value const &x1){return disc_x_logic_less_equal(x0.r, x1.r);}
-	//auto disc_c_logic_less_equal_r_i	=disc_r_logic_less_equal_r_i;
-	//auto disc_q_logic_less_equal_r_i	=disc_r_logic_less_equal_r_i;
-	//bool disc_rr_logic_less_equal_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_r_logic_less_equal_r_i(x0.r-y0.r, x1.r-y1.r);}
-	//auto disc_rc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	//auto disc_rq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	//auto disc_cr_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	//auto disc_cc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	//auto disc_cq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	//auto disc_qr_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	//auto disc_qc_logic_less_equal_i		=disc_rr_logic_less_equal_i;
-	//auto disc_qq_logic_less_equal_i		=disc_rr_logic_less_equal_i;
 	
 	void  r_r_logic_greater_l		(VectP &r, VectP const &x)					{r=0>x;}
 	void  r_c_logic_greater_l		(VectP &r, CompP const &x)					{r=0>*x.r;}
@@ -6275,21 +6159,6 @@ namespace	G2
 	void r_qc_logic_greater			(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r>*y.r;}
 	void r_qq_logic_greater			(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r>*y.r;}
 	auto disc_r_logic_greater_o		=disc_r_logic_divides_o;
-	//auto disc_r_logic_greater_l_i	=disc_r_logic_less_equal_l_i;
-	//auto disc_c_logic_greater_l_i	=disc_c_logic_less_equal_l_i;
-	//auto disc_q_logic_greater_l_i	=disc_q_logic_less_equal_l_i;
-	//auto disc_r_logic_greater_r_i	=disc_r_logic_less_equal_r_i;
-	//auto disc_c_logic_greater_r_i	=disc_c_logic_less_equal_r_i;
-	//auto disc_q_logic_greater_r_i	=disc_q_logic_less_equal_r_i;
-	//auto disc_rr_logic_greater_i	=disc_rr_logic_less_equal_i;
-	//auto disc_rc_logic_greater_i	=disc_rc_logic_less_equal_i;
-	//auto disc_rq_logic_greater_i	=disc_rq_logic_less_equal_i;
-	//auto disc_cr_logic_greater_i	=disc_cr_logic_less_equal_i;
-	//auto disc_cc_logic_greater_i	=disc_cc_logic_less_equal_i;
-	//auto disc_cq_logic_greater_i	=disc_cq_logic_less_equal_i;
-	//auto disc_qr_logic_greater_i	=disc_qr_logic_less_equal_i;
-	//auto disc_qc_logic_greater_i	=disc_qc_logic_less_equal_i;
-	//auto disc_qq_logic_greater_i	=disc_qq_logic_less_equal_i;
 	
 	void  r_r_logic_greater_equal_l	(VectP &r, VectP const &x)					{r=0>=x;}
 	void  r_c_logic_greater_equal_l	(VectP &r, CompP const &x)					{r=0>=*x.r;}
@@ -6307,29 +6176,11 @@ namespace	G2
 	void r_qc_logic_greater_equal	(VectP &r, QuatP const &x, CompP const &y)	{r=*x.r>=*y.r;}
 	void r_qq_logic_greater_equal	(VectP &r, QuatP const &x, QuatP const &y)	{r=*x.r>=*y.r;}
 	auto disc_r_logic_greater_equal_o=disc_r_logic_divides_o;
-	//auto disc_r_logic_greater_equal_l_i	=disc_r_logic_less_l_i;
-	//auto disc_c_logic_greater_equal_l_i	=disc_c_logic_less_l_i;
-	//auto disc_q_logic_greater_equal_l_i	=disc_q_logic_less_l_i;
-	//auto disc_r_logic_greater_equal_r_i	=disc_r_logic_less_r_i;
-	//auto disc_c_logic_greater_equal_r_i	=disc_c_logic_less_r_i;
-	//auto disc_q_logic_greater_equal_r_i	=disc_q_logic_less_r_i;
-	//auto disc_rr_logic_greater_equal_i	=disc_rr_logic_less_i;
-	//auto disc_rc_logic_greater_equal_i	=disc_rc_logic_less_i;
-	//auto disc_rq_logic_greater_equal_i	=disc_rq_logic_less_i;
-	//auto disc_cr_logic_greater_equal_i	=disc_cr_logic_less_i;
-	//auto disc_cc_logic_greater_equal_i	=disc_cc_logic_less_i;
-	//auto disc_cq_logic_greater_equal_i	=disc_cq_logic_less_i;
-	//auto disc_qr_logic_greater_equal_i	=disc_qr_logic_less_i;
-	//auto disc_qc_logic_greater_equal_i	=disc_qc_logic_less_i;
-	//auto disc_qq_logic_greater_equal_i	=disc_qq_logic_less_i;
 	
 	void  r_r_logic_not				(VectP &r, VectP const &x)					{r=x==0;}
 	void  r_c_logic_not				(VectP &r, CompP const &x)					{r=(*x.r==0)&(*x.i==0);}
 	void  r_q_logic_not				(VectP &r, QuatP const &x)					{r=(*x.r==0)&(*x.i==0)&(*x.j==0)&(*x.k==0);}
 	auto disc_r_logic_not_o			=disc_r_logic_divides_o;
-	//auto disc_r_logic_not_i			=disc_r_divide_i;
-	//auto disc_c_logic_not_i			=disc_c_divide_i;
-	//auto disc_q_logic_not_i			=disc_q_divide_i;
 	
 	void r_rr_logic_and				(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()&y.r_is_true();}
 	void r_rc_logic_and				(VectP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()&y.c_is_true();}
@@ -6341,21 +6192,6 @@ namespace	G2
 	void r_qc_logic_and				(VectP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()&y.c_is_true();}
 	void r_qq_logic_and				(VectP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()&y.q_is_true();}
 	auto disc_r_logic_and_o			=disc_r_logic_divides_o;
-	//bool disc_x_logic_and			(double x0, double x1)
-	//{
-	//	if(x0<0)	return x1>=0;
-	//	if(x0==0)	return x1<0||x1>0;
-	//				return x1<=0;
-	//}
-	//bool disc_rr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r);}
-	//bool disc_rc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	//bool disc_rq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	//bool disc_cr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r);}
-	//bool disc_cc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	//bool disc_cq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	//bool disc_qr_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r);}
-	//bool disc_qc_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	//bool disc_qq_logic_and_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)||disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
 	
 	void r_rr_logic_or				(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()|y.r_is_true();}
 	void r_rc_logic_or				(VectP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()|y.c_is_true();}
@@ -6367,15 +6203,6 @@ namespace	G2
 	void r_qc_logic_or				(VectP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()|y.c_is_true();}
 	void r_qq_logic_or				(VectP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()|y.q_is_true();}
 	auto disc_r_logic_or_o			=disc_r_logic_divides_o;
-	//bool disc_rr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r);}
-	//bool disc_rc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	//bool disc_rq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	//bool disc_cr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r);}
-	//bool disc_cc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	//bool disc_cq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
-	//bool disc_qr_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r);}
-	//bool disc_qc_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i);}
-	//bool disc_qq_logic_or_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return disc_x_logic_and(x0.r, x1.r)&&disc_x_logic_and(x0.i, x1.i)&&disc_x_logic_and(x0.j, x1.j)&&disc_x_logic_and(x0.k, x1.k)&&disc_x_logic_and(y0.r, y1.r)&&disc_x_logic_and(y0.i, y1.i)&&disc_x_logic_and(y0.j, y1.j)&&disc_x_logic_and(y0.k, y1.k);}
 	
 	void r_rr_logic_xor				(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()^y.r_is_true();}
 	void r_rc_logic_xor				(VectP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()^y.c_is_true();}
@@ -6387,15 +6214,6 @@ namespace	G2
 	void r_qc_logic_xor				(VectP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()^y.c_is_true();}
 	void r_qq_logic_xor				(VectP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()^y.q_is_true();}
 	auto disc_r_logic_xor_o			=disc_r_logic_divides_o;
-	//auto disc_rr_logic_xor_i		=disc_rr_logic_and_i;
-	//auto disc_rc_logic_xor_i		=disc_rc_logic_and_i;
-	//auto disc_rq_logic_xor_i		=disc_rq_logic_and_i;
-	//auto disc_cr_logic_xor_i		=disc_cr_logic_and_i;
-	//auto disc_cc_logic_xor_i		=disc_cc_logic_and_i;
-	//auto disc_cq_logic_xor_i		=disc_cq_logic_and_i;
-	//auto disc_qr_logic_xor_i		=disc_qr_logic_and_i;
-	//auto disc_qc_logic_xor_i		=disc_qc_logic_and_i;
-	//auto disc_qq_logic_xor_i		=disc_qq_logic_and_i;
 	
 	void r_rr_condition_zero		(VectP &r, VectP const &x, VectP const &y)	{r=x.r_is_true()?x:y;}
 	void c_rc_condition_zero		(CompP &r, VectP const &x, CompP const &y)	{r=x.r_is_true()?Comp1d(*x.r):y;}
@@ -7430,7 +7248,7 @@ namespace	G2
 	void r_cr_mandelbrot			(VectP &r, CompP const &x, VectP const &y)	{r=mandelbrot(x, (int)(double)y);}
 
 	void r_rr_min					(VectP &r, VectP const &x, VectP const &y)	{r=(x+y-abs(x-y))*0.5;}
-	void c_cr_min					(CompP &r, CompP const &x, VectP const &y)	{Comp1d cx=x; double ry=y;	r=(cx+ry-abs(cx-ry))*0.5;}
+	void c_cr_min					(CompP &r, CompP const &x, VectP const &y)	{Comp1d cx=x; double ry=y;	r=(cx+ry-abs(cx-ry))*0.5;}//TODO: compare real parts and assign appropriate components
 	void c_cc_min					(CompP &r, CompP const &x, CompP const &y)	{Comp1d cx=x, cy=y;			r=(cx+cy-abs(cx-cy))*0.5;}
 	void q_qq_min					(QuatP &r, QuatP const &x, QuatP const &y)	{Quat1d qx=x, qy=y;			r=(qx+qy-abs(qx-qy))*0.5;}
 
@@ -7448,7 +7266,7 @@ namespace	G2
 	void r_qr_conditional_110		(VectP &r, QuatP const &x, VectP const &y)	{r=x.q_is_true()?y:0;}
 	void c_qc_conditional_110		(CompP &r, QuatP const &x, CompP const &y)	{r=x.q_is_true()?y:Comp1d();}
 	void q_qq_conditional_110		(QuatP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()?y:Quat1d();}
-	bool disc_conditional_110_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
+	bool disc_conditional_110_i		(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i)&&_1d_zero_in_range(x0.j, x1.j)&&_1d_zero_in_range(x0.k, x1.k);}
 	
 	void r_rr_conditional_101		(VectP &r, VectP const &x, VectP const &y)	{r=x?0:y;}
 	void c_rc_conditional_101		(CompP &r, VectP const &x, CompP const &y)	{r=x?Comp1d():y;}
@@ -7461,7 +7279,7 @@ namespace	G2
 	void q_qq_conditional_101		(QuatP &r, QuatP const &x, QuatP const &y)	{r=x.q_is_true()?Quat1d():y;}
 	auto disc_conditional_101_i		=disc_conditional_110_i;
 
-	bool disc_conditional_111_i		(Value const &x0, Value const &y0, Value const &z0, Value const &x1, Value const &y1, Value const &z1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
+	bool disc_conditional_111_i		(Value const &x0, Value const &y0, Value const &z0, Value const &x1, Value const &y1, Value const &z1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i)&&_1d_zero_in_range(x0.j, x1.j)&&_1d_zero_in_range(x0.k, x1.k);}
 
 	void  r_r_increment				(VectP &r, VectP const &x)					{r=x+1;}
 	void  c_c_increment				(CompP &r, CompP const &x)					{r=(Comp1d)x+1.;}
@@ -8886,14 +8704,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_rr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(r_rr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(r_rr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(r_rr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(r_rr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(r_rr_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(r_rr_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(r_rr_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(r_rr_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(r_rr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(r_rr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_rr_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(r_rr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(r_rr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
 			case M_RAND:				function.set(SCALAR(r_rr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(r_rr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_atan_i);					return;
@@ -8947,14 +8765,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_rc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(c_rc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(c_rc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(c_rc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(c_rc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(c_rc_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(c_rc_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(c_rc_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(c_rc_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(c_rc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(c_rc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_rc_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(c_rc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(c_rc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_log_i);					return;
 			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(c_rc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_random, false);			return;
@@ -9010,14 +8828,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_rq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_rq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(q_rq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(q_rq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(q_rq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(q_rq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(q_rq_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(q_rq_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(q_rq_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(q_rq_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(q_rq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(q_rq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_rq_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(q_rq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(q_rq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_cq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cq_log_i);					return;
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_rq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_random, false);			return;
@@ -9079,14 +8897,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_cr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(c_cr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(c_cr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(c_cr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(c_cr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(c_cr_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(c_cr_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(c_cr_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(c_cr_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(c_cr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(c_cr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_cr_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(c_cr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(c_cr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
 			case M_RAND:				function.set(SCALAR(c_cr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(c_cr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_atan_i);					return;
@@ -9138,14 +8956,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_cc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(c_cc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(c_cc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(c_cc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(c_cc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(c_cc_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(c_cc_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(c_cc_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(c_cc_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(c_cc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(c_cc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_cc_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(c_cc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(c_cc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_log_i);					return;
 			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
 			case M_ATAN:				function.set(SCALAR(c_cc_atan)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_atan_i);					return;
@@ -9196,14 +9014,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_cq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_cq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(q_cq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(q_cq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(q_cq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(q_cq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(q_cq_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(q_cq_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(q_cq_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(q_cq_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(q_cq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(q_cq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_cq_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(q_cq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(q_cq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_cq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cq_log_i);					return;
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_cq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_random, false);			return;
@@ -9264,14 +9082,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_qr_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qr_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(q_qr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(q_qr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(q_qr_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(q_qr_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(q_qr_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(q_qr_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(q_qr_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(q_qr_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(q_qr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(q_qr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_qr_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(q_qr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(q_qr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_qc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qc_log_i);					return;
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_qr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_random, false);			return;
@@ -9327,14 +9145,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_qc_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qc_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(q_qc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(q_qc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(q_qc_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(q_qc_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(q_qc_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(q_qc_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(q_qc_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(q_qc_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(q_qc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(q_qc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_qc_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(q_qc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(q_qc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_qc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qc_log_i);					return;
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_qc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_random, false);			return;
@@ -9390,14 +9208,14 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOGIC_EQUAL:			function.set(SIMD(r_qq_logic_equal)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_equal_o, false);			return;
 			case M_LOGIC_NOT_EQUAL:		function.set(SIMD(r_qq_logic_not_equal)),		bmts=returns_rrr_rrr_rrr,	d(disc_r_logic_not_equal_o, false);		return;
 			case M_ASSIGN_AND:
-			case M_BITWISE_AND:			function.set(SCALAR(q_qq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_and_o, false);	return;
-			case M_BITWISE_NAND:		function.set(SCALAR(q_qq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_nand_o, false);	return;
+			case M_BITWISE_AND:			function.set(SCALAR(q_qq_bitwise_and)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_and_o, false);		return;
+			case M_BITWISE_NAND:		function.set(SCALAR(q_qq_bitwise_nand)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nand_o, false);	return;
 			case M_ASSIGN_XOR:
-			case M_BITWISE_XOR:			function.set(SCALAR(q_qq_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_xor_o, false);	return;
-			case M_BITWISE_XNOR:		function.set(SCALAR(q_qq_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_xnor_o, false);	return;
+			case M_BITWISE_XOR:			function.set(SCALAR(q_qq_bitwise_xor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xor_o, false);		return;
+			case M_BITWISE_XNOR:		function.set(SCALAR(q_qq_bitwise_xnor)),		bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_xnor_o, false);	return;
 			case M_ASSIGN_OR:
-			case M_VERTICAL_BAR:		function.set(SCALAR(q_qq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_or_o, false);		return;
-			case M_BITWISE_NOR:			function.set(SCALAR(q_qq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_qq_bitwise_nor_o, false);	return;
+			case M_VERTICAL_BAR:		function.set(SCALAR(q_qq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
+			case M_BITWISE_NOR:			function.set(SCALAR(q_qq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_qq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qq_log_i);					return;
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_atan_i);					return;
