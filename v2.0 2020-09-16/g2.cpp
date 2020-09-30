@@ -7337,167 +7337,66 @@ namespace	G2
 	inline double clamp01(double x)
 	{
 		double temp=x+abs(x);//max(0, x)
-		return (temp+1-abs(temp-1))*0.25;//min(x, 1)
+		return (temp+2-abs(temp-2))*0.25;//min(x, 1)
 	}
-	void  r_r_trwv					(VectP &r, VectP const &x)					{double t=abs(x-::floor(x)-0.5); r=t+t;}
-	void  r_c_trwv					(VectP &r, CompP const &x)					{Comp1d cx=x; double t=abs(cx-floor(cx)-0.5); r=t+t;}
-	void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat1d qx=x; double t=abs(qx-floor(qx)-0.5); r=t+t;}
-	void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)
+	inline double trwv_dc(double x, double y)
 	{
 		double t=x-::floor(x), t2=1-x;
 		t2-=::floor(t2);
 		double dc=clamp01(y);
 		double dc2=1-dc, t_d=t/dc, t2_d2=t2/dc2;
-		r=(t_d<1)*t_d+(t2_d2<1)*t2_d2;
+		return (t_d<1?t_d:0)+(t2_d2<1?t2_d2:0);
 	}
-	void c_cr_trwv					(CompP &r, CompP const &x, VectP const &y)
-	{
-		Comp1d cx=x, t=cx-floor(cx), t2=1.-cx;
-		t2-=floor(t2);
-		double dc=clamp01(y);
-		double dc2=1-dc;
-		auto t_d=t/dc, t2_d2=t2/dc2;
-		r=double(t_d.real()<1)*t_d+double(t2_d2.real()<1)*t2_d2;
-	}
-	void c_cc_trwv					(CompP &r, CompP const &x, CompP const &y)
-	{
-		Comp1d cx=x, cy=y, t=cx-floor(cx), t2=1.-cx;
-		t2-=floor(t2);
-		Comp1d dc(clamp01(*y.r), 0);
-		//Comp1d dc=cy;
-		//dc.real(clamp_positive(dc.real()));
-		//dc.real(dc.real()>1?1:dc.real());
-		Comp1d dc2=1.-dc;
-		auto t_d=t/dc, t2_d2=t2/dc2;
-		r=double(t_d.real()<1)*t_d+double(t2_d2.real()<1)*t2_d2;
-	}
-	void q_qq_trwv					(QuatP &r, QuatP const &x, QuatP const &y)
-	{
-		Quat1d cx=x, cy=y, t=cx-floor(cx), t2=1.-cx;
-		t2-=floor(t2);
-		Quat1d dc(clamp01(*y.r));
-		//Quat1d dc=cy;
-		//dc=Quat1d(clamp_positive(dc.real()), dc.R_component_2(), dc.R_component_3(), dc.R_component_4());
-		//dc=Quat1d(dc.real()>1?1:dc.real(), dc.R_component_2(), dc.R_component_3(), dc.R_component_4());
-		Quat1d dc2=1.-dc;
-		auto t_d=t/dc, t2_d2=t2/dc2;
-		r=double(t_d.real()<1)*t_d+double(t2_d2.real()<1)*t2_d2;
-	}
-	bool disc_c_trwv_i				(Value const &x0, Value const &x1){return std::floor(x0.r)!=std::floor(x1.r)||std::floor(x0.i)!=std::floor(x1.i);}
-	bool disc_q_trwv_i				(Value const &x0, Value const &x1){return false;}//
-	bool disc_rr_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return std::floor(x0.r)!=std::floor(x1.r);}
-	bool disc_rc_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return std::floor(x0.r)!=std::floor(x1.r);}
-	bool disc_rq_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return std::floor(x0.r)!=std::floor(x1.r);}
-	bool disc_cr_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1)
-	{
-		if(std::floor(x0.r)!=std::floor(x1.r)||std::floor(x0.i)!=std::floor(x1.i))
-			return true;
-		return y0.r<1?y1.r>=1:y0.r==1?y1.r<1||y1.r>1:y1.r<=1;
-	}
-	bool disc_cc_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cq_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qr_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qc_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qq_trwv_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	void  r_r_trwv					(VectP &r, VectP const &x)					{double t=abs(x-::floor(x)-0.5); r=t+t;}
+	void  r_c_trwv					(VectP &r, CompP const &x)					{Comp1d cx=x; double t=abs(cx-floor(cx)-0.5); r=t+t;}
+	void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat1d qx=x; double t=abs(qx-floor(qx)-0.5); r=t+t;}
+	void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_rc_trwv					(VectP &r, VectP const &x, CompP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_rq_trwv					(VectP &r, VectP const &x, QuatP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_cr_trwv					(VectP &r, CompP const &x, VectP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_cc_trwv					(VectP &r, CompP const &x, CompP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_cq_trwv					(VectP &r, CompP const &x, QuatP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_qr_trwv					(VectP &r, QuatP const &x, VectP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_qc_trwv					(VectP &r, QuatP const &x, CompP const &y)	{r=trwv_dc(*x.r, *y.r);}
+	void r_qq_trwv					(VectP &r, QuatP const &x, QuatP const &y)	{r=trwv_dc(*x.r, *y.r);}
 
-	void  r_r_saw					(VectP &r, VectP const &x)
+	inline double sawtooth(double x)
 	{
-		double t=x-x.floor(), t2=::floor(1-t);
-		r=(t2+1)*(t2*0.5+t);
+		double t=x-::floor(x), t2=::floor(1-t);//dc=1
+		return (t2+1)*(t2*0.5+t);
 	}
-	void  c_c_saw					(CompP &r, CompP const &x)
+	inline double sawtooth_dc(double x, double y)
 	{
-		Comp1d cx=x;
-		Comp1d t=cx-floor(cx), t2=floor(1.-t);
-		r=(t2+1.)*(t2*0.5+t);
+		if(!y)
+			return 0;
+		auto t=x-::floor(x), t2=::floor(y-t);
+		return (t2+1)*(t2*0.5+t)/y;
 	}
-	void  q_q_saw					(QuatP &r, QuatP const &x)
-	{
-		Quat1d qx=x;
-		Quat1d t=qx-floor(qx), t2=floor(1.-t);
-		r=(t2+1.)*(t2*0.5+t);
-	}
-	void r_rr_saw					(VectP &r, VectP const &x, VectP const &y)
-	{
-		auto t=x-x.floor(), t2=::floor(y-t);
-		r=(t2+1)*(t2*0.5+t)/y;
-	}
-	void c_rc_saw					(CompP &r, VectP const &x, CompP const &y)
-	{
-		Comp1d cy=y;
-		auto t=x-x.floor();
-		auto t2=floor(cy-t);
-		r=(t2+1.)*(t2*0.5+t)/cy;
-	}
-	void q_rq_saw					(QuatP &r, VectP const &x, QuatP const &y)
-	{
-		Quat1d qy=y;
-		auto t=x-x.floor();
-		auto t2=floor(qy-t);
-		r=(t2+1.)*(t2*0.5+t)/qy;
-	}
-	void c_cr_saw					(CompP &r, CompP const &x, VectP const &y)
-	{
-		double ry=y;
-		Comp1d cx=x;
-		auto t=cx-floor(cx);
-		auto t2=floor(ry-t);
-		r=(t2+1.)*(t2*0.5+t)/ry;
-	}
-	void c_cc_saw					(CompP &r, CompP const &x, CompP const &y)
-	{
-		Comp1d cx=x, cy=y;
-		auto t=cx-floor(cx);
-		auto t2=floor(cy-t);
-		r=(t2+1.)*(t2*0.5+t)/cy;
-	}
-	void q_cq_saw					(QuatP &r, CompP const &x, QuatP const &y)
-	{
-		Comp1d cx=x;
-		Quat1d qy=y;
-		auto t=cx-floor(cx);
-		auto t2=floor(qy-t);
-		r=(t2+1.)*(t2*0.5+t)/qy;
-	}
-	void q_qr_saw					(QuatP &r, QuatP const &x, VectP const &y)
-	{
-		Quat1d qx=x;
-		double ry=y;
-		auto t=qx-floor(qx);
-		auto t2=floor(ry-t);
-		r=(t2+1.)*(t2*0.5+t)/ry;
-	}
-	void q_qc_saw					(QuatP &r, QuatP const &x, CompP const &y)
-	{
-		Quat1d qx=x;
-		Comp1d cy=y;
-		auto t=qx-floor(qx);
-		auto t2=floor(cy-t);
-		r=(t2+1.)*(t2*0.5+t)/cy;
-	}
-	void q_qq_saw					(QuatP &r, QuatP const &x, QuatP const &y)
-	{
-		Quat1d qx=x, qy=y;
-		auto t=qx-floor(qx);
-		auto t2=floor(qy-t);
-		r=(t2+1.)*(t2*0.5+t)/qy;
-	}
+	inline bool sawtooth_dc_disc(double t0, double t1){return std::floor(t0)!=std::floor(t1);}
+	void  r_r_saw					(VectP &r, VectP const &x)					{r=sawtooth(*x.r);}
+	void  r_c_saw					(VectP &r, CompP const &x)					{r=sawtooth(*x.r);}
+	void  r_q_saw					(VectP &r, QuatP const &x)					{r=sawtooth(*x.r);}
+	void r_rr_saw					(VectP &r, VectP const &x, VectP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_rc_saw					(VectP &r, VectP const &x, CompP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_rq_saw					(VectP &r, VectP const &x, QuatP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_cr_saw					(VectP &r, CompP const &x, VectP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_cc_saw					(VectP &r, CompP const &x, CompP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_cq_saw					(VectP &r, CompP const &x, QuatP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_qr_saw					(VectP &r, QuatP const &x, VectP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_qc_saw					(VectP &r, QuatP const &x, CompP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
+	void r_qq_saw					(VectP &r, QuatP const &x, QuatP const &y)	{r=sawtooth_dc(*x.r, *y.r);}
 	bool disc_r_saw_i				(Value const &x0, Value const &x1){return std::ceil(x0.r)!=std::ceil(x1.r);}
-	bool disc_c_saw_i				(Value const &x0, Value const &x1){return _1d_int_in_range(x0.r, x1.r)||_1d_int_in_range(x0.i, x1.i);}
-	bool disc_q_saw_i				(Value const &x0, Value const &x1){return false;}//
-	bool disc_rr_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1)
-	{
-		double t0=x0.r-y0.r, t1=x1.r-y1.r;
-		return std::floor(t0)!=std::floor(t1);
-	}
-	bool disc_rc_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_rq_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cr_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cc_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_cq_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qr_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qc_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
-	bool disc_qq_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_c_saw_i				(Value const &x0, Value const &x1){return std::ceil(x0.r)!=std::ceil(x1.r);}
+	bool disc_q_saw_i				(Value const &x0, Value const &x1){return std::ceil(x0.r)!=std::ceil(x1.r);}
+	bool disc_rr_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_rc_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_rq_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_cr_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_cc_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_cq_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_qr_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_qc_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
+	bool disc_qq_saw_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return sawtooth_dc_disc(x0.r-y0.r, x1.r-y1.r);}
 
 	void r_rr_hypot					(VectP &r, VectP const &x, VectP const &y)	{r=::sqrt(x*x+y*y);}
 	//void c_cc_hypot					(CompP const &x, CompP const &y)	{return sqrt(sq(x)+sq(y));}
@@ -7677,7 +7576,7 @@ struct		BinaryFunctionNameMap
 	{UFNAMES_R(trgl), "trgl", FORMAT_UNARY_FUNCTION},\
 	{UFNAMES_R(sqwv), "sqwv", FORMAT_UNARY_FUNCTION},\
 	{UFNAMES_R(trwv), "trwv", FORMAT_UNARY_FUNCTION},\
-	UFMAP(saw),\
+	{UFNAMES_R(saw), "saw", FORMAT_UNARY_FUNCTION},\
 	{{r_r_mandelbrot, r_c_mandelbrot,  r_c_mandelbrot}, "mandelbrot", FORMAT_UNARY_FUNCTION},\
 	{UFNAMES(increment), "++", FORMAT_UNARY_OPERATOR_LEFT},\
 	{UFNAMES(decrement), "--", FORMAT_UNARY_OPERATOR_LEFT},\
@@ -7720,8 +7619,8 @@ struct		BinaryFunctionNameMap
 	{{r_rr_random, c_cr_random, c_cc_random, q_qq_random,  q_qq_random, q_qq_random, q_qq_random, q_qq_random, q_qq_random}, "rand", FORMAT_BINARY_FUNCTION},\
 	{{c_rr_hankel1,  c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1, c_rr_hankel1}, "hankel1", FORMAT_BINARY_FUNCTION},\
 	{BFNAMES_R(sqwv), "sqwv", FORMAT_BINARY_FUNCTION},\
-	{{r_rr_trwv,   c_cr_trwv, c_cc_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv, q_qq_trwv}, "trwv", FORMAT_BINARY_FUNCTION},\
-	BFMAP(saw),\
+	{{r_rr_trwv, r_rc_trwv, r_rq_trwv, r_cr_trwv, r_cc_trwv, r_cq_trwv, r_qr_trwv, r_qc_trwv, r_qq_trwv}, "trwv", FORMAT_BINARY_FUNCTION},\
+	{{r_rr_saw, r_rc_saw, r_rq_saw, r_cr_saw, r_cc_saw, r_cq_saw, r_qr_saw, r_qc_saw, r_qq_saw}, "saw", FORMAT_BINARY_FUNCTION},\
 	{{r_rr_hypot,  r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot, r_rr_hypot}, "hypot", FORMAT_BINARY_FUNCTION},\
 	{{r_rr_mandelbrot, r_cr_mandelbrot,   r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot, r_cr_mandelbrot}, "mandelbrot", FORMAT_BINARY_FUNCTION},\
 	{{r_rr_min, c_cc_min, q_qq_min,   q_qq_min, q_qq_min, q_qq_min, q_qq_min, q_qq_min, q_qq_min}, "min", FORMAT_BINARY_FUNCTION},\
@@ -7823,179 +7722,6 @@ const char*	mp_fp2str(void *fp, bool is_binary, int &fmt)
 #undef		UMAP_DECLARATION
 #undef		BMAP_DECLARATION
 typedef		const char* (*FP2STR_FN)(void *fp, bool is_binary, int &fmt);
-#endif
-#if 0
-const char* fp2str(FP const &fp, int &fmt)
-{
-	using namespace G2;
-	const char *a=nullptr;
-		 if(fp.r_r==r_r_setzero					||fp.c_c==c_c_setzero			||fp.q_q==q_q_setzero	)fmt=FORMAT_UNARY_FUNCTION, a="setzero";
-	else if(fp.r_r==r_r_ceil					||fp.c_c==c_c_ceil				||fp.q_q==q_q_ceil		)fmt=FORMAT_UNARY_FUNCTION, a="ceil";
-	else if(fp.r_r==r_r_floor					||fp.c_c==c_c_floor				||fp.q_q==q_q_floor		)fmt=FORMAT_UNARY_FUNCTION, a="floor";
-	else if(fp.r_r==r_r_round					||fp.c_c==c_c_round				||fp.q_q==q_q_round		)fmt=FORMAT_UNARY_FUNCTION, a="round";
-	else if(fp.r_r==r_r_abs						||fp.r_c==r_c_abs				||fp.r_q==r_q_abs		)fmt=FORMAT_UNARY_FUNCTION, a="abs";
-	else if(fp.r_r==r_r_arg						||fp.r_c==r_c_arg				||fp.r_q==r_q_arg		)fmt=FORMAT_UNARY_FUNCTION, a="arg";
-	else if(fp.r_c==r_c_real)fmt=FORMAT_UNARY_FUNCTION, a="re";
-	else if(fp.r_c==r_c_imag)fmt=FORMAT_UNARY_FUNCTION, a="im";
-	else if(fp.c_c==c_c_conjugate				||fp.q_q==q_q_conjugate			)fmt=FORMAT_UNARY_FUNCTION, a="conjugate";
-	else if(fp.c_c==c_c_polar					||fp.c_q==c_q_polar				)fmt=FORMAT_UNARY_FUNCTION, a="polar";
-	if(a)
-		return a;
-		 if(fp.c_c==c_c_cartesian				||fp.q_q==q_q_cartesian			)fmt=FORMAT_UNARY_FUNCTION, a="cartesian";
-	else if(fp.r_rr==r_rr_plus					||fp.c_rc==c_rc_plus			||fp.q_rq==q_rq_plus			||fp.c_cr==c_cr_plus			||fp.c_cc==c_cc_plus			||fp.q_cq==q_cq_plus			||fp.q_qr==q_qr_plus					||fp.q_qc==q_qc_plus				||fp.q_qq==q_qq_plus			)fmt=FORMAT_BINARY_OPERATOR, a="+";//add
-	else if(fp.r_r==r_r_minus					||fp.c_c==c_c_minus				||fp.q_q==q_q_minus				)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="neg";
-	else if(fp.r_rr==r_rr_minus					||fp.c_rc==c_rc_minus			||fp.q_rq==q_rq_minus			||fp.c_cr==c_cr_minus			||fp.c_cc==c_cc_minus			||fp.q_cq==q_cq_minus			||fp.q_qr==q_qr_minus					||fp.q_qc==q_qc_minus				||fp.q_qq==q_qq_minus			)fmt=FORMAT_BINARY_OPERATOR, a="-";//sub
-	else if(fp.r_rr==r_rr_multiply				||fp.c_rc==c_rc_multiply		||fp.q_rq==q_rq_multiply		||fp.c_cr==c_cr_multiply		||fp.c_cc==c_cc_multiply		||fp.q_cq==q_cq_multiply		||fp.q_qr==q_qr_multiply				||fp.q_qc==q_qc_multiply			||fp.q_qq==q_qq_multiply		)fmt=FORMAT_BINARY_OPERATOR, a="*";//mul
-	else if(fp.r_r==r_r_divide					||fp.c_c==c_c_divide			||fp.q_q==q_q_divide			)fmt=FORMAT_UNARY_FUNCTION, a="reciprocal";
-	else if(fp.r_rr==r_rr_divide				||fp.c_rc==c_rc_divide			||fp.q_rq==q_rq_divide			||fp.c_cr==c_cr_divide			||fp.c_cc==c_cc_divide			||fp.q_cq==q_cq_divide			||fp.q_qr==q_qr_divide					||fp.q_qc==q_qc_divide				||fp.q_qq==q_qq_divide			)fmt=FORMAT_BINARY_OPERATOR, a="/";//div
-	else if(fp.r_rr==r_rr_logic_divides			||fp.r_rc==r_rc_logic_divides	||fp.r_rq==r_rq_logic_divides	||fp.r_cr==r_cr_logic_divides	||fp.r_cc==r_cc_logic_divides	||fp.r_cq==r_cq_logic_divides	||fp.r_qr==r_qr_logic_divides			||fp.r_qc==r_qc_logic_divides		||fp.r_qq==r_qq_logic_divides	)fmt=FORMAT_BINARY_OPERATOR, a="@";//divides
-	else if(fp.r_rr==r_rr_power_real			||fp.c_cr==c_cr_power_real		||fp.q_qr==q_qr_power_real		)fmt=FORMAT_BINARY_OPERATOR, a="**";//power real
-	else if(fp.c_cr==c_cr_pow					||fp.c_cc==c_cc_pow				||fp.q_cq==q_cq_pow				||fp.q_qr==q_qr_pow				||fp.q_qc==q_qc_pow				||fp.q_qq==q_qq_pow				)fmt=FORMAT_BINARY_OPERATOR, a="^";
-	if(a)
-		return a;
-		 if(fp.c_c==c_c_ln						||fp.q_q==q_q_ln				)fmt=FORMAT_UNARY_FUNCTION, a="ln";
-	else if(fp.c_c==c_c_log						||fp.q_q==q_q_log				)fmt=FORMAT_UNARY_FUNCTION, a="log10";
-	else if(fp.c_cr==c_cr_log					||fp.c_cc==c_cc_log				||fp.q_cq==q_cq_log				||fp.q_qc==q_qc_log				||fp.q_qq==q_qq_log				)fmt=FORMAT_BINARY_FUNCTION, a="log";
-	else if(fp.c_rr==c_rr_tetrate				||fp.c_rc==c_rc_tetrate			||fp.c_cr==c_cr_tetrate			||fp.c_cc==c_cc_tetrate			||fp.q_qr==q_qr_tetrate			)fmt=FORMAT_BINARY_OPERATOR, a="^^";//tetrate
-	else if(fp.c_rr==c_rr_pentate				||fp.c_cr==c_cr_pentate			)fmt=FORMAT_BINARY_OPERATOR, a="^^^";//pentate
-	else if(fp.r_r==r_r_bitwise_shift_left_l	||fp.c_c==c_c_bitwise_shift_left_l	||fp.q_q==q_q_bitwise_shift_left_l)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="<<";
-	else if(fp.r_r==r_r_bitwise_shift_left_r	||fp.c_c==c_c_bitwise_shift_left_r	||fp.q_q==q_q_bitwise_shift_left_r)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a="<<";
-	else if(fp.r_rr==r_rr_bitwise_shift_left	||fp.c_rc==c_rc_bitwise_shift_left	||fp.q_rq==q_rq_bitwise_shift_left||fp.c_cr==c_cr_bitwise_shift_left	||fp.c_cc==c_cc_bitwise_shift_left	||fp.q_cq==q_cq_bitwise_shift_left	||fp.q_qr==q_qr_bitwise_shift_left	||fp.q_qc==q_qc_bitwise_shift_left	||fp.q_qq==q_qq_bitwise_shift_left)fmt=FORMAT_BINARY_OPERATOR, a="<<";
-	else if(fp.r_r==r_r_bitwise_shift_right_l	||fp.c_c==c_c_bitwise_shift_right_l	||fp.q_q==q_q_bitwise_shift_right_l)fmt=FORMAT_UNARY_OPERATOR_LEFT, a=">>";
-	else if(fp.r_r==r_r_bitwise_shift_right_r	||fp.c_c==c_c_bitwise_shift_right_r	||fp.q_q==q_q_bitwise_shift_right_r)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a=">>";
-	if(a)
-		return a;
-		 if(fp.r_rr==r_rr_bitwise_shift_right	||fp.c_rc==c_rc_bitwise_shift_right	||fp.q_rq==q_rq_bitwise_shift_right||fp.c_cr==c_cr_bitwise_shift_right||fp.c_cc==c_cc_bitwise_shift_right||fp.q_cq==q_cq_bitwise_shift_right||fp.q_qr==q_qr_bitwise_shift_right||fp.q_qc==q_qc_bitwise_shift_right||fp.q_qq==q_qq_bitwise_shift_right)fmt=FORMAT_BINARY_OPERATOR, a="<<";
-	else if(fp.r_r==r_r_bitwise_not				||fp.c_c==c_c_bitwise_not		||fp.q_q==q_q_bitwise_not		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="~";
-	else if(fp.r_r==r_r_bitwise_and				||fp.c_c==c_c_bitwise_and		||fp.q_q==q_q_bitwise_and		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="&";
-	else if(fp.r_rr==r_rr_bitwise_and			||fp.c_rc==c_rc_bitwise_and		||fp.q_rq==q_rq_bitwise_and		||fp.c_cr==c_cr_bitwise_and		||fp.c_cc==c_cc_bitwise_and		||fp.q_cq==q_cq_bitwise_and			||fp.q_qr==q_qr_bitwise_and			||fp.q_qc==q_qc_bitwise_and			||fp.q_qq==q_qq_bitwise_and			)fmt=FORMAT_BINARY_OPERATOR, a="&";
-	else if(fp.r_r==r_r_bitwise_nand			||fp.c_c==c_c_bitwise_nand		||fp.q_q==q_q_bitwise_nand		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="~&";
-	else if(fp.r_rr==r_rr_bitwise_nand			||fp.c_rc==c_rc_bitwise_nand	||fp.q_rq==q_rq_bitwise_nand	||fp.c_cr==c_cr_bitwise_nand	||fp.c_cc==c_cc_bitwise_nand	||fp.q_cq==q_cq_bitwise_nand		||fp.q_qr==q_qr_bitwise_nand		||fp.q_qc==q_qc_bitwise_nand		||fp.q_qq==q_qq_bitwise_nand		)fmt=FORMAT_BINARY_OPERATOR, a="~&";
-	else if(fp.r_r==r_r_bitwise_or				||fp.c_c==c_c_bitwise_or		||fp.q_q==q_q_bitwise_or		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="|";
-	else if(fp.r_rr==r_rr_bitwise_or			||fp.c_rc==c_rc_bitwise_or		||fp.q_rq==q_rq_bitwise_or		||fp.c_cr==c_cr_bitwise_or		||fp.c_cc==c_cc_bitwise_or		||fp.q_cq==q_cq_bitwise_or			||fp.q_qr==q_qr_bitwise_or			||fp.q_qc==q_qc_bitwise_or			||fp.q_qq==q_qq_bitwise_or			)fmt=FORMAT_BINARY_OPERATOR, a="|";
-	else if(fp.r_r==r_r_bitwise_nor				||fp.c_c==c_c_bitwise_nor		||fp.q_q==q_q_bitwise_nor		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="~|";
-	else if(fp.r_rr==r_rr_bitwise_nor			||fp.c_rc==c_rc_bitwise_nor		||fp.q_rq==q_rq_bitwise_nor		||fp.c_cr==c_cr_bitwise_nor		||fp.c_cc==c_cc_bitwise_nor		||fp.q_cq==q_cq_bitwise_nor			||fp.q_qr==q_qr_bitwise_nor			||fp.q_qc==q_qc_bitwise_nor			||fp.q_qq==q_qq_bitwise_nor			)fmt=FORMAT_BINARY_OPERATOR, a="~|";
-	if(a)
-		return a;
-		 if(fp.r_r==r_r_bitwise_xor				||fp.c_c==c_c_bitwise_xor		||fp.q_q==q_q_bitwise_xor		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="xor";
-	else if(fp.r_rr==r_rr_bitwise_xor			||fp.c_rc==c_rc_bitwise_xor		||fp.q_rq==q_rq_bitwise_xor		||fp.c_cr==c_cr_bitwise_xor		||fp.c_cc==c_cc_bitwise_xor		||fp.q_cq==q_cq_bitwise_xor			||fp.q_qr==q_qr_bitwise_xor			||fp.q_qc==q_qc_bitwise_xor			||fp.q_qq==q_qq_bitwise_xor			)fmt=FORMAT_BINARY_OPERATOR, a="xor";
-	else if(fp.r_r==r_r_bitwise_xnor			||fp.c_c==c_c_bitwise_xnor		||fp.q_q==q_q_bitwise_xnor		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="xnor";
-	else if(fp.r_rr==r_rr_bitwise_xnor			||fp.c_rc==c_rc_bitwise_xnor	||fp.q_rq==q_rq_bitwise_xnor	||fp.c_cr==c_cr_bitwise_xnor	||fp.c_cc==c_cc_bitwise_xnor	||fp.q_cq==q_cq_bitwise_xnor		||fp.q_qr==q_qr_bitwise_xnor		||fp.q_qc==q_qc_bitwise_xnor		||fp.q_qq==q_qq_bitwise_xnor		)fmt=FORMAT_BINARY_OPERATOR, a="xnor";
-	else if(fp.r_r==r_r_logic_equal				||fp.r_c==r_c_logic_equal		||fp.r_q==r_q_logic_equal		)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a="==0";
-	else if(fp.r_rr==r_rr_logic_equal			||fp.r_rc==r_rc_logic_equal		||fp.r_rq==r_rq_logic_equal		||fp.r_cr==r_cr_logic_equal		||fp.r_cc==r_cc_logic_equal		||fp.r_cq==r_cq_logic_equal			||fp.r_qr==r_qr_logic_equal			||fp.r_qc==r_qc_logic_equal			||fp.r_qq==r_qq_logic_equal			)fmt=FORMAT_BINARY_OPERATOR, a="==";
-	else if(fp.r_r==r_r_logic_not_equal			||fp.r_c==r_c_logic_not_equal	||fp.r_q==r_q_logic_not_equal	)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a="!=0";
-	else if(fp.r_rr==r_rr_logic_not_equal		||fp.r_rc==r_rc_logic_not_equal	||fp.r_rq==r_rq_logic_not_equal	||fp.r_cr==r_cr_logic_not_equal	||fp.r_cc==r_cc_logic_not_equal	||fp.r_cq==r_cq_logic_not_equal		||fp.r_qr==r_qr_logic_not_equal		||fp.r_qc==r_qc_logic_not_equal		||fp.r_qq==r_qq_logic_not_equal		)fmt=FORMAT_BINARY_OPERATOR, a="!=";
-	else if(fp.r_r==r_r_logic_less_l			||fp.r_c==r_c_logic_less_l		||fp.r_q==r_q_logic_less_l		)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="0<";
-	else if(fp.r_r==r_r_logic_less_r			||fp.r_c==r_c_logic_less_r		||fp.r_q==r_q_logic_less_r		)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a="<0";
-	if(a)
-		return a;
-		 if(fp.r_rr==r_rr_logic_less			||fp.r_rc==r_rc_logic_less		||fp.r_rq==r_rq_logic_less		||fp.r_cr==r_cr_logic_less		||fp.r_cc==r_cc_logic_less		||fp.r_cq==r_cq_logic_less			||fp.r_qr==r_qr_logic_less			||fp.r_qc==r_qc_logic_less			||fp.r_qq==r_qq_logic_less			)fmt=FORMAT_BINARY_OPERATOR, a="<";
-	else if(fp.r_r==r_r_logic_less_equal_l		||fp.r_c==r_c_logic_less_equal_l||fp.r_q==r_q_logic_less_equal_l)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="0<=";
-	else if(fp.r_r==r_r_logic_less_equal_r		||fp.r_c==r_c_logic_less_equal_r||fp.r_q==r_q_logic_less_equal_r)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a="<=0";
-	else if(fp.r_rr==r_rr_logic_less_equal		||fp.r_rc==r_rc_logic_less_equal||fp.r_rq==r_rq_logic_less_equal||fp.r_cr==r_cr_logic_less_equal||fp.r_cc==r_cc_logic_less_equal||fp.r_cq==r_cq_logic_less_equal	||fp.r_qr==r_qr_logic_less_equal	||fp.r_qc==r_qc_logic_less_equal	||fp.r_qq==r_qq_logic_less_equal	)fmt=FORMAT_BINARY_OPERATOR, a="<=";
-	else if(fp.r_r==r_r_logic_greater_l			||fp.r_c==r_c_logic_greater_l	||fp.r_q==r_q_logic_greater_l	)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="0>";
-	else if(fp.r_r==r_r_logic_greater_r			||fp.r_c==r_c_logic_greater_r	||fp.r_q==r_q_logic_greater_r	)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a=">0";
-	else if(fp.r_rr==r_rr_logic_greater			||fp.r_rc==r_rc_logic_greater	||fp.r_rq==r_rq_logic_greater	||fp.r_cr==r_cr_logic_greater	||fp.r_cc==r_cc_logic_greater	||fp.r_cq==r_cq_logic_greater		||fp.r_qr==r_qr_logic_greater		||fp.r_qc==r_qc_logic_greater		||fp.r_qq==r_qq_logic_greater		)fmt=FORMAT_BINARY_OPERATOR, a=">";
-	else if(fp.r_r==r_r_logic_greater_equal_l	||fp.r_c==r_c_logic_greater_equal_l||fp.r_q==r_q_logic_greater_equal_l)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="0>=";
-	else if(fp.r_r==r_r_logic_greater_equal_r	||fp.r_c==r_c_logic_greater_equal_r||fp.r_q==r_q_logic_greater_equal_r)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a=">=0";
-	else if(fp.r_rr==r_rr_logic_greater_equal	||fp.r_rc==r_rc_logic_greater_equal||fp.r_rq==r_rq_logic_greater_equal||fp.r_cr==r_cr_logic_greater_equal||fp.r_cc==r_cc_logic_greater_equal||fp.r_cq==r_cq_logic_greater_equal||fp.r_qr==r_qr_logic_greater_equal||fp.r_qc==r_qc_logic_greater_equal||fp.r_qq==r_qq_logic_greater_equal)fmt=FORMAT_BINARY_OPERATOR, a=">=";
-	if(a)
-		return a;
-		 if(fp.r_r==r_r_logic_not				||fp.r_c==r_c_logic_not			||fp.r_q==r_q_logic_not			)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="!";
-	else if(fp.r_rr==r_rr_logic_and				||fp.r_rc==r_rc_logic_and		||fp.r_rq==r_rq_logic_and		||fp.r_cr==r_cr_logic_and		||fp.r_cc==r_cc_logic_and		||fp.r_cq==r_cq_logic_and			||fp.r_qr==r_qr_logic_and			||fp.r_qc==r_qc_logic_and			||fp.r_qq==r_qq_logic_and			)fmt=FORMAT_BINARY_OPERATOR, a="&&";
-	else if(fp.r_rr==r_rr_logic_or 				||fp.r_rc==r_rc_logic_or 		||fp.r_rq==r_rq_logic_or 		||fp.r_cr==r_cr_logic_or 		||fp.r_cc==r_cc_logic_or 		||fp.r_cq==r_cq_logic_or 			||fp.r_qr==r_qr_logic_or 			||fp.r_qc==r_qc_logic_or 			||fp.r_qq==r_qq_logic_or 			)fmt=FORMAT_BINARY_OPERATOR, a="||";
-	else if(fp.r_rr==r_rr_logic_xor 			||fp.r_rc==r_rc_logic_xor 		||fp.r_rq==r_rq_logic_xor 		||fp.r_cr==r_cr_logic_xor		||fp.r_cc==r_cc_logic_xor		||fp.r_cq==r_cq_logic_xor			||fp.r_qr==r_qr_logic_xor			||fp.r_qc==r_qc_logic_xor			||fp.r_qq==r_qq_logic_xor			)fmt=FORMAT_BINARY_OPERATOR, a="##";
-	else if(fp.r_rr==r_rr_condition_zero		||fp.c_rc==c_rc_condition_zero	||fp.q_rq==q_rq_condition_zero	||fp.c_cr==c_cr_condition_zero	||fp.c_cc==c_cc_condition_zero	||fp.q_cq==q_cq_condition_zero		||fp.q_qr==q_qr_condition_zero		||fp.q_qc==q_qc_condition_zero 		||fp.q_qq==q_qq_condition_zero 		)fmt=FORMAT_BINARY_OPERATOR, a="??";
-	else if(fp.r_r==r_r_percent					||fp.c_c==c_c_percent			||fp.q_q==q_q_percent			)fmt=FORMAT_UNARY_OPERATOR_RIGHT, a="percent";
-	else if(fp.r_rr==r_rr_modulo				||fp.c_rc==c_rc_modulo			||fp.q_rq==q_rq_modulo			||fp.c_cr==c_cr_modulo			||fp.c_cc==c_cc_modulo			||fp.q_cq==q_cq_modulo				||fp.q_qr==q_qr_modulo				||fp.q_qc==q_qc_modulo			 	||fp.q_qq==q_qq_modulo			 	)fmt=FORMAT_BINARY_OPERATOR, a="mod";
-	else if(fp.r_r==r_r_sgn						||fp.c_c==c_c_sgn				||fp.q_q==q_q_sgn				)fmt=FORMAT_UNARY_FUNCTION, a="sgn";
-	else if(fp.r_r==r_r_sq						||fp.c_c==c_c_sq				||fp.q_q==q_q_sq				)fmt=FORMAT_UNARY_FUNCTION, a="sq";
-	else if(fp.c_c==c_c_sqrt					||fp.q_q==q_q_sqrt				)fmt=FORMAT_UNARY_FUNCTION, a="sqrt";
-	if(a)
-		return a;
-		 if(fp.r_r==r_r_invsqrt					)fmt=FORMAT_UNARY_FUNCTION, a="invsqrt";
-	else if(fp.r_r==r_r_cbrt					||fp.c_c==c_c_cbrt				||fp.q_q==q_q_cbrt				)fmt=FORMAT_UNARY_FUNCTION, a="cbrt";
-	else if(fp.r_r==r_r_gauss					||fp.c_c==c_c_gauss				||fp.q_q==q_q_gauss				)fmt=FORMAT_UNARY_FUNCTION, a="gauss";
-	else if(fp.r_r==r_r_erf						)fmt=FORMAT_UNARY_FUNCTION, a="erf";
-	else if(fp.r_r==r_r_zeta					)fmt=FORMAT_UNARY_FUNCTION, a="zeta";
-	else if(fp.r_r==r_r_tgamma					||fp.c_c==c_c_tgamma			||fp.q_q==q_q_tgamma			)fmt=FORMAT_UNARY_FUNCTION, a="tgamma";
-	else if(fp.r_r==r_r_loggamma				)fmt=FORMAT_UNARY_FUNCTION, a="loggamma";
-	else if(fp.r_r==r_r_permutation				||fp.c_c==c_c_permutation		||fp.q_q==q_q_permutation//why unary?
-		||fp.r_rr==r_rr_permutation				||fp.c_cr==c_cr_permutation		||fp.c_cc==c_cc_permutation		||fp.q_qq==q_qq_permutation 	)fmt=FORMAT_UNARY_FUNCTION, a="permutation";
-	else if(fp.r_r==r_r_combination				||fp.c_c==c_c_combination		||fp.q_q==q_q_combination
-		||fp.r_rr==r_rr_combination				||fp.c_cr==c_cr_combination		||fp.c_cc==c_cc_combination		||fp.q_qq==q_qq_combination 	)fmt=FORMAT_UNARY_FUNCTION, a="combination";
-	else if(fp.r_r==r_r_cos						||fp.c_c==c_c_cos				||fp.q_q==q_q_cos				)fmt=FORMAT_UNARY_FUNCTION, a="cos";
-	if(a)
-		return a;
-		 if(									fp.c_c==c_c_acos				||fp.q_q==q_q_acos				)fmt=FORMAT_UNARY_FUNCTION, a="acos";
-	else if(fp.r_r==r_r_cosh					||fp.c_c==c_c_cosh				||fp.q_q==q_q_cosh				)fmt=FORMAT_UNARY_FUNCTION, a="cosh";
-	else if(									fp.c_c==c_c_acosh				||fp.q_q==q_q_acosh				)fmt=FORMAT_UNARY_FUNCTION, a="acosh";
-	else if(fp.r_r==r_r_cosc					||fp.c_c==c_c_cosc				||fp.q_q==q_q_cosc				)fmt=FORMAT_UNARY_FUNCTION, a="cosc";
-	else if(fp.r_r==r_r_sec						||fp.c_c==c_c_sec				||fp.q_q==q_q_sec				)fmt=FORMAT_UNARY_FUNCTION, a="sec";
-	else if(									fp.c_c==c_c_asec				||fp.q_q==q_q_asec				)fmt=FORMAT_UNARY_FUNCTION, a="asec";
-	else if(									fp.c_c==c_c_asech				||fp.q_q==q_q_asech				)fmt=FORMAT_UNARY_FUNCTION, a="asech";
-	else if(fp.r_r==r_r_sin						||fp.c_c==c_c_sin				||fp.q_q==q_q_sin				)fmt=FORMAT_UNARY_FUNCTION, a="sin";
-	else if(									fp.c_c==c_c_asin				||fp.q_q==q_q_asin				)fmt=FORMAT_UNARY_FUNCTION, a="asin";
-	else if(fp.r_r==r_r_sinh					||fp.c_c==c_c_sinh				||fp.q_q==q_q_sinh				)fmt=FORMAT_UNARY_FUNCTION, a="sinh";
-	if(a)
-		return a;
-		 if(fp.r_r==r_r_asinh					||fp.c_c==c_c_asinh				||fp.q_q==q_q_asinh				)fmt=FORMAT_UNARY_FUNCTION, a="asinh";
-	else if(fp.r_r==r_r_sinc					||fp.c_c==c_c_sinc				||fp.q_q==q_q_sinc				)fmt=FORMAT_UNARY_FUNCTION, a="sinc";
-	else if(fp.r_r==r_r_sinhc					||fp.c_c==c_c_sinhc				||fp.q_q==q_q_sinhc				)fmt=FORMAT_UNARY_FUNCTION, a="sinhc";
-	else if(fp.r_r==r_r_csc						||fp.c_c==c_c_csc				||fp.q_q==q_q_csc				)fmt=FORMAT_UNARY_FUNCTION, a="csc";
-	else if(									fp.c_c==c_c_acsc				||fp.q_q==q_q_acsc				)fmt=FORMAT_UNARY_FUNCTION, a="acsc";
-	else if(fp.r_r==r_r_csch					||fp.c_c==c_c_csch				||fp.q_q==q_q_csch				)fmt=FORMAT_UNARY_FUNCTION, a="csch";
-	else if(fp.r_r==r_r_acsch					||fp.c_c==c_c_acsch				||fp.q_q==q_q_acsch				)fmt=FORMAT_UNARY_FUNCTION, a="acsch";
-	else if(fp.r_r==r_r_tan						||fp.c_c==c_c_tan				||fp.q_q==q_q_tan				)fmt=FORMAT_UNARY_FUNCTION, a="tan";
-	else if(fp.r_r==r_r_atan					||fp.c_c==c_c_atan				||fp.q_q==q_q_atan				)fmt=FORMAT_UNARY_FUNCTION, a="atan";
-	else if(fp.r_rr==r_rr_atan					||fp.c_rc==c_rc_atan			||fp.q_rq==q_rq_atan			||fp.c_cr==c_cr_atan			||fp.c_cc==c_cc_atan			||fp.q_cq==q_cq_atan				||fp.q_qr==q_qr_atan				||fp.q_qc==q_qc_atan				||fp.q_qq==q_qq_atan)fmt=FORMAT_BINARY_FUNCTION, a="atan";
-	if(a)
-		return a;
-		 if(fp.r_r==r_r_tanh					||fp.c_c==c_c_tanh				||fp.q_q==q_q_tanh				)fmt=FORMAT_UNARY_FUNCTION, a="tanh";
-	else if(									fp.c_c==c_c_atanh				||fp.q_q==q_q_atanh				)fmt=FORMAT_UNARY_FUNCTION, a="atanh";
-	else if(fp.r_r==r_r_tanc					||fp.c_c==c_c_tanc				||fp.q_q==q_q_tanc				)fmt=FORMAT_UNARY_FUNCTION, a="tanc";
-	else if(fp.r_r==r_r_cot						||fp.c_c==c_c_cot				||fp.q_q==q_q_cot				)fmt=FORMAT_UNARY_FUNCTION, a="cot";
-	else if(fp.r_r==r_r_acot					||fp.c_c==c_c_acot				||fp.q_q==q_q_acot				)fmt=FORMAT_UNARY_FUNCTION, a="acot";
-	else if(fp.r_r==r_r_coth					||fp.c_c==c_c_coth				||fp.q_q==q_q_coth				)fmt=FORMAT_UNARY_FUNCTION, a="coth";
-	else if(									fp.c_c==c_c_acoth				||fp.q_q==q_q_acoth				)fmt=FORMAT_UNARY_FUNCTION, a="acoth";
-	else if(fp.r_r==r_r_exp						||fp.c_c==c_c_exp				||fp.q_q==q_q_exp				)fmt=FORMAT_UNARY_FUNCTION, a="exp";
-	else if(fp.r_r==r_r_fib						||fp.c_c==c_c_fib				||fp.q_q==q_q_fib				)fmt=FORMAT_UNARY_FUNCTION, a="fib";
-	else if(fp.r_r==r_r_random					||fp.c_c==c_c_random			||fp.q_q==q_q_random//why unary?
-		||fp.r_rr==r_rr_random					||fp.c_cr==c_cr_random			||fp.c_cc==c_cc_random			||fp.q_qq==q_qq_random)fmt=FORMAT_UNARY_FUNCTION, a="rand";
-	if(a)
-		return a;
-		 if(fp.r_r==r_r_beta					)fmt=FORMAT_UNARY_FUNCTION, a="beta";
-	else if(fp.r_r==r_r_cyl_bessel_j			)fmt=FORMAT_UNARY_FUNCTION, a="bessel_j";
-	else if(fp.r_r==r_r_cyl_neumann				)fmt=FORMAT_UNARY_FUNCTION, a="neumann";
-	else if(fp.c_r==c_r_hankel1					||fp.c_c==c_c_hankel1			)fmt=FORMAT_UNARY_FUNCTION, a="hankel1";
-	else if(fp.c_rr==c_rr_hankel1				)fmt=FORMAT_BINARY_FUNCTION, a="hankel1";
-	else if(fp.r_r==r_r_step					||fp.c_c==c_c_step				||fp.q_q==q_q_step				)fmt=FORMAT_UNARY_FUNCTION, a="step";
-	else if(fp.r_r==r_r_rect					||fp.c_c==c_c_rect				||fp.q_q==q_q_rect				)fmt=FORMAT_UNARY_FUNCTION, a="rect";
-	else if(fp.r_r==r_r_trgl					||fp.r_c==r_c_trgl				||fp.r_q==r_q_trgl				)fmt=FORMAT_UNARY_FUNCTION, a="trgl";
-	else if(fp.r_r==r_r_sqwv					||fp.r_c==r_c_sqwv				||fp.r_q==r_q_sqwv//why unary?
-		||fp.r_rr==r_rr_sqwv					||fp.r_rc==r_rc_sqwv			||fp.r_rq==r_rq_sqwv			||fp.r_cr==r_cr_sqwv			||fp.r_cc==r_cc_sqwv			||fp.r_cq==r_cq_sqwv				||fp.r_qr==r_qr_sqwv				||fp.r_qc==r_qc_sqwv				||fp.r_qq==r_qq_sqwv)fmt=FORMAT_BINARY_FUNCTION, a="sqwv";
-	else if(fp.r_r==r_r_trwv					||fp.r_c==r_c_trwv				||fp.r_q==r_q_trwv)fmt=FORMAT_UNARY_FUNCTION, a="trwv";
-	if(a)
-		return a;
-		 if(fp.r_rr==r_rr_trwv					||fp.c_cr==c_cr_trwv			||fp.c_cc==c_cc_trwv			||fp.q_qq==q_qq_trwv)fmt=FORMAT_BINARY_FUNCTION, a="trwv";
-	else if(fp.r_r==r_r_saw						||fp.c_c==c_c_saw				||fp.q_q==q_q_saw//why unary?
-		||fp.r_rr==r_rr_saw						||fp.c_rc==c_rc_saw				||fp.q_rq==q_rq_saw				||fp.c_cr==c_cr_saw				||fp.c_cc==c_cc_saw				||fp.q_cq==q_cq_saw					||fp.q_qr==q_qr_saw					||fp.q_qc==q_qc_saw					||fp.q_qq==q_qq_saw)fmt=FORMAT_BINARY_FUNCTION, a="saw";
-	else if(fp.r_rr==r_rr_hypot					)fmt=FORMAT_BINARY_FUNCTION, a="hypot";
-	else if(fp.r_r==r_r_mandelbrot				||fp.r_c==r_c_mandelbrot		)fmt=FORMAT_UNARY_FUNCTION, a="mandelbrot";
-	else if(fp.r_rr==r_rr_mandelbrot			||fp.r_cr==r_cr_mandelbrot		)fmt=FORMAT_BINARY_FUNCTION, a="mandelbrot";
-	else if(fp.r_rr==r_rr_min					||fp.c_cc==c_cc_min				||fp.q_qq==q_qq_min				)fmt=FORMAT_BINARY_FUNCTION, a="minimum";
-	else if(fp.r_rr==r_rr_max					||fp.c_cc==c_cc_max				||fp.q_qq==q_qq_max				)fmt=FORMAT_BINARY_FUNCTION, a="maximum";
-	else if(fp.r_rr==r_rr_conditional_110		||fp.c_rc==c_rc_conditional_110	||fp.q_rq==q_rq_conditional_110	||fp.r_cr==r_cr_conditional_110	||fp.c_cc==c_cc_conditional_110	||fp.q_cq==q_cq_conditional_110		||fp.r_qr==r_qr_conditional_110		||fp.c_qc==c_qc_conditional_110		||fp.q_qq==q_qq_conditional_110)fmt=FORMAT_BINARY_FUNCTION, a="x?y:0";
-	else if(fp.r_rr==r_rr_conditional_101		||fp.c_rc==c_rc_conditional_101	||fp.q_rq==q_rq_conditional_101	||fp.r_cr==r_cr_conditional_101	||fp.c_cc==c_cc_conditional_101	||fp.q_cq==q_cq_conditional_101		||fp.r_qr==r_qr_conditional_101		||fp.c_qc==c_qc_conditional_101		||fp.q_qq==q_qq_conditional_101)fmt=FORMAT_BINARY_FUNCTION, a="x?0:y";
-	else if(fp.r_r==r_r_increment				||fp.c_c==c_c_increment			||fp.q_q==q_q_increment			)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="++";//inc
-	if(a)
-		return a;
-		 if(fp.r_r==r_r_decrement				||fp.c_c==c_c_decrement			||fp.q_q==q_q_decrement			)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="--";//dec
-	else if(fp.r_r==r_r_assign					||fp.c_c==c_c_assign			||fp.q_q==q_q_assign			)fmt=FORMAT_UNARY_OPERATOR_LEFT, a="";//=	an operator that does nothing
-
-	if(!a)fmt=FORMAT_INSTRUCTION, a="???";
-	return a;
-}
 #endif
 void print_term(std::stringstream &LOL_1, Expression const &ex, int idx)
 {
@@ -8899,8 +8625,8 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_GAUSS:				function.set(SIMD(r_r_gauss)),			umts=returns_rcq,		d();								return;
 		case M_PERMUTATION:			function.set(SCALAR(r_r_permutation)),	umts=returns_rcq,		d();								return;
 		case M_COMBINATION:			function.set(SCALAR(r_r_combination)),	umts=returns_rcq,		d();								return;
-		case M_SQWV:				function.set(SIMD2(r_r_sqwv)),			umts=returns_rcq,		d(disc_r_sqwv_o, false);			return;
-		case M_TRWV:				function.set(SIMD2(r_r_trwv)),			umts=returns_rcq,		d();								return;
+		case M_SQWV:				function.set(SIMD2(r_r_sqwv)),			umts=returns_rrr,		d(disc_r_sqwv_o, false);			return;
+		case M_TRWV:				function.set(SIMD2(r_r_trwv)),			umts=returns_rrr,		d();								return;
 		case M_SAW:					function.set(SIMD2(r_r_saw)),			umts=returns_rcq,		d(disc_r_saw_i, true);				return;
 		case M_HYPOT:				function.set(SIMD(r_r_abs)),			umts=returns_rrr,		d();								return;
 		case M_MANDELBROT:			function.set(SIMD(r_r_mandelbrot)),		umts=returns_rrr,		d();								return;
@@ -9003,9 +8729,9 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_GAUSS:				function.set(SIMD(c_c_gauss)),			umts=returns_rcq,		d();								return;
 		case M_COMBINATION:			function.set(SCALAR(c_c_combination)),	umts=returns_rcq,		d();								return;
 		case M_PERMUTATION:			function.set(SCALAR(c_c_permutation)),	umts=returns_rcq,		d();								return;
-		case M_SQWV:				function.set(SIMD2(r_c_sqwv)),			umts=returns_rcq,		d(disc_r_sqwv_o, false);			return;
-		case M_TRWV:				function.set(SIMD2(r_c_trwv)),			umts=returns_rcq,		d(disc_c_trwv_i, true);				return;
-		case M_SAW:					function.set(SIMD2(c_c_saw)),			umts=returns_rcq,		d(disc_c_saw_i, true);				return;
+		case M_SQWV:				function.set(SIMD2(r_c_sqwv)),			umts=returns_rrr,		d(disc_r_sqwv_o, false);			return;
+		case M_TRWV:				function.set(SIMD2(r_c_trwv)),			umts=returns_rrr,		d();								return;
+		case M_SAW:					function.set(SIMD2(r_c_saw)),			umts=returns_rcq,		d(disc_c_saw_i, true);				return;
 		case M_MANDELBROT:			function.set(SIMD(r_c_mandelbrot));		umts=returns_rrr,		d();								return;
 	//	case M_MIN:					function.set(SCALAR(c_c_min)),			umts=returns_rcq,		d();								return;
 	//	case M_MAX:					function.set(SCALAR(c_c_max)),			umts=returns_rcq,		d();								return;
@@ -9106,9 +8832,9 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_GAUSS:				function.set(SIMD(q_q_gauss)),			umts=returns_rcq,		d();								return;
 		case M_PERMUTATION:			function.set(SCALAR(q_q_permutation)),	umts=returns_rcq,		d();								return;
 		case M_COMBINATION:			function.set(SCALAR(q_q_combination)),	umts=returns_rcq,		d();								return;
-		case M_SQWV:				function.set(SIMD2(r_q_sqwv)),			umts=returns_rcq,		d(disc_r_sqwv_o, false);			return;
-		case M_TRWV:				function.set(SIMD2(r_q_trwv)),			umts=returns_rcq,		d(disc_q_trwv_i, true);				return;
-		case M_SAW:					function.set(SIMD2(q_q_saw)),			umts=returns_rcq,		d(disc_q_saw_i, true);				return;
+		case M_SQWV:				function.set(SIMD2(r_q_sqwv)),			umts=returns_rrr,		d(disc_r_sqwv_o, false);			return;
+		case M_TRWV:				function.set(SIMD2(r_q_trwv)),			umts=returns_rrr,		d();								return;
+		case M_SAW:					function.set(SIMD2(r_q_saw)),			umts=returns_rcq,		d(disc_q_saw_i, true);				return;
 	//	case M_MIN:					function.set(SCALAR(q_q_min)),			umts=returns_rcq,		d();								return;
 	//	case M_MAX:					function.set(SCALAR(q_q_max)),			umts=returns_rcq,		d();								return;
 		case M_BETA:				function.set();																						return;
@@ -9171,8 +8897,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
 			case M_RAND:				function.set(SCALAR(r_rr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(r_rr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_rr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-			case M_TRWV:				function.set(SIMD2(r_rr_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_trwv_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_rr_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD2(r_rr_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
 			case M_SAW:					function.set(SIMD2(r_rr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_saw_i);					return;
 			case M_HYPOT:				function.set(SIMD(r_rr_hypot)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MANDELBROT:			function.set(SIMD(r_rr_mandelbrot)),			bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -9233,10 +8959,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(c_rc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_random, false);			return;
 			case M_ATAN:				function.set(SIMD(c_rc_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_atan_i);					return;
-			case M_SQWV:				function.set(SIMD(r_rc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-		//	case M_TRWV:				function.set(SIMD(c_rc_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_trwv_i);					return;
-			case M_TRWV:				function.set(SIMD(c_cc_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_trwv_i);					return;
-			case M_SAW:					function.set(SIMD(c_rc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_saw_i);					return;
+			case M_SQWV:				function.set(SIMD(r_rc_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD(r_rc_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_SAW:					function.set(SIMD(r_rc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_saw_i);					return;
 		//	case M_MIN:					function.set(SIMD(c_rc_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MIN:					function.set(SIMD(c_cc_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 		//	case M_MAX:					function.set(SIMD(c_rc_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9297,10 +9022,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_rq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_rq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_rq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-		//	case M_TRWV:				function.set(SCALAR(q_rq_trwv)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_trwv_i);					return;
-			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_trwv_i);					return;//
-			case M_SAW:					function.set(SIMD2(q_rq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_saw_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_rq_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD2(r_rq_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_SAW:					function.set(SIMD2(r_rq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_saw_i);					return;
 		//	case M_MIN:					function.set(SIMD(q_rq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 		//	case M_MAX:					function.set(SIMD(q_rq_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9366,9 +9090,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
 			case M_RAND:				function.set(SCALAR(c_cr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(c_cr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_cr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-			case M_TRWV:				function.set(SIMD2(c_cr_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_trwv_i);					return;
-			case M_SAW:					function.set(SIMD2(c_cr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_saw_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_cr_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD2(r_cr_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_SAW:					function.set(SIMD2(r_cr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_saw_i);					return;
 			case M_MANDELBROT:			function.set(SIMD(r_cr_mandelbrot)),			bmts=returns_rrr_rrr_rrr,	d();								return;
 			case M_MIN:					function.set(SIMD(c_cr_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MAX:					function.set(SIMD(c_cr_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9425,9 +9149,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(c_cc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_log_i);					return;
 			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
 			case M_ATAN:				function.set(SCALAR(c_cc_atan)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_cc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-			case M_TRWV:				function.set(SIMD2(c_cc_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cc_trwv_i);					return;
-			case M_SAW:					function.set(SIMD2(c_cc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cc_saw_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_cc_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD2(r_cc_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_SAW:					function.set(SIMD2(r_cc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cc_saw_i);					return;
 			case M_MIN:					function.set(SIMD(c_cc_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MAX:					function.set(SIMD(c_cc_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_BETA:				function.set();																									return;
@@ -9484,10 +9208,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_cq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_cq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_cq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-		//	case M_TRWV:				function.set(SCALAR(q_cq_trwv)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_trwv_i);					return;
-			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_trwv_i);					return;
-			case M_SAW:					function.set(SIMD2(q_cq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_saw_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_cq_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD2(r_cq_trwv)),					bmts=returns_rrr_rrr_rrr,	d();					return;
+			case M_SAW:					function.set(SIMD2(r_cq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_saw_i);					return;
 		//	case M_MIN:					function.set(SCALAR(q_cq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 		//	case M_MAX:					function.set(SCALAR(q_cq_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9553,10 +9276,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_qr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_qr_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-		//	case M_TRWV:				function.set(SIMD(q_qr_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_trwv_i);					return;
-			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_trwv_i);					return;
-			case M_SAW:					function.set(SIMD2(q_qr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_saw_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_qr_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD2(r_qr_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_SAW:					function.set(SIMD2(r_qr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_saw_i);					return;
 		//	case M_MIN:					function.set(SIMD(q_qr_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 		//	case M_MAX:					function.set(SIMD(q_qr_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9617,10 +9339,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 		//	case M_RAND:				function.set(SCALAR(q_qc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qc_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_atan_i);					return;
-			case M_SQWV:				function.set(SIMD2(r_qc_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-		//	case M_TRWV:				function.set(SCALAR(q_qc_trwv)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_trwv_i);					return;
-			case M_TRWV:				function.set(SIMD2(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_trwv_i);					return;
-			case M_SAW:					function.set(SIMD2(q_qc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_saw_i);					return;
+			case M_SQWV:				function.set(SIMD2(r_qc_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD2(r_qc_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_SAW:					function.set(SIMD2(r_qc_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_saw_i);					return;
 		//	case M_MIN:					function.set(SIMD(q_qc_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 		//	case M_MAX:					function.set(SIMD(q_qc_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
@@ -9680,9 +9401,9 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_LOG:					function.set(SIMD(q_qq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qq_log_i);					return;
 			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_atan_i);					return;
-			case M_SQWV:				function.set(SIMD(r_qq_sqwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_r_sqwv_o, false);			return;
-			case M_TRWV:				function.set(SIMD(q_qq_trwv)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_trwv_i);					return;
-			case M_SAW:					function.set(SIMD(q_qq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_saw_i);					return;
+			case M_SQWV:				function.set(SIMD(r_qq_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
+			case M_TRWV:				function.set(SIMD(r_qq_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_SAW:					function.set(SIMD(r_qq_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_saw_i);					return;
 			case M_MIN:					function.set(SIMD(q_qq_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MAX:					function.set(SIMD(q_qq_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_BETA:				function.set();																									return;
@@ -12364,10 +12085,12 @@ void solve(Expression &ex, int offset, int x1, int x2, int y1, int y2, int z1, i
 		{
 			auto &in=ex.i[i];
 			auto &res=ex.n[in.result], &op1=ex.n[in.op1], &op2=ex.n[in.type>=4&&in.type<=12||in.type>=18&&in.type<=27?in.op2:in.op1];
+#ifdef CHECK_NULL_POINTERS
 			unsigned
 				mrr=-(res.r.p!=nullptr), mri=-(res.i.p!=nullptr), mrj=-(res.j.p!=nullptr), mrk=-(res.k.p!=nullptr),
 				m1r=-(op1.r.p!=nullptr), m1i=-(op1.i.p!=nullptr), m1j=-(op1.j.p!=nullptr), m1k=-(op1.k.p!=nullptr),
 				m2r=-(op2.r.p!=nullptr), m2i=-(op2.i.p!=nullptr), m2j=-(op2.j.p!=nullptr), m2k=-(op2.k.p!=nullptr);
+#endif
 			for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)//for each element in SIMD group (for non-SIMD instructions)
 			{
 				switch(in.type)
@@ -12513,10 +12236,12 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 #ifdef _DEBUG
 		free(malloc(1));//
 #endif
+#ifdef CHECK_NULL_POINTERS
 		unsigned
 			mrr=INP(0, 0), mri=INP(0, 1), mrj=INP(0, 2), mrk=INP(0, 3),
 			m1r=INP(1, 0), m1i=INP(1, 1), m1j=INP(1, 2), m1k=INP(1, 3),
 			m2r=INP(2, 0), m2i=INP(2, 1), m2j=INP(2, 2), m2k=INP(2, 3);
+#endif
 		switch(in.type)
 		{
 		case 'c':
@@ -36981,6 +36706,8 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 						if(map.size())
 						{
 							Compile::compile_expression_global(*it);
+						//	expression_to_clipboard(*it, true);//MP instructions
+						//	expression_to_clipboard(*it);//
 							it->resultLogicType=Compile::expressionResultLogicType();
 							if(it->resultLogicType>=2&&it->i.rbegin()->has_nonreal_args())
 								it->resultLogicType=1;

@@ -2569,8 +2569,8 @@ namespace	G2
 		__forceinline Vect2d pow(Vect2d const &x, Vect2d const &y){return Vect2d(::exp((y*Vect2d(::log(x.v))).v));}
 		const Vect2d m_ln_phi=::log(m_phi.v), m_inv_sqrt5=m_one/m_sqrt5;
 		void  r_r_fib					(VectP &r, VectP const &x)					{Vect2d rx=x; assign(r, (Vect2d(::exp((rx*m_ln_phi).v))-Vect2d(::cos((m_pi*rx).v))*Vect2d(::exp((-rx*m_ln_phi).v)))*m_inv_sqrt5);}
-	//	void  r_r_fib						(Vect2d const &x)					{return (pow(m_phi, x)-Vect2d(::cos((m_pi*x).v))*pow(m_phi, -x))/m_sqrt5;}
-	//	void  r_r_fib						(Vect2d const &x)					{return (Vect2d(::pow(m_phi.v, x.v))-Vect2d(::cos((m_pi*x).v))*Vect2d(::pow(m_phi.v, (-x).v)))/m_sqrt5;}
+	//	void  r_r_fib					(Vect2d const &x)							{return (pow(m_phi, x)-Vect2d(::cos((m_pi*x).v))*pow(m_phi, -x))/m_sqrt5;}
+	//	void  r_r_fib					(Vect2d const &x)							{return (Vect2d(::pow(m_phi.v, x.v))-Vect2d(::cos((m_pi*x).v))*Vect2d(::pow(m_phi.v, (-x).v)))/m_sqrt5;}
 		void  c_c_fib					(CompP &r, CompP const &x)					{Comp2d cx=x; assign(r, (exp(cx*m_ln_phi)-cos(m_pi*cx)*exp(-cx*m_ln_phi))*m_inv_sqrt5);}
 	//	void  c_c_fib					(CompP &r, CompP const &x)					{Comp2d cx=x; assign(r, ((m_phi^cx)-cos(m_pi*cx)*(m_phi^-cx))/m_sqrt5;}
 		void  q_q_fib					(QuatP &r, QuatP const &x)					{Quat2d qx=x; assign(r, (exp(qx*m_ln_phi)-cos(m_pi*qx)*exp(-qx*m_ln_phi))*m_inv_sqrt5);}
@@ -2694,10 +2694,7 @@ namespace	G2
 		void r_qc_sqwv_sse2				(VectP &r, QuatP const &x, CompP const &y)	{Vect2d rx=x.r;	assign(r, rx-rx.floor_sse2()<Vect2d(y.r)&m_one);}
 		void r_qq_sqwv_sse2				(VectP &r, QuatP const &x, QuatP const &y)	{Vect2d rx=x.r;	assign(r, rx-rx.floor_sse2()<Vect2d(y.r)&m_one);}
 
-		void  r_r_trwv					(VectP &r, VectP const &x)					{Vect2d rx=x; Vect2d t=(rx-rx.floor()-m_half).abs(); assign(r, t+t);}
-		void  r_c_trwv					(VectP &r, CompP const &x)					{Comp2d cx=x; Vect2d t=(cx-cx.floor()-m_half).abs(); assign(r, t+t);}
-		void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat2d qx=x; Vect2d t=(qx-qx.floor()-m_half).abs(); assign(r, t+t);}
-		void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)
+		inline Vect2d trwv_dc(Vect2d const &x, Vect2d const &y)
 		{
 			Vect2d rx=x;	Vect2d ry=y;
 			Vect2d t=rx-rx.floor(), t2=m_one-rx;
@@ -2707,49 +2704,22 @@ namespace	G2
 			d=d&mask.complement()|m_one&mask;
 			Vect2d d2=m_one-d;
 			Vect2d t_d=t/d, t2_d2=t2/d2;
-			assign(r, ((t_d<m_one)&t_d)+((t2_d2<m_one)&t2_d2));
+			return ((t_d<m_one)&t_d)+((t2_d2<m_one)&t2_d2);
 		}
-		void c_cr_trwv					(CompP &r, CompP const &x, VectP const &y)
-		{
-			Comp2d cx=x;	Vect2d ry=y;
-			auto t=cx-cx.floor(), t2=m_one-cx;
-			t2=t2-t2.floor();
-			auto d=and(ry, ry>m_zero);
-			auto mask=d>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			auto d2=m_one-d;
-			auto t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-		}
-		void c_cc_trwv					(CompP &r, CompP const &x, CompP const &y)
-		{
-			Comp2d cx=x;	Comp2d cy=y;
-			Comp2d t=cx-cx.floor(), t2=m_one-cx;
-			t2=t2-t2.floor();
-			Comp2d d=and(cy, cy.r>m_zero);
-			Vect2d mask=d.r>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			Comp2d d2=m_one-d;
-			Comp2d t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-		}
-		void q_qq_trwv					(QuatP &r, QuatP const &x, QuatP const &y)
-		{
-			Quat2d qx=x;	Quat2d qy=y;
-			Quat2d t=qx-qx.floor(), t2=m_one-qx;
-			t2=t2-t2.floor();
-			Quat2d d=and(qy, qy.r>m_zero);
-			Vect2d mask=d.r>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			Quat2d d2=m_one-d;
-			Quat2d t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-		}
-
-		void  r_r_trwv_sse2				(VectP &r, VectP const &x)					{Vect2d rx=x; Vect2d t=(rx-rx.floor_sse2()-m_half).abs(); assign(r, t+t);}
-		void  r_c_trwv_sse2				(VectP &r, CompP const &x)					{Comp2d cx=x; Vect2d t=(cx-cx.floor_sse2()-m_half).abs(); assign(r, t+t);}
-		void  r_q_trwv_sse2				(VectP &r, QuatP const &x)					{Quat2d qx=x; Vect2d t=(qx-qx.floor_sse2()-m_half).abs(); assign(r, t+t);}
-		void r_rr_trwv_sse2				(VectP &r, VectP const &x, VectP const &y)
+		void  r_r_trwv					(VectP &r, VectP const &x)					{Vect2d rx=x; Vect2d t=(rx-rx.floor()-m_half).abs(); assign(r, t+t);}
+		void  r_c_trwv					(VectP &r, CompP const &x)					{Comp2d cx=x; Vect2d t=(cx-cx.floor()-m_half).abs(); assign(r, t+t);}
+		void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat2d qx=x; Vect2d t=(qx-qx.floor()-m_half).abs(); assign(r, t+t);}
+		void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rc_trwv					(VectP &r, VectP const &x, CompP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rq_trwv					(VectP &r, VectP const &x, QuatP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cr_trwv					(VectP &r, CompP const &x, VectP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cc_trwv					(VectP &r, CompP const &x, CompP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cq_trwv					(VectP &r, CompP const &x, QuatP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qr_trwv					(VectP &r, QuatP const &x, VectP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qc_trwv					(VectP &r, QuatP const &x, CompP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qq_trwv					(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, trwv_dc(Vect2d(x.r), Vect2d(y.r)));}
+		
+		inline Vect2d trwv_dc_sse2(Vect2d const &x, Vect2d const &y)
 		{
 			Vect2d rx=x;	Vect2d ry=y;
 			Vect2d t=rx-rx.floor_sse2(), t2=m_one-rx;
@@ -2759,206 +2729,66 @@ namespace	G2
 			d=d&mask.complement()|m_one&mask;
 			Vect2d d2=m_one-d;
 			Vect2d t_d=t/d, t2_d2=t2/d2;
-			assign(r, ((t_d<m_one)&t_d)+((t2_d2<m_one)&t2_d2));
+			return ((t_d<m_one)&t_d)+((t2_d2<m_one)&t2_d2);
 		}
-		void c_cr_trwv_sse2				(CompP &r, CompP const &x, VectP const &y)
-		{
-			Comp2d cx=x;	Vect2d ry=y;
-			auto t=cx-cx.floor_sse2(), t2=m_one-cx;
-			t2=t2-t2.floor_sse2();
-			auto d=and(ry, (ry<m_zero).complement());
-			auto mask=d>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			auto d2=m_one-d;
-			auto t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-		}
-		void c_cc_trwv_sse2				(CompP &r, CompP const &x, CompP const &y)
-		{
-			Comp2d cx=x;	Comp2d cy=y;
-			Comp2d t=cx-cx.floor_sse2(), t2=m_one-cx;
-			t2=t2-t2.floor_sse2();
-			Comp2d d=and(cy, (cy.r<m_zero).complement());
-			Vect2d mask=d.r>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			Comp2d d2=m_one-d;
-			Comp2d t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-		}
-		void q_qq_trwv_sse2				(QuatP &r, QuatP const &x, QuatP const &y)
-		{
-			Quat2d qx=x;	Quat2d qy=y;
-			Quat2d t=qx-qx.floor_sse2(), t2=m_one-qx;
-			t2=t2-t2.floor_sse2();
-			Quat2d d=and(qy, (qy.r<m_zero).complement());
-			Vect2d mask=d.r>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			Quat2d d2=m_one-d;
-			Quat2d t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-		}
+		void  r_r_trwv_sse2				(VectP &r, VectP const &x)					{Vect2d rx=x; Vect2d t=(rx-rx.floor_sse2()-m_half).abs(); assign(r, t+t);}
+		void  r_c_trwv_sse2				(VectP &r, CompP const &x)					{Comp2d cx=x; Vect2d t=(cx-cx.floor_sse2()-m_half).abs(); assign(r, t+t);}
+		void  r_q_trwv_sse2				(VectP &r, QuatP const &x)					{Quat2d qx=x; Vect2d t=(qx-qx.floor_sse2()-m_half).abs(); assign(r, t+t);}
+		void r_rr_trwv_sse2				(VectP &r, VectP const &x, VectP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rc_trwv_sse2				(VectP &r, VectP const &x, CompP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rq_trwv_sse2				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cr_trwv_sse2				(VectP &r, CompP const &x, VectP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cc_trwv_sse2				(VectP &r, CompP const &x, CompP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cq_trwv_sse2				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qr_trwv_sse2				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qc_trwv_sse2				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qq_trwv_sse2				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, trwv_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
 
-		void  r_r_saw					(VectP &r, VectP const &x)
+		inline Vect2d sawtooth(Vect2d const &x)
 		{
-			Vect2d rx=x;
-			Vect2d t=rx-rx.floor(), t2=(m_one-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t));
+			Vect2d t=x-x.floor(), t2=(m_one-t).floor();
+			return (t2+m_one)*(t2*m_half+t);
 		}
-		void  c_c_saw					(CompP &r, CompP const &x)
+		inline Vect2d sawtooth_dc(Vect2d const &x, Vect2d const &y)
 		{
-			Comp2d cx=x;
-			auto t=cx-cx.floor(), t2=(m_one-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t));
+			auto t=x-x.floor(), t2=(y-t).floor();
+			return (t2+m_one)*(t2*m_half+t)/y;
 		}
-		void  q_q_saw					(QuatP &r, QuatP const &x)
+		void  r_r_saw					(VectP &r, VectP const &x)					{assign(r, sawtooth(Vect2d(x.r)));}
+		void  r_c_saw					(VectP &r, CompP const &x)					{assign(r, sawtooth(Vect2d(x.r)));}
+		void  r_q_saw					(VectP &r, QuatP const &x)					{assign(r, sawtooth(Vect2d(x.r)));}
+		void r_rr_saw					(VectP &r, VectP const &x, VectP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rc_saw					(VectP &r, VectP const &x, CompP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rq_saw					(VectP &r, VectP const &x, QuatP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cr_saw					(VectP &r, CompP const &x, VectP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cc_saw					(VectP &r, CompP const &x, CompP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cq_saw					(VectP &r, CompP const &x, QuatP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qr_saw					(VectP &r, QuatP const &x, VectP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qc_saw					(VectP &r, QuatP const &x, CompP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qq_saw					(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, sawtooth_dc(Vect2d(x.r), Vect2d(y.r)));}
+		
+		inline Vect2d sawtooth_sse2(Vect2d const &x)
 		{
-			Quat2d qx=x;
-			auto t=qx-qx.floor(), t2=(m_one-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t));
+			Vect2d t=x-x.floor_sse2(), t2=(m_one-t).floor_sse2();
+			return (t2+m_one)*(t2*m_half+t);
 		}
-		void r_rr_saw					(VectP &r, VectP const &x, VectP const &y)
+		inline Vect2d sawtooth_dc_sse2(Vect2d const &x, Vect2d const &y)
 		{
-			Vect2d rx=x;	Vect2d ry=y;
-			auto t=rx-rx.floor(), t2=(ry-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
+			auto t=x-x.floor_sse2(), t2=(y-t).floor_sse2();
+			return (t2+m_one)*(t2*m_half+t)/y;
 		}
-		void c_rc_saw					(CompP &r, VectP const &x, CompP const &y)
-		{
-			Vect2d rx=x;	Comp2d cy=y;
-			auto t=rx-rx.floor();
-			auto t2=(cy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-		}
-		void q_rq_saw					(QuatP &r, VectP const &x, QuatP const &y)
-		{
-			Vect2d rx=x;	Quat2d qy=y;
-			auto t=rx-rx.floor();
-			auto t2=(qy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-		}
-		void c_cr_saw					(CompP &r, CompP const &x, VectP const &y)
-		{
-			Comp2d cx=x;	Vect2d ry=y;
-			auto t=cx-cx.floor();
-			auto t2=(ry-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-		}
-		void c_cc_saw					(CompP &r, CompP const &x, CompP const &y)
-		{
-			Comp2d cx=x, cy=y;
-			auto t=cx-cx.floor();
-			auto t2=(cy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-		}
-		void q_cq_saw					(QuatP &r, CompP const &x, QuatP const &y)
-		{
-			Comp2d cx=x;	Quat2d qy=y;
-			auto t=cx-cx.floor();
-			auto t2=(qy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-		}
-		void q_qr_saw					(QuatP &r, QuatP const &x, VectP const &y)
-		{
-			Quat2d qx=x;	Vect2d ry=y;
-			auto t=qx-qx.floor();
-			auto t2=(ry-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-		}
-		void q_qc_saw					(QuatP &r, QuatP const &x, CompP const &y)
-		{
-			Quat2d qx=x;	Comp2d cy=y;
-			auto t=qx-qx.floor();
-			auto t2=(cy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-		}
-		void q_qq_saw					(QuatP &r, QuatP const &x, QuatP const &y)
-		{
-			Quat2d qx=x, qy=y;
-			auto t=qx-qx.floor();
-			auto t2=(qy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-		}
-
-		void  r_r_saw_sse2				(VectP &r, VectP const &x)
-		{
-			Vect2d rx=x;
-			Vect2d t=rx-rx.floor_sse2(), t2=(m_one-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t));
-		}
-		void  c_c_saw_sse2				(CompP &r, CompP const &x)
-		{
-			Comp2d cx=x;
-			auto t=cx-cx.floor_sse2(), t2=(m_one-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t));
-		}
-		void  q_q_saw_sse2				(QuatP &r, QuatP const &x)
-		{
-			Quat2d qx=x;
-			auto t=qx-qx.floor_sse2(), t2=(m_one-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t));
-		}
-		void r_rr_saw_sse2				(VectP &r, VectP const &x, VectP const &y)
-		{
-			Vect2d rx=x;	Vect2d ry=y;
-			auto t=rx-rx.floor_sse2(), t2=(ry-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-		}
-		void c_rc_saw_sse2				(CompP &r, VectP const &x, CompP const &y)
-		{
-			Vect2d rx=x;	Comp2d cy=y;
-			auto t=rx-rx.floor_sse2();
-			auto t2=(cy-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-		}
-		void q_rq_saw_sse2				(QuatP &r, VectP const &x, QuatP const &y)
-		{
-			Vect2d rx=x;	Quat2d qy=y;
-			auto t=rx-rx.floor_sse2();
-			auto t2=(qy-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-		}
-		void c_cr_saw_sse2				(CompP &r, CompP const &x, VectP const &y)
-		{
-			Comp2d cx=x;	Vect2d ry=y;
-			auto t=cx-cx.floor_sse2();
-			auto t2=(ry-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-		}
-		void c_cc_saw_sse2				(CompP &r, CompP const &x, CompP const &y)
-		{
-			Comp2d cx=x, cy=y;
-			auto t=cx-cx.floor_sse2();
-			auto t2=(cy-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-		}
-		void q_cq_saw_sse2				(QuatP &r, CompP const &x, QuatP const &y)
-		{
-			Comp2d cx=x;	Quat2d qy=y;
-			auto t=cx-cx.floor_sse2();
-			auto t2=(qy-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-		}
-		void q_qr_saw_sse2				(QuatP &r, QuatP const &x, VectP const &y)
-		{
-			Quat2d qx=x;	Vect2d ry=y;
-			auto t=qx-qx.floor_sse2();
-			auto t2=(ry-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-		}
-		void q_qc_saw_sse2				(QuatP &r, QuatP const &x, CompP const &y)
-		{
-			Quat2d qx=x;	Comp2d cy=y;
-			auto t=qx-qx.floor_sse2();
-			auto t2=(cy-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-		}
-		void q_qq_saw_sse2				(QuatP &r, QuatP const &x, QuatP const &y)
-		{
-			Quat2d qx=x, qy=y;
-			auto t=qx-qx.floor_sse2();
-			auto t2=(qy-t).floor_sse2();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-		}
+		void  r_r_saw_sse2				(VectP &r, VectP const &x)					{assign(r, sawtooth_sse2(Vect2d(x.r)));}
+		void  r_c_saw_sse2				(VectP &r, CompP const &x)					{assign(r, sawtooth_sse2(Vect2d(x.r)));}
+		void  r_q_saw_sse2				(VectP &r, QuatP const &x)					{assign(r, sawtooth_sse2(Vect2d(x.r)));}
+		void r_rr_saw_sse2				(VectP &r, VectP const &x, VectP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rc_saw_sse2				(VectP &r, VectP const &x, CompP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_rq_saw_sse2				(VectP &r, VectP const &x, QuatP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cr_saw_sse2				(VectP &r, CompP const &x, VectP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cc_saw_sse2				(VectP &r, CompP const &x, CompP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_cq_saw_sse2				(VectP &r, CompP const &x, QuatP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qr_saw_sse2				(VectP &r, QuatP const &x, VectP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qc_saw_sse2				(VectP &r, QuatP const &x, CompP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
+		void r_qq_saw_sse2				(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, sawtooth_dc_sse2(Vect2d(x.r), Vect2d(y.r)));}
 
 		void r_rr_hypot					(VectP &r, VectP const &x, VectP const &y)	{Vect2d rx=x, ry=y; assign(r, sqrt(rx*rx+ry*ry));}
 	//	void c_cc_hypot					(CompP &r, CompP const &x, CompP const &y)	{Comp2d cx=x; assign(r, sqrt(sq(x)+sq(y));}

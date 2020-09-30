@@ -2347,10 +2347,7 @@ namespace	G2
 		void r_qc_sqwv					(VectP &r, QuatP const &x, CompP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
 		void r_qq_sqwv					(VectP &r, QuatP const &x, QuatP const &y)	{Vect4d rx=x.r;	assign(r, rx-rx.floor()<Vect4d(y.r)&m_one);VLEAVE;}
 
-		void  r_r_trwv					(VectP &r, VectP const &x)					{Vect4d rx=x; Vect4d t=(rx-rx.floor()-m_half).abs(); assign(r, t+t);VLEAVE;}
-		void  r_c_trwv					(VectP &r, CompP const &x)					{Comp4d cx=x; Vect4d t=(cx-cx.floor()-m_half).abs(); assign(r, t+t);VLEAVE;}
-		void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat4d qx=x; Vect4d t=(qx-qx.floor()-m_half).abs(); assign(r, t+t);VLEAVE;}
-		void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)
+		inline Vect4d trwv_dc(Vect4d const &x, Vect4d const &y)
 		{
 			Vect4d rx=x;	Vect4d ry=y;
 			Vect4d t=rx-rx.floor(), t2=m_one-rx;
@@ -2360,141 +2357,43 @@ namespace	G2
 			d=d&mask.complement()|m_one&mask;
 			Vect4d d2=m_one-d;
 			Vect4d t_d=t/d, t2_d2=t2/d2;
-			assign(r, ((t_d<m_one)&t_d)+((t2_d2<m_one)&t2_d2));
-			VLEAVE;
+			return ((t_d<m_one)&t_d)+((t2_d2<m_one)&t2_d2);
 		}
-		void c_cr_trwv					(CompP &r, CompP const &x, VectP const &y)
+		void  r_r_trwv					(VectP &r, VectP const &x)					{Vect4d rx=x; Vect4d t=(rx-rx.floor()-m_half).abs(); assign(r, t+t); VLEAVE;}
+		void  r_c_trwv					(VectP &r, CompP const &x)					{Comp4d cx=x; Vect4d t=(cx-cx.floor()-m_half).abs(); assign(r, t+t); VLEAVE;}
+		void  r_q_trwv					(VectP &r, QuatP const &x)					{Quat4d qx=x; Vect4d t=(qx-qx.floor()-m_half).abs(); assign(r, t+t); VLEAVE;}
+		void r_rr_trwv					(VectP &r, VectP const &x, VectP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_rc_trwv					(VectP &r, VectP const &x, CompP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_rq_trwv					(VectP &r, VectP const &x, QuatP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_cr_trwv					(VectP &r, CompP const &x, VectP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_cc_trwv					(VectP &r, CompP const &x, CompP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_cq_trwv					(VectP &r, CompP const &x, QuatP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_qr_trwv					(VectP &r, QuatP const &x, VectP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_qc_trwv					(VectP &r, QuatP const &x, CompP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_qq_trwv					(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, trwv_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		
+		inline Vect4d sawtooth(Vect4d const &x)
 		{
-			Comp4d cx=x;	Vect4d ry=y;
-			auto t=cx-cx.floor(), t2=m_one-cx;
-			t2=t2-t2.floor();
-			auto d=and(ry, ry>m_zero);
-			auto mask=d>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			auto d2=m_one-d;
-			auto t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-			VLEAVE;
+			Vect4d t=x-x.floor(), t2=(m_one-t).floor();
+			return (t2+m_one)*(t2*m_half+t);
 		}
-		void c_cc_trwv					(CompP &r, CompP const &x, CompP const &y)
+		inline Vect4d sawtooth_dc(Vect4d const &x, Vect4d const &y)
 		{
-			Comp4d cx=x;	Comp4d cy=y;
-			Comp4d t=cx-cx.floor(), t2=m_one-cx;
-			t2=t2-t2.floor();
-			Comp4d d=and(cy, cy.r>m_zero);
-			Vect4d mask=d.r>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			Comp4d d2=m_one-d;
-			Comp4d t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-			VLEAVE;
+			auto t=x-x.floor(), t2=(y-t).floor();
+			return (t2+m_one)*(t2*m_half+t)/y;
 		}
-		void q_qq_trwv					(QuatP &r, QuatP const &x, QuatP const &y)
-		{
-			Quat4d qx=x;	Quat4d qy=y;
-			Quat4d t=qx-qx.floor(), t2=m_one-qx;
-			t2=t2-t2.floor();
-			Quat4d d=and(qy, qy.r>m_zero);
-			Vect4d mask=d.r>m_one;
-			d=and(d, mask.complement())|m_one&mask;
-			Quat4d d2=m_one-d;
-			Quat4d t_d=t/d, t2_d2=t2/d2;
-			assign(r, and((t_d.r<m_one), t_d)+and((t2_d2.r<m_one), t2_d2));
-			VLEAVE;
-		}
-
-		void  r_r_saw					(VectP &r, VectP const &x)
-		{
-			Vect4d rx=x;
-			Vect4d t=rx-rx.floor(), t2=(m_one-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t));
-			VLEAVE;
-		}
-		void  c_c_saw					(CompP &r, CompP const &x)
-		{
-			Comp4d cx=x;
-			auto t=cx-cx.floor(), t2=(m_one-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t));
-			VLEAVE;
-		}
-		void  q_q_saw					(QuatP &r, QuatP const &x)
-		{
-			Quat4d qx=x;
-			auto t=qx-qx.floor(), t2=(m_one-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t));
-			VLEAVE;
-		}
-		void r_rr_saw					(VectP &r, VectP const &x, VectP const &y)
-		{
-			Vect4d rx=x;	Vect4d ry=y;
-			auto t=rx-rx.floor(), t2=(ry-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-			VLEAVE;
-		}
-		void c_rc_saw					(CompP &r, VectP const &x, CompP const &y)
-		{
-			Vect4d rx=x;	Comp4d cy=y;
-			auto t=rx-rx.floor();
-			auto t2=(cy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-			VLEAVE;
-		}
-		void q_rq_saw					(QuatP &r, VectP const &x, QuatP const &y)
-		{
-			Vect4d rx=x;	Quat4d qy=y;
-			auto t=rx-rx.floor();
-			auto t2=(qy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-			VLEAVE;
-		}
-		void c_cr_saw					(CompP &r, CompP const &x, VectP const &y)
-		{
-			Comp4d cx=x;	Vect4d ry=y;
-			auto t=cx-cx.floor();
-			auto t2=(ry-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-			VLEAVE;
-		}
-		void c_cc_saw					(CompP &r, CompP const &x, CompP const &y)
-		{
-			Comp4d cx=x, cy=y;
-			auto t=cx-cx.floor();
-			auto t2=(cy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-			VLEAVE;
-		}
-		void q_cq_saw					(QuatP &r, CompP const &x, QuatP const &y)
-		{
-			Comp4d cx=x;	Quat4d qy=y;
-			auto t=cx-cx.floor();
-			auto t2=(qy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-			VLEAVE;
-		}
-		void q_qr_saw					(QuatP &r, QuatP const &x, VectP const &y)
-		{
-			Quat4d qx=x;	Vect4d ry=y;
-			auto t=qx-qx.floor();
-			auto t2=(ry-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/ry);
-			VLEAVE;
-		}
-		void q_qc_saw					(QuatP &r, QuatP const &x, CompP const &y)
-		{
-			Quat4d qx=x;	Comp4d cy=y;
-			auto t=qx-qx.floor();
-			auto t2=(cy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/cy);
-			VLEAVE;
-		}
-		void q_qq_saw					(QuatP &r, QuatP const &x, QuatP const &y)
-		{
-			Quat4d qx=x, qy=y;
-			auto t=qx-qx.floor();
-			auto t2=(qy-t).floor();
-			assign(r, (t2+m_one)*(t2*m_half+t)/qy);
-			VLEAVE;
-		}
+		void  r_r_saw					(VectP &r, VectP const &x)					{assign(r, sawtooth(Vect4d(x.r))); VLEAVE;}
+		void  r_c_saw					(VectP &r, CompP const &x)					{assign(r, sawtooth(Vect4d(x.r))); VLEAVE;}
+		void  r_q_saw					(VectP &r, QuatP const &x)					{assign(r, sawtooth(Vect4d(x.r))); VLEAVE;}
+		void r_rr_saw					(VectP &r, VectP const &x, VectP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_rc_saw					(VectP &r, VectP const &x, CompP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_rq_saw					(VectP &r, VectP const &x, QuatP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_cr_saw					(VectP &r, CompP const &x, VectP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_cc_saw					(VectP &r, CompP const &x, CompP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_cq_saw					(VectP &r, CompP const &x, QuatP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_qr_saw					(VectP &r, QuatP const &x, VectP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_qc_saw					(VectP &r, QuatP const &x, CompP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
+		void r_qq_saw					(VectP &r, QuatP const &x, QuatP const &y)	{assign(r, sawtooth_dc(Vect4d(x.r), Vect4d(y.r))); VLEAVE;}
 
 		void r_rr_hypot					(VectP &r, VectP const &x, VectP const &y)	{Vect4d rx=x, ry=y; assign(r, sqrt(rx*rx+ry*ry));VLEAVE;}
 	//	void c_cc_hypot					(CompP &r, CompP const &x, CompP const &y)	{Comp4d cx=x; assign(r, sqrt(sq(x)+sq(y));}

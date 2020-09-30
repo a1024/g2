@@ -36,6 +36,11 @@
 	#define	CHECK_NULL_POINTERS
 	#define	ALIGNED_INTRINSICS//load/store vs loadu/storeu
 
+#ifdef CHECK_NULL_POINTERS
+#define				DEREF(pointer)		(pointer?*pointer:0)
+#else
+#define				DEREF(pointer)		(*pointer)
+#endif
 inline float		clamp_positive(float x){return (x+abs(x))*0.5f;}
 inline int			clamp_positive(int x){return (x+abs(x))>>1;}
 inline int			minimum(int a, int b){return (a+b-abs(a-b))>>1;}
@@ -109,6 +114,8 @@ namespace	G2
 	inline long long convert_d2ll		(double const x){return x!=x||x<-ll_max||x>ll_max?(long long&)x	:(long long)x;}
 	inline long long convert_d2ll_zero	(double const x){return x!=x||x<-ll_max||x>ll_max?0				:(long long)x;}
 
+	//inline bool		istrue		(Comp1d const &x){return x.real()||x.imag();}
+	//inline bool		istrue		(Quat1d const &x){return x.R_component_1()||x.R_component_2()||x.R_component_3()||x.R_component_4();}
 	inline Comp1d	floor		(Comp1d const &x){return Comp1d(::floor(x.real()), ::floor(x.imag()));}
 	inline Quat1d	floor		(Quat1d	const &x){return Quat1d(::floor(x.R_component_1()), ::floor(x.R_component_2()), ::floor(x.R_component_3()), ::floor(x.R_component_4()));}
 	inline Comp1d	ceil		(Comp1d const &x){return Comp1d(::ceil(x.real()), ::ceil(x.imag()));}
@@ -202,9 +209,9 @@ struct VectP
 	double *r;
 	VectP():r(nullptr){}
 	VectP(double *r):r(r){}
-	bool r_is_true()const{return *r!=0;}
+	bool r_is_true()const{return DEREF(r)!=0;}
 
-	operator double()const{return *r;}
+	operator double()const{return DEREF(r);}
 
 	VectP& operator=(double x){*r=x; return *this;}
 	VectP& operator=(VectP const &x){*r=*x.r; return *this;}
@@ -309,11 +316,12 @@ struct CompP
 	double *r, *i;
 	CompP():r(nullptr), i(nullptr){}
 	CompP(double *r, double *i):r(r), i(i){}
-	bool r_is_true()const{return *r!=0;}
-	bool c_is_true()const{return *r!=0||*i!=0;}
+	bool r_is_true()const{return DEREF(r)!=0;}
+	bool c_is_true()const{return DEREF(r)!=0||DEREF(i)!=0;}
 
 	operator Comp1d()const{return Comp1d(*r, *i);}
 	CompP& operator=(Comp1d const &x){*r=x.real(), *i=x.imag(); return *this;}
+	//CompP& operator=(double const &x){*r=x, *i=0; return *this;}
 
 /*	Comp1d floor()const{return Comp1d(::floor(*r), ::floor(*i));}
 	Comp1d ceil()const{return Comp1d(::ceil(*r), ::ceil(*i));}
@@ -361,12 +369,14 @@ struct QuatP
 	double *r, *i, *j, *k;
 	QuatP():r(nullptr), i(nullptr), j(nullptr), k(nullptr){}
 	QuatP(double *r, double *i, double *j, double *k):r(r), i(i), j(j), k(k){}
-	bool r_is_true()const{return *r!=0;}
-	bool c_is_true()const{return *r!=0||*i!=0;}
-	bool q_is_true()const{return *r!=0||*i!=0||*j!=0||*k!=0;}
+	bool r_is_true()const{return DEREF(r)!=0;}
+	bool c_is_true()const{return DEREF(r)!=0||DEREF(i)!=0;}
+	bool q_is_true()const{return DEREF(r)!=0||DEREF(i)!=0||DEREF(j)!=0||DEREF(k)!=0;}
 
-	operator Quat1d()const{return Quat1d(*r, *i, *j, *k);}
+	operator Quat1d()const{return Quat1d(DEREF(r), DEREF(i), DEREF(j), DEREF(k));}
 	QuatP& operator=(Quat1d const &x){*r=x.R_component_1(), *i=x.R_component_2(), *j=x.R_component_3(), *k=x.R_component_4(); return *this;}
+	//QuatP& operator=(Comp1d const &x){*r=x.real(), *i=x.imag(), *j=0, *k=0; return *this;}
+	//QuatP& operator=(double const &x){*r=x, *i=0, *j=0, *k=0; return *this;}
 };
 //namespace	modes
 //{

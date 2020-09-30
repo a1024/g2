@@ -1370,113 +1370,57 @@ namespace		MP
 	void r_qc_sqwv					(Quat &r, Quat const &x, Quat const &y)	{r=x.r-floor(x.r)<y.r;}
 	void r_qq_sqwv					(Quat &r, Quat const &x, Quat const &y)	{r=x.r-floor(x.r)<y.r;}
 
-	Real clamp_positive(Real const &x){return signbit(x)?x:0;}
+//	Real clamp_positive(Real const &x){return signbit(x)?x:0;}
+	inline Real clamp01(Real const &x)
+	{
+		Real temp=x+abs(x);//max(0, x)
+		return (temp+2-abs(temp-2))*0.25;//min(x, 1)
+	}
+	inline Real trwv_dc(Real const &x, Real const &y)
+	{
+		Real t=x-floor(x), t2=1-x;
+		t2-=floor(t2);
+		Real dc=clamp01(y);
+		Real dc2=1-dc, t_d=t/dc, t2_d2=t2/dc2;
+		return (t_d<1?t_d:0)+(t2_d2<1?t2_d2:0);
+	}
 	void  r_r_trwv					(Quat &r, Quat const &x)				{auto temp=abs(x.r-floor(x.r)-0.5); r=temp+temp;}
 	void  r_c_trwv					(Quat &r, Quat const &x)				{Comp cx=(Comp)x; auto temp=abs(cx-floor(cx)-0.5); r=temp+temp;}
 	void  r_q_trwv					(Quat &r, Quat const &x)				{Quat qx=x; r=2*abs(qx-floor(qx)-0.5);}
-	void r_rr_trwv					(Quat &r, Quat const &x, Quat const &y)
+	void r_rr_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_rc_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_rq_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_cr_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_cc_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_cq_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_qr_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_qc_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	void r_qq_trwv					(Quat &r, Quat const &x, Quat const &y)	{r=trwv_dc(x.r, y.r);}
+	
+	inline Real sawtooth(Real x)
 	{
-		Real t=x.r-floor(x.r), t2=1-x.r;
-		t2-=floor(t2);
-		Real dc=clamp_positive(y.r);
-		dc=dc>1?1:dc;
-		Real dc2=1-dc, t_d=t/dc, t2_d2=t2/dc2;
-		r=(t_d<1)*t_d+(t2_d2<1)*t2_d2;
+		Real t=x-floor(x), t2=floor(1-t);//dc=1
+		return (t2+1)*(t2*0.5+t);
 	}
-	void c_cr_trwv					(Quat &r, Quat const &x, Quat const &y)
+	inline Real sawtooth_dc(Real x, Real y)
 	{
-		Comp cx=(Comp)x, t=cx-floor(cx), t2=1.-cx;
-		t2-=floor(t2);
-		Real dc=clamp_positive(y.r);
-		dc=dc>1?1:dc;
-		Real dc2=1-dc;
-		auto t_d=t/dc, t2_d2=t2/dc2;
-		r=Real(t_d.r<1)*t_d+Real(t2_d2.r<1)*t2_d2;
+		if(!y)
+			return 0;
+		Real t=x-floor(x), t2=floor(y-t);
+		return (t2+1)*(t2*0.5+t)/y;
 	}
-	void c_cc_trwv					(Quat &r, Quat const &x, Quat const &y)
-	{
-		Comp cx=(Comp)x, cy=y, t=cx-floor(cx), t2=1.-cx;
-		t2-=floor(t2);
-		Comp dc=cy;
-		dc.r=clamp_positive(dc.r);
-		dc.r=dc.r>1?1:dc.r;
-		Comp dc2=1.-dc;
-		auto t_d=t/dc, t2_d2=t2/dc2;
-		r=Real(t_d.r<1)*t_d+Real(t2_d2.r<1)*t2_d2;
-	}
-	void q_qq_trwv					(Quat &r, Quat const &x, Quat const &y)
-	{
-		Quat cx=x, cy=y, t=cx-floor(cx), t2=1.-cx;
-		t2-=floor(t2);
-		Quat dc=cy;
-		dc.r=clamp_positive(dc.r);
-		dc.r=dc.r>1?1:dc.r;
-		Quat dc2=1.-dc;
-		auto t_d=t/dc, t2_d2=t2/dc2;
-		r=Real(t_d.r<1)*t_d+Real(t2_d2.r<1)*t2_d2;
-	}
-
-	void  r_r_saw					(Quat &r, Quat const &x)				{Real t=x.r-floor(x.r), t2=floor(1-t); r=(t2+1)*(t2*0.5+t);}
-	void  c_c_saw					(Quat &r, Quat const &x)				{Comp cx=(Comp)x, t=cx-floor(cx), t2=floor(1-t); r=(t2+1)*(t2*0.5+t);}
-	void  q_q_saw					(Quat &r, Quat const &x)				{Quat t=x-floor(x), t2=floor(1-t); r=(t2+1)*(t2*0.5+t);}
-	void r_rr_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		auto t=x.r-floor(x.r), t2=floor(y.r-t);
-		r=(t2+1)*(t2*0.5+t)/y;
-	}
-	void c_rc_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		Comp cy=(Comp)y;
-		auto t=x.r-floor(x.r);
-		auto t2=floor(cy-t);
-		r=(t2+1.)*(t2*0.5+t)/cy;
-	}
-	void q_rq_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		auto t=x.r-floor(x.r);
-		auto t2=floor(y-t);
-		r=(t2+1.)*(t2*0.5+t)/y;
-	}
-	void c_cr_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		Comp cx=(Comp)x;
-		auto t=cx-floor(cx);
-		auto t2=floor(y.r-t);
-		r=(t2+1.)*(t2*0.5+t)/y.r;
-	}
-	void c_cc_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		Comp cx=(Comp)x, cy=(Comp)y;
-		auto t=cx-floor(cx);
-		auto t2=floor(cy-t);
-		r=(t2+1.)*(t2*0.5+t)/cy;
-	}
-	void q_cq_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		Comp cx=(Comp)x;
-		auto t=cx-floor(cx);
-		auto t2=floor(y-t);
-		r=(t2+1.)*(t2*0.5+t)/y;
-	}
-	void q_qr_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		auto t=x-floor(x);
-		auto t2=floor(y.r-t);
-		r=(t2+1.)*(t2*0.5+t)/y.r;
-	}
-	void q_qc_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		Comp cy=(Comp)y;
-		auto t=x-floor(x);
-		auto t2=floor(cy-t);
-		r=(t2+1.)*(t2*0.5+t)/cy;
-	}
-	void q_qq_saw					(Quat &r, Quat const &x, Quat const &y)
-	{
-		auto t=x-floor(x);
-		auto t2=floor(y-t);
-		r=(t2+1.)*(t2*0.5+t)/y;
-	}
+	void  r_r_saw					(Quat &r, Quat const &x)				{r=sawtooth(x.r);}
+	void  r_c_saw					(Quat &r, Quat const &x)				{r=sawtooth(x.r);}
+	void  r_q_saw					(Quat &r, Quat const &x)				{r=sawtooth(x.r);}
+	void r_rr_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_rc_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_rq_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_cr_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_cc_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_cq_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_qr_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_qc_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
+	void r_qq_saw					(Quat &r, Quat const &x, Quat const &y)	{r=sawtooth_dc(x.r, y.r);}
 
 	void r_rr_hypot					(Quat &r, Quat const &x, Quat const &y)	{r=sqrt(x.r*x.r+y.r*y.r);}
 	//void c_cc_hypot					(Comp const &x, Comp const &y)	{return sqrt(sq(x)+sq(y));}
