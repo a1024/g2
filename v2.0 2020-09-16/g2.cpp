@@ -164,6 +164,7 @@ double _10pow(int n)
 	return mask[n+308];
 }
 inline double _10pow(double x){return exp(x*G2::_ln10);}
+inline int			conditional_negate(int x, bool flag){return (x^-(int)flag)+flag;}
 inline double		clamp_positive(double x){return (x+abs(x))*0.5;}
 inline long long	clamp_positive_ll(double x){return (long long)((x+abs(x))*0.5);}
 inline int			clamp_negative(int x){return (x-abs(x))>>1;}
@@ -6227,12 +6228,12 @@ namespace	G2
 	bool disc_rr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r);}
 	bool disc_rc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r);}
 	bool disc_rq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r);}
-	bool disc_cr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i);}
-	bool disc_cc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i);}
-	bool disc_cq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i);}
-	bool disc_qr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
-	bool disc_qc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
-	bool disc_qq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)||_1d_zero_in_range(x0.i, x1.i)||_1d_zero_in_range(x0.j, x1.j)||_1d_zero_in_range(x0.k, x1.k);}
+	bool disc_cr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i);}
+	bool disc_cc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i);}
+	bool disc_cq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i);}
+	bool disc_qr_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i)&&_1d_zero_in_range(x0.j, x1.j)&&_1d_zero_in_range(x0.k, x1.k);}
+	bool disc_qc_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i)&&_1d_zero_in_range(x0.j, x1.j)&&_1d_zero_in_range(x0.k, x1.k);}
+	bool disc_qq_condition_zero_i	(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return _1d_zero_in_range(x0.r, x1.r)&&_1d_zero_in_range(x0.i, x1.i)&&_1d_zero_in_range(x0.j, x1.j)&&_1d_zero_in_range(x0.k, x1.k);}
 
 	void  r_r_percent				(VectP &r, VectP const &x)					{r=x*0.01;}
 	void  c_c_percent				(CompP &r, CompP const &x)					{r=(Comp1d)x*0.01;}
@@ -6803,7 +6804,7 @@ namespace	G2
 	void  r_r_atan					(VectP &r, VectP const &x)					{r=::atan(x);}
 	void  c_c_atan					(CompP &r, CompP const &x)					{r=atan(x);}
 	void  q_q_atan					(QuatP &r, QuatP const &x)					{r=atan(x);}
-	void r_rr_atan					(VectP &r, VectP const &x, VectP const &y)	{r=::atan2(x, y);}
+	void r_rr_atan					(VectP &r, VectP const &x, VectP const &y)	{r=::atan2(x, y);}		//TODO: fix atan addition
 	void c_rc_atan					(CompP &r, VectP const &x, CompP const &y)
 	{
 		double rx=x;
@@ -6995,18 +6996,18 @@ namespace	G2
 	void c_cr_random				(CompP &r, CompP const &x, VectP const &y)	{r=Comp1d(my_rand(), my_rand());}
 	void c_cc_random				(CompP &r, CompP const &x, CompP const &y)	{r=Comp1d(my_rand(), my_rand());}
 	void q_qq_random				(QuatP &r, QuatP const &x, QuatP const &y)	{r=Quat1d(my_rand(), my_rand(), my_rand(), my_rand());}
-	bool disc_r_random				(Value const &o0, Value const &o1){return true;}
-	auto disc_c_random				=disc_r_random;
-	auto disc_q_random				=disc_r_random;
-	auto disc_rr_random				=disc_r_random;
-	auto disc_rc_random				=disc_r_random;
-	auto disc_rq_random				=disc_r_random;
-	auto disc_cr_random				=disc_r_random;
-	auto disc_cc_random				=disc_r_random;
-	auto disc_cq_random				=disc_r_random;
-	auto disc_qr_random				=disc_r_random;
-	auto disc_qc_random				=disc_r_random;
-	auto disc_qq_random				=disc_r_random;
+	bool disc_r_random_o			(Value const &o0, Value const &o1){return true;}
+	auto disc_c_random_o			=disc_r_random_o;
+	auto disc_q_random_o			=disc_r_random_o;
+	//auto disc_rr_random_o			=disc_r_random_o;
+	//auto disc_rc_random_o			=disc_r_random_o;
+	//auto disc_rq_random_o			=disc_r_random_o;
+	//auto disc_cr_random_o			=disc_r_random_o;
+	//auto disc_cc_random_o			=disc_r_random_o;
+	//auto disc_cq_random_o			=disc_r_random_o;
+	//auto disc_qr_random_o			=disc_r_random_o;
+	//auto disc_qc_random_o			=disc_r_random_o;
+	//auto disc_qq_random_o			=disc_r_random_o;
 
 	inline double beta(double x, double y)
 	{
@@ -7246,6 +7247,7 @@ namespace	G2
 	void r_c_mandelbrot				(VectP &r, CompP const &x)					{r=mandelbrot(x, 200);}
 	void r_rr_mandelbrot			(VectP &r, VectP const &x, VectP const &y)	{r=mandelbrot((Comp1d)(double)x, (int)(double)y);}
 	void r_cr_mandelbrot			(VectP &r, CompP const &x, VectP const &y)	{r=mandelbrot(x, (int)(double)y);}
+	bool disc_r_mandelbrot_o		(Value const &x0, Value const &x1){return x0.r!=x1.r;}
 
 	void r_rr_min					(VectP &r, VectP const &x, VectP const &y)	{r=(x+y-abs(x-y))*0.5;}
 	void c_cr_min					(CompP &r, CompP const &x, VectP const &y)	{Comp1d cx=x; double ry=y;	r=(cx+ry-abs(cx-ry))*0.5;}//TODO: compare real parts and assign appropriate components
@@ -8437,7 +8439,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_FRAC:				function.set(SCALAR(r_r_frac)),			umts=returns_rcq,		d(disc_r_frac_i, true);				return;
 		case M_ABS:					function.set(SIMD(r_r_abs)),			umts=returns_rrr,		d();								return;
 		case M_ARG:					function.set(SIMD(r_r_arg)),			umts=returns_rrr,		d(disc_r_arg_i, true);				return;
-		case M_RAND:				function.set(SCALAR(r_r_random)),		umts=returns_rcq,		d(disc_r_random, false);			return;
+		case M_RAND:				function.set(SCALAR(r_r_random)),		umts=returns_rcq,		d(disc_r_random_o, false);			return;
 		case M_GAMMA:				function.set(SCALAR(r_r_tgamma)),		umts=returns_rcq,		d(disc_r_tgamma_i, true);			return;
 		case M_LNGAMMA:				function.set(SIMD(r_r_loggamma)),		umts=returns_rXX,		d(disc_r_loggamma_i, true);			return;
 		case M_GAUSS:				function.set(SIMD(r_r_gauss)),			umts=returns_rcq,		d();								return;
@@ -8447,7 +8449,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_TRWV:				function.set(SIMD2(r_r_trwv)),			umts=returns_rrr,		d();								return;
 		case M_SAW:					function.set(SIMD2(r_r_saw)),			umts=returns_rcq,		d(disc_r_saw_i, true);				return;
 		case M_HYPOT:				function.set(SIMD(r_r_abs)),			umts=returns_rrr,		d();								return;
-		case M_MANDELBROT:			function.set(SIMD(r_r_mandelbrot)),		umts=returns_rrr,		d();								return;
+		case M_MANDELBROT:			function.set(SIMD(r_r_mandelbrot)),		umts=returns_rrr,		d(disc_r_mandelbrot_o, false);		return;
 	//	case M_MIN:					function.set(SCALAR(r_r_min)),			umts=returns_rcq,		d();								return;
 	//	case M_MAX:					function.set(SCALAR(r_r_max)),			umts=returns_rcq,		d();								return;
 		case M_BETA:				function.set(SCALAR(r_r_beta)),			umts=returns_rXX,		d(disc_r_beta_i, true);				return;
@@ -8541,7 +8543,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_INVSQRT:				function.set();																						return;
 		case M_ERF:					function.set();																						return;
 		case M_ZETA:				function.set();																						return;
-		case M_RAND:				function.set(SCALAR(c_c_random)),		umts=returns_rcq,		d(disc_c_random, false);			return;
+		case M_RAND:				function.set(SCALAR(c_c_random)),		umts=returns_rcq,		d(disc_c_random_o, false);			return;
 		case M_GAMMA:				function.set(SCALAR(c_c_tgamma)),		umts=returns_rcq,		d(disc_c_tgamma_i, true);			return;
 		case M_LNGAMMA:				function.set(),							umts=returns_rXX,		d();								return;
 		case M_GAUSS:				function.set(SIMD(c_c_gauss)),			umts=returns_rcq,		d();								return;
@@ -8550,7 +8552,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_SQWV:				function.set(SIMD2(r_c_sqwv)),			umts=returns_rrr,		d(disc_r_sqwv_o, false);			return;
 		case M_TRWV:				function.set(SIMD2(r_c_trwv)),			umts=returns_rrr,		d();								return;
 		case M_SAW:					function.set(SIMD2(r_c_saw)),			umts=returns_rcq,		d(disc_c_saw_i, true);				return;
-		case M_MANDELBROT:			function.set(SIMD(r_c_mandelbrot));		umts=returns_rrr,		d();								return;
+		case M_MANDELBROT:			function.set(SIMD(r_c_mandelbrot));		umts=returns_rrr,		d(disc_r_mandelbrot_o, false);		return;
 	//	case M_MIN:					function.set(SCALAR(c_c_min)),			umts=returns_rcq,		d();								return;
 	//	case M_MAX:					function.set(SCALAR(c_c_max)),			umts=returns_rcq,		d();								return;
 		case M_BETA:				function.set();																						return;
@@ -8644,7 +8646,7 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		case M_INVSQRT:				function.set();																						return;
 		case M_ERF:					function.set();																						return;
 		case M_ZETA:				function.set();																						return;
-		case M_RAND:				function.set(SCALAR(q_q_random)),		umts=returns_rcq,		d(disc_q_random, false);			return;
+		case M_RAND:				function.set(SCALAR(q_q_random)),		umts=returns_rcq,		d(disc_q_random_o, false);			return;
 		case M_GAMMA:				function.set(SCALAR(q_q_tgamma)),		umts=returns_rcq,		d(disc_q_tgamma_i, true);			return;
 		case M_LNGAMMA:				function.set(),							umts=returns_rXX,		d();								return;
 		case M_GAUSS:				function.set(SIMD(q_q_gauss)),			umts=returns_rcq,		d();								return;
@@ -8713,13 +8715,13 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(r_rr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(r_rr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_r_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
-			case M_RAND:				function.set(SCALAR(r_rr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rr_random, false);			return;
+			case M_RAND:				function.set(SCALAR(r_rr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_r_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(r_rr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_rr_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_rr_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
 			case M_SAW:					function.set(SIMD2(r_rr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_rr_saw_i);					return;
 			case M_HYPOT:				function.set(SIMD(r_rr_hypot)),					bmts=returns_rcq_ccq_qqq,	d();								return;
-			case M_MANDELBROT:			function.set(SIMD(r_rr_mandelbrot)),			bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_MANDELBROT:			function.set(SIMD(r_rr_mandelbrot)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_mandelbrot_o, false);		return;
 			case M_MIN:					function.set(SIMD(r_rr_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MAX:					function.set(SIMD(r_rr_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_BETA:				function.set(SCALAR(r_rr_beta)),				bmts=returns_rXX_XXX_XXX,	d(disc_rr_beta_i);					return;
@@ -8774,8 +8776,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(c_rc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(c_rc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_log_i);					return;
-			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
-		//	case M_RAND:				function.set(SCALAR(c_rc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_random, false);			return;
+			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_c_random_o, false);			return;
+		//	case M_RAND:				function.set(SCALAR(c_rc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rc_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(c_rc_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rc_atan_i);					return;
 			case M_SQWV:				function.set(SIMD(r_rc_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD(r_rc_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -8837,8 +8839,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(q_rq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(q_rq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_cq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cq_log_i);					return;
-			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
-		//	case M_RAND:				function.set(SCALAR(q_rq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_random, false);			return;
+			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_q_random_o, false);			return;
+		//	case M_RAND:				function.set(SCALAR(q_rq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_rq_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(q_rq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_rq_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_rq_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_rq_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -8906,12 +8908,12 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(c_cr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(c_cr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cr_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cr_log_i);					return;
-			case M_RAND:				function.set(SCALAR(c_cr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cr_random, false);			return;
+			case M_RAND:				function.set(SCALAR(c_cr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_c_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(c_cr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_cr_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_cr_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
 			case M_SAW:					function.set(SIMD2(r_cr_saw)),					bmts=returns_rcq_ccq_qqq,	d(disc_cr_saw_i);					return;
-			case M_MANDELBROT:			function.set(SIMD(r_cr_mandelbrot)),			bmts=returns_rrr_rrr_rrr,	d();								return;
+			case M_MANDELBROT:			function.set(SIMD(r_cr_mandelbrot)),			bmts=returns_rrr_rrr_rrr,	d(disc_r_mandelbrot_o, false);		return;
 			case M_MIN:					function.set(SIMD(c_cr_min)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_MAX:					function.set(SIMD(c_cr_max)),					bmts=returns_rcq_ccq_qqq,	d();								return;
 			case M_BETA:				function.set();																									return;
@@ -8965,7 +8967,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(c_cc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(c_cc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_c_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(c_cc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cc_log_i);					return;
-			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_random, false);			return;
+			case M_RAND:				function.set(SCALAR(c_cc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_c_random_o, false);			return;
 			case M_ATAN:				function.set(SCALAR(c_cc_atan)),				bmts=returns_rcq_ccq_qqq,	d(disc_cc_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_cc_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_cc_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -9023,8 +9025,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(q_cq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(q_cq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_cq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_cq_log_i);					return;
-			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
-		//	case M_RAND:				function.set(SCALAR(q_cq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_random, false);			return;
+			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_q_random_o, false);			return;
+		//	case M_RAND:				function.set(SCALAR(q_cq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_cq_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(q_cq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_cq_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_cq_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_cq_trwv)),					bmts=returns_rrr_rrr_rrr,	d();					return;
@@ -9091,8 +9093,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(q_qr_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(q_qr_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_qc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qc_log_i);					return;
-			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
-		//	case M_RAND:				function.set(SCALAR(q_qr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_random, false);			return;
+			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_q_random_o, false);			return;
+		//	case M_RAND:				function.set(SCALAR(q_qr_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qr_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qr_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qr_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_qr_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_qr_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -9154,8 +9156,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(q_qc_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(q_qc_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_qc_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qc_log_i);					return;
-			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
-		//	case M_RAND:				function.set(SCALAR(q_qc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_random, false);			return;
+			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_q_random_o, false);			return;
+		//	case M_RAND:				function.set(SCALAR(q_qc_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qc_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qc_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qc_atan_i);					return;
 			case M_SQWV:				function.set(SIMD2(r_qc_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD2(r_qc_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -9217,7 +9219,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			case M_VERTICAL_BAR:		function.set(SCALAR(q_qq_bitwise_or)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_or_o, false);		return;
 			case M_BITWISE_NOR:			function.set(SCALAR(q_qq_bitwise_nor)),			bmts=returns_rcq_ccq_qqq,	d(disc_q_bitwise_nor_o, false);		return;
 			case M_LOG:					function.set(SIMD(q_qq_log)),					bmts=returns_ccq_ccq_qqq,	d(disc_qq_log_i);					return;
-			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_qq_random, false);			return;
+			case M_RAND:				function.set(SCALAR(q_qq_random)),				bmts=returns_rcq_ccq_qqq,	d(disc_q_random_o, false);			return;
 			case M_ATAN:				function.set(SIMD(q_qq_atan)),					bmts=returns_rcq_ccq_qqq,	d(disc_qq_atan_i);					return;
 			case M_SQWV:				function.set(SIMD(r_qq_sqwv)),					bmts=returns_rrr_rrr_rrr,	d(disc_r_sqwv_o, false);			return;
 			case M_TRWV:				function.set(SIMD(r_qq_trwv)),					bmts=returns_rrr_rrr_rrr,	d();								return;
@@ -15564,6 +15566,8 @@ namespace	modes
 			return change;
 		}
 	};
+#define			ys_Ystart	ys.Xstart
+#define			zs_Zstart	zs.Xstart
 	void _2dMode_DrawCheckboard_range(PenBrush &penBrush, Scale &xs, Scale &ys, int xi, int xf, int yi, int yf)
 //	void _2dMode_DrawCheckboard_range(HPEN__ *hPen, HBRUSH__ *hBrush, Scale &xs, Scale &ys, int xi, int xf, int yi, int yf)
 	{
@@ -16900,8 +16904,10 @@ namespace	modes
 				//				_  _
 				//zero cross	 \/
 				{
-					int Xplaces1=Xplaces+1, Yplaces1=Yplaces+1,
-						Xplaces2=Xplaces+2, Yplaces2=Yplaces+2;
+					int Xplaces1=Xplaces+3, Yplaces1=Yplaces+1,
+						Xplaces2=Xplaces+4, Yplaces2=Yplaces+2;
+					//int Xplaces1=Xplaces+1, Yplaces1=Yplaces+1,
+					//	Xplaces2=Xplaces+2, Yplaces2=Yplaces+2;
 
 					unsigned yDiscOffset=Yplaces2*Xplaces1;
 					ex.discontinuities.assign(yDiscOffset+Yplaces1*Xplaces2, false);
@@ -17205,7 +17211,7 @@ namespace	modes
 		}
 		void full(Expression &ex)
 		{
-			modes::Xstart=xs.Xstart, modes::Xsample=xs.Xsample, modes::Ystart=ys.Xstart, modes::Ysample=ys.Xsample, modes::T=T;
+			modes::Xstart=xs.Xstart, modes::Xsample=xs.Xsample, modes::Ystart=ys_Ystart, modes::Ysample=ys.Xsample, modes::T=T;
 			//modes::Xstart=Xstart, modes::Xsample=Xsample, modes::Ystart=Ystart, modes::Ysample=Ysample, modes::T=T;
 			modes::Xplaces=Xplaces, modes::Yplaces=Yplaces, modes::Zplaces=1, modes::ndrSize=ndrSize;
 
@@ -17341,7 +17347,7 @@ namespace	modes
 		void solve_range	(Expression &ex, int *a)
 		{
 			int &x1=a[0], &x2=a[1], &y1=a[2], &y2=a[3];
-			modes::Xstart=xs.Xstart, modes::Xsample=xs.Xsample, modes::Ystart=ys.Xstart, modes::Ysample=ys.Xsample, modes::T=T;
+			modes::Xstart=xs.Xstart, modes::Xsample=xs.Xsample, modes::Ystart=ys_Ystart, modes::Ysample=ys.Xsample, modes::T=T;
 		//	modes::Xstart=Xstart, modes::Xsample=Xsample, modes::Ystart=Ystart, modes::Ysample=Ysample, modes::T=T;
 			modes::Xplaces=Xplaces, modes::Yplaces=Yplaces, modes::Zplaces=1, modes::ndrSize=ndrSize;
 			fill_range(ex, choose_fill_fn, 0, x1, x2, y1, y2, 0, 1, Xplaces, Yplaces, 1, Xplaces*Yplaces, xs.logscale, ys.logscale, false);
@@ -17623,7 +17629,7 @@ namespace	modes
 
 		//	this->Xplaces=Xplaces, this->Yplaces=Yplaces;
 			XXstart=xs.Xstart, XXstep=xs.Xsample;//, XYstep=ys.Xstep;
-			YYstart=ys.Xstart, YYstep=ys.Xsample;//, YXstep=xs.Xstep;
+			YYstart=ys_Ystart, YYstep=ys.Xsample;//, YXstep=xs.Xstep;
 			int XYstart_t=ys.dist2ticks(YYstart), YXstart_t=xs.dist2ticks(XXstart);
 			XYstart=ys.ticks2dist(XYstart_t);
 			YXstart=xs.ticks2dist(YXstart_t);
@@ -17649,7 +17655,7 @@ namespace	modes
 		{
 			unsigned yPos=xs.Xplaces*nX;
 			modes::XXstart=xs.Xstart, modes::XXstep=xs.Xsample, modes::XYstart=ys.rXstart, modes::XYstep=ys.Xstep;
-			modes::YXstart=xs.rXstart, modes::YXstep=xs.Xstep, modes::YYstart=ys.Xstart, modes::YYstep=ys.Xsample, modes::T=T;
+			modes::YXstart=xs.rXstart, modes::YXstep=xs.Xstep, modes::YYstart=ys_Ystart, modes::YYstep=ys.Xsample, modes::T=T;
 			modes::Xplaces=xs.Xplaces, modes::Yplaces=ys.Xplaces, modes::Zplaces=Zplaces, modes::ndrSize=ndrSize;
 			//modes::XXstart=XXstart, modes::XXstep=XXstep, modes::XYstart=XYstart, modes::XYstep=XYstep, modes::T=T;
 			//modes::YXstart=YXstart, modes::YXstep=YXstep, modes::YYstart=YYstart, modes::YYstep=YYstep;
@@ -17837,7 +17843,7 @@ namespace	modes
 		void solve_range_Y(Expression &ex, int *a)
 		{
 			int &x1=a[0], &x2=a[1], &y1=a[2], &y2=a[3];
-			modes::YXstart=xs.rXstart, modes::YXstep=xs.Xstep, modes::YYstart=ys.Xstart, modes::YYstep=ys.Xsample, modes::T=T;
+			modes::YXstart=xs.rXstart, modes::YXstep=xs.Xstep, modes::YYstart=ys_Ystart, modes::YYstep=ys.Xsample, modes::T=T;
 		//	modes::YXstart=YXstart, modes::YXstep=YXstep, modes::YYstart=YYstart, modes::YYstep=YYstep, modes::T=T;
 			fill_range(ex, choose_fill_fn_l2d_Y, xs.Xplaces*nX, y1, y2, x1, x2, 0, 1, ys.Xplaces, nY, 1, ys.Xplaces*nY, false, false, false);
 			int yPos=xs.Xplaces*nX, yDiscPos=(xs.Xplaces-1)*nX;
@@ -18255,8 +18261,8 @@ namespace	modes
 		xs.start_grid(), ys.start_grid(), zs.start_grid();
 		double
 			Xstart=xs.fn(xs.Xstart), Xend=xs.fn(xs.Xend),
-			Ystart=ys.fn(ys.Xstart), Yend=ys.fn(ys.Xend),
-			Zstart=zs.fn(zs.Xstart), Zend=zs.fn(zs.Xend);
+			Ystart=ys.fn(ys_Ystart), Yend=ys.fn(ys.Xend),
+			Zstart=zs.fn(zs_Zstart), Zend=zs.fn(zs.Xend);
 		_3d.lineColor=_3dGridColor;
 	//	for(double x=xs.snap2grid_ceil(xs.Xstart);x<=xs.Xend;)
 		for(double x=xs.snap2grid_AR_ceil(xs.Xstart, 1);x<=xs.Xend;)
@@ -18267,8 +18273,8 @@ namespace	modes
 			if(xs.next_AR(x))
 				break;
 		}
-	//	for(double y=ys.snap2grid_ceil(ys.Xstart);y<=ys.Xend;)
-		for(double y=ys.snap2grid_AR_ceil(ys.Xstart, AR_Y);y<=ys.Xend;)
+	//	for(double y=ys.snap2grid_ceil(ys_Ystart);y<=ys.Xend;)
+		for(double y=ys.snap2grid_AR_ceil(ys_Ystart, AR_Y);y<=ys.Xend;)
 		{
 			double y2=ys.fn(y);
 			_3d.line(dvec3(Xstart, y2, VZ), dvec3(Xend, y2, VZ)), _3d.line(dvec3(VX, y2, Zstart), dvec3(VX, y2, Zend));
@@ -18276,8 +18282,8 @@ namespace	modes
 			if(ys.next_AR(y))
 				break;
 		}
-	//	for(double z=zs.snap2grid_ceil(zs.Xstart);z<=zs.Xend;)
-		for(double z=zs.snap2grid_AR_ceil(zs.Xstart, AR_Z);z<=zs.Xend;)
+	//	for(double z=zs.snap2grid_ceil(zs_Zstart);z<=zs.Xend;)
+		for(double z=zs.snap2grid_AR_ceil(zs_Zstart, AR_Z);z<=zs.Xend;)
 		{
 			double z2=zs.fn(z);
 			_3d.line(dvec3(Xstart, VY, z2), dvec3(Xend, VY, z2)), _3d.line(dvec3(VX, Ystart, z2), dvec3(VX, Yend, z2));
@@ -18308,8 +18314,8 @@ namespace	modes
 			if(xs.next_AR(X))
 				break;
 		}
-	//	for(double Y=ys.snap2grid_ceil(ys.Xstart);Y<=ys.Xend;)
-		for(double Y=ys.snap2grid_AR_ceil(ys.Xstart, AR_Y);Y<=ys.Xend;)
+	//	for(double Y=ys.snap2grid_ceil(ys_Ystart);Y<=ys.Xend;)
+		for(double Y=ys.snap2grid_AR_ceil(ys_Ystart, AR_Y);Y<=ys.Xend;)
 		{
 			if(ys.is_not_origin(Y))
 			//	_3d.label(VX, ys.fn(Y), VZ, "%g", Y);
@@ -18318,8 +18324,8 @@ namespace	modes
 			if(ys.next_AR(Y))
 				break;
 		}
-	//	for(double Z=zs.snap2grid_ceil(zs.Xstart);Z<=zs.Xend;)
-		for(double Z=zs.snap2grid_AR_ceil(zs.Xstart, AR_Z);Z<=zs.Xend;)
+	//	for(double Z=zs.snap2grid_ceil(zs_Zstart);Z<=zs.Xend;)
+		for(double Z=zs.snap2grid_AR_ceil(zs_Zstart, AR_Z);Z<=zs.Xend;)
 		{
 			if(zs.is_not_origin(Z))
 			//	_3d.label(VX, VY, zs.fn(Z), "%g", Z);
@@ -18332,9 +18338,10 @@ namespace	modes
 	void _2dMode_NumberAxes(int &H, int &V, int &VT, Scale &xs, Scale &ys)
 	{
 		xs.start_checkboard(), ys.start_checkboard();
-		H=int(ys.Xstart>(int)ys.logscale?h:ys.Xend<(int)ys.logscale?-1:ys.fn_y_int(ys.logscale));
+		POINT origin={(int)xs.logscale, (int)ys.logscale};
+		H=int(ys_Ystart>origin.y?h:ys.Xend<origin.y?-1:ys.fn_y_int(ys.logscale));
 		int HT=H+(H>h-30?-18:2);
-		V=int(xs.Xstart>(int)xs.logscale?-1:xs.Xend<(int)xs.logscale?w:xs.fn_x_int(xs.logscale));
+		V=int(xs.Xstart>origin.x?-1:xs.Xend<origin.x?w:xs.fn_x_int(xs.logscale));
 		VT=V+int(V>w-24-ys.prec*8?-24-ys.prec*8:2);
 	//	H=int(VY-DY/2>0?h:VY+DY/2<0?-1:h*(VY/DY+.5)); int HT=H+(H>h-30?-18:2); V=int(VX-DX/2>0?-1:VX+DX/2<0?w:w*(-VX+DX/2)/DX), VT=V+int(V>w-24-prec*8?-24-prec*8:2);
 		setBkMode(TRANSPARENT);
@@ -19707,7 +19714,7 @@ namespace	modes
 		}
 		void messageTimer()
 		{
-			int dx=(10^-(int)_2d_drag_graph_not_window)+_2d_drag_graph_not_window;
+			int dx=conditional_negate(10, _2d_drag_graph_not_window);
 			if(kb[VK_LEFT		]){	xs.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset-=dx;}
 			if(kb[VK_RIGHT		]){	xs.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset+=dx;}
 			if(kb[VK_UP			]){	itb.tpy-=dx;	if(itb.tpy<0		)itb.tpy=0;}//VY+=DX*10/w;
@@ -20454,7 +20461,7 @@ namespace	modes
 		{
 			auto &ndr=expr[e].n[expr[e].resultTerm].r;
 			auto &contour=contours[e];
-			int YLstart_t=ys.dist2ticks(ys.Xstart), YLend_t=ys.dist2ticks(ys.Xend)+1;
+			int YLstart_t=ys.dist2ticks(ys_Ystart), YLend_t=ys.dist2ticks(ys.Xend)+1;
 			for(int v=0, vEnd=ndr.size()-1;v<vEnd;++v)
 			{
 				auto &V1=ndr[v], &V2=ndr[v+1];
@@ -21208,10 +21215,10 @@ namespace	modes
 			auto &Rcontour=Rcontours[e];
 			auto &Icontour=Icontours[e];
 			Rcontour.clear(), Icontour.clear();
-			int RLstart=ys.dist2ticks(ys.Xstart-10*ys.Xsample), RLend=ys.dist2ticks(ys.Xend+25*ys.Xsample)+1;
-			int ILstart=zs.dist2ticks(zs.Xstart-10*zs.Xsample), ILend=zs.dist2ticks(zs.Xend+25*zs.Xsample)+1;
-			//double RLstart=ys.ticks2dist(ys.dist2ticks(ys.Xstart-10*ys.Xsample)), RLend=ys.ticks2dist(ys.dist2ticks(ys.Xend+25*ys.Xsample)+1);
-			//double ILstart=zs.ticks2dist(zs.dist2ticks(zs.Xstart-10*zs.Xsample)), ILend=zs.ticks2dist(zs.dist2ticks(zs.Xend+25*zs.Xsample)+1);
+			int RLstart=ys.dist2ticks(ys_Ystart-10*ys.Xsample), RLend=ys.dist2ticks(ys.Xend+25*ys.Xsample)+1;
+			int ILstart=zs.dist2ticks(zs_Zstart-10*zs.Xsample), ILend=zs.dist2ticks(zs.Xend+25*zs.Xsample)+1;
+			//double RLstart=ys.ticks2dist(ys.dist2ticks(ys_Ystart-10*ys.Xsample)), RLend=ys.ticks2dist(ys.dist2ticks(ys.Xend+25*ys.Xsample)+1);
+			//double ILstart=zs.ticks2dist(zs.dist2ticks(zs_Zstart-10*zs.Xsample)), ILend=zs.ticks2dist(zs.dist2ticks(zs.Xend+25*zs.Xsample)+1);
 		//	double RLstart=std::ceil((Rstart-10*Xs)/Rstep)*Rstep, RLend=std::ceil((Rend+25*Xs)/Rstep)*Rstep;
 		//	double ILstart=std::ceil((Istart-10*Xs)/Istep)*Istep, ILend=std::ceil((Iend+25*Xs)/Istep)*Istep;
 			for(unsigned v=0, vEnd=Xplaces-1;v<vEnd;++v)
@@ -22722,7 +22729,7 @@ namespace	modes
 
 		void messageTimer()
 		{
-			int dx=(10^-(int)_2d_drag_graph_not_window)+_2d_drag_graph_not_window;
+			int dx=conditional_negate(10, _2d_drag_graph_not_window);
 			if(kb[VK_LEFT		])	xs.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset-=dx;
 			if(kb[VK_RIGHT		])	xs.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset+=dx;
 			if(kb[VK_UP			])	ys.shift(+dx);
@@ -23233,7 +23240,7 @@ namespace	modes
 
 		void messageTimer()
 		{
-			int dx=(10^-(int)_2d_drag_graph_not_window)+_2d_drag_graph_not_window;
+			int dx=conditional_negate(10, _2d_drag_graph_not_window);
 			if(kb[VK_LEFT		]){	xs.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset-=dx;}
 			if(kb[VK_RIGHT		]){	xs.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset+=dx;}
 			if(kb[VK_UP			]){	ys.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Yoffset+=dx;}
@@ -23747,7 +23754,7 @@ namespace	modes
 				}
 				return false;
 			};
-			int zi=zs.dist2ticks(zs.Xstart), zf=zs.dist2ticks(zs.Xend);
+			int zi=zs.dist2ticks(zs_Zstart), zf=zs.dist2ticks(zs.Xend);
 			auto cutTrgl=[&](Double_X_Y_V &A, Double_X_Y_V &B, Double_X_Y_V &C)
 			{
 				modes::contour::Double_X_Y_V *_1, *_2, *_3;//ordered by z in acscending order
@@ -23798,7 +23805,7 @@ namespace	modes
 					}
 				}
 			};
-			double Xstart=xs.Xstart, Ystart=AR_Y*ys.Xstart;
+			double Xstart=xs.Xstart, Ystart=AR_Y*ys_Ystart;
 			for(unsigned vy=0, vyEnd=Yplaces-1;vy<vyEnd;++vy)
 			{
 				Y0=ys.ifn_x(vy), Y1=ys.ifn_x(vy+1);
@@ -24873,13 +24880,13 @@ namespace	modes
 			GUIPrint(w-400, (h>>1)+18, "VY=%g, DY=%g, AR_Y=%g (ys)", VY, DY, ys.AR);//
 			GUIPrint(w-400, (h>>1)+18*2, "VY=%g, DY=%g, AR_Y=%g (draw)", VY0, DY0, AR_Y);//
 			GUIPrint(w-400, (h>>1)+18*3, "Yplaces=%d, ys.Yplaces=%d, Ysample=%g", Yplaces, ys.Xplaces, ys.Xsample);//
-			GUIPrint(w-400, (h>>1)+18*4, "Ystart=%g, Yend=%g (ys)", ys.Xstart, ys.Xend);//
+			GUIPrint(w-400, (h>>1)+18*4, "Ystart=%g, Yend=%g (ys)", ys_Ystart, ys.Xend);//
 			GUIPrint(w-400, (h>>1)+18*5, "Ystart=%g, Yend=%g (modes)", modes::Ystart, modes::Yend);//
 			GUIPrint(w-400, (h>>1)+18*6, "YshiftPoint=%g, YsamplePos=%g, Yoffset=%d", YshiftPoint, YsamplePos, Yoffset0);//
 			GUIPrint(w-400, (h>>1)+18*7, "x1=%d, x2=%d, y1=%d, y2=%d", solver.ra[0], solver.ra[1], solver.ra[2], solver.ra[3]);//
 			//GUIPrint(0, 0, "Ystart=%g, Ysample=%g modes", modes::Ystart, modes::Ysample);//
-			//GUIPrint(0, 16, "Ystart=%g, Ysample=%g ys", ys.Xstart, ys.Xsample);//
-			if(modes::Ystart!=ys.Xstart||modes::Ysample!=ys.Xsample)
+			//GUIPrint(0, 16, "Ystart=%g, Ysample=%g ys", ys_Ystart, ys.Xsample);//
+			if(modes::Ystart!=ys_Ystart||modes::Ysample!=ys.Xsample)
 				int LOL_1=0;
 		//	GUIPrint(0, 0, "DX=%g, DY=%g, DZ=%g", DX, DY, DZ);//
 			DY=DY0, VY=VY0, DZ=DZ0, VZ=VZ0;
@@ -25674,11 +25681,11 @@ namespace	modes
 
 		void messageTimer()
 		{
-			int dx=(10^-(int)_2d_drag_graph_not_window)-_2d_drag_graph_not_window;
-			if(kb[VK_LEFT		]){	xs.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset-=10;}
-			if(kb[VK_RIGHT		]){	xs.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset+=10;}
-			if(kb[VK_UP			]){	ys.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Yoffset+=10;}
-			if(kb[VK_DOWN		]){	ys.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Yoffset-=10;}
+			int dx=conditional_negate(10, _2d_drag_graph_not_window);
+			if(kb[VK_LEFT		]){	xs.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset-=dx;}
+			if(kb[VK_RIGHT		]){	xs.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset+=dx;}
+			if(kb[VK_UP			]){	ys.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Yoffset+=dx;}
+			if(kb[VK_DOWN		]){	ys.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Yoffset-=dx;}
 			if(kb[VK_ADD		]||kb[VK_RETURN	]||kb[VK_OEM_PLUS	])
 			{
 					 if(kb['X'])xs.zoom(1/1.1), AR_Y/=1.1;
@@ -25915,6 +25922,7 @@ namespace	modes
 					{
 						if(Xoffset||Yoffset)
 						{
+						//	Xoffset=Yoffset=0;//DEBUG
 							solver.partial_bounds(VX, DX, VY, DY, Xoffset, Yoffset);
 							solver.synchronize();
 							if(ex.nITD)
@@ -26034,9 +26042,12 @@ namespace	modes
 							print(w-arrow_label_offset_X, Ys, label.label.c_str(), label.label.size()), Ys+=16;
 						//	TextOutA(ghMemDC, w-arrow_label_offset_X, Ys, label.label.c_str(), label.label.size()), Ys+=16;
 						}
-						int Xs=	V+VT+24+8*ys.prec>w-24-ys.prec*8
-							?	V+VT-24-8*ys.prec
-							:	V+VT+24+8*ys.prec;
+						int Xs=	VT+24+8*ys.prec>w-24-ys.prec*8
+							?	VT-24-8*ys.prec
+							:	VT+24+8*ys.prec;
+						//int Xs=	V+VT+24+8*ys.prec>w-24-ys.prec*8
+						//	?	V+VT-24-8*ys.prec
+						//	:	V+VT+24+8*ys.prec;
 						Ys=0;
 						for(int kl=0, klEnd=labels.Ylabels.size();kl<klEnd;++kl)
 						{
@@ -26230,7 +26241,7 @@ namespace	modes
 
 		void messageTimer()
 		{
-			int dx=(10^-(int)_2d_drag_graph_not_window)-_2d_drag_graph_not_window;
+			int dx=conditional_negate(10, _2d_drag_graph_not_window);
 			if(kb[VK_LEFT		]){	xs.shift(-dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset-=dx;}
 			if(kb[VK_RIGHT		]){	xs.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Xoffset+=dx;}
 			if(kb[VK_UP			]){	ys.shift(+dx), toSolve=true; if(shiftOnly)shiftOnly=1, Yoffset+=dx;}
@@ -31049,7 +31060,7 @@ namespace	modes
 			auto &result_contour=(&Rcontours)[c][e];
 			auto &lines=(&Rlines)[c][e];
 			g_contour=contour;
-			vi=zs.dist2ticks(zs.Xstart), vf=zs.dist2ticks(zs.Xend);
+			vi=zs.dist2ticks(zs_Zstart), vf=zs.dist2ticks(zs.Xend);
 			for(auto cit=contour.begin();cit!=contour.end();++cit)//for each contour level (surface)
 			{
 				auto &level=cit->first;
@@ -33647,7 +33658,7 @@ void extract_range(int rmode, Variable const &var, int c, double &varStart, doub
 		switch((&var.varTypeR)[c])
 		{
 		case 'x':varStart=ti2d.xs.Xstart, varEnd=ti2d.xs.Xend;break;
-		case 'y':varStart=ti2d.ys.Xstart, varEnd=ti2d.ys.Xend;break;
+		case 'y':varStart=ti2d.ys_Ystart, varEnd=ti2d.ys.Xend;break;
 		case 't':varStart=varEnd=ti2d.solver.T;break;
 		case 'c':varStart=varEnd=(&var.val.r)[c];break;
 		}
@@ -33656,7 +33667,7 @@ void extract_range(int rmode, Variable const &var, int c, double &varStart, doub
 		switch((&var.varTypeR)[c])
 		{
 		case 'x':varStart=t2d.xs.Xstart, varEnd=t2d.xs.Xend;break;
-		case 'y':varStart=t2d.ys.Xstart, varEnd=t2d.ys.Xend;break;
+		case 'y':varStart=t2d.ys_Ystart, varEnd=t2d.ys.Xend;break;
 		case 't':varStart=varEnd=t2d.solver.T;break;
 		case 'c':varStart=varEnd=(&var.val.r)[c];break;
 		}
@@ -33665,7 +33676,7 @@ void extract_range(int rmode, Variable const &var, int c, double &varStart, doub
 		switch((&var.varTypeR)[c])
 		{
 		case 'x':varStart=c2d.xs.Xstart, varEnd=c2d.xs.Xend;break;
-		case 'y':varStart=c2d.ys.Xstart, varEnd=c2d.ys.Xend;break;
+		case 'y':varStart=c2d.ys_Ystart, varEnd=c2d.ys.Xend;break;
 		case 't':varStart=varEnd=c2d.solver.T;break;
 		case 'c':varStart=varEnd=(&var.val.r)[c];break;
 		}
@@ -33674,7 +33685,7 @@ void extract_range(int rmode, Variable const &var, int c, double &varStart, doub
 		switch((&var.varTypeR)[c])
 		{
 		case 'x':varStart=l2d.xs.Xstart, varEnd=l2d.xs.Xend;break;
-		case 'y':varStart=l2d.ys.Xstart, varEnd=l2d.ys.Xend;break;
+		case 'y':varStart=l2d.ys_Ystart, varEnd=l2d.ys.Xend;break;
 		case 't':varStart=varEnd=l2d.solver.T;break;
 		case 'c':varStart=varEnd=(&var.val.r)[c];break;
 		}
@@ -33683,7 +33694,7 @@ void extract_range(int rmode, Variable const &var, int c, double &varStart, doub
 		switch((&var.varTypeR)[c])
 		{
 		case 'x':varStart=t2d_h.xs.Xstart, varEnd=t2d_h.xs.Xend;break;
-		case 'y':varStart=t2d_h.ys.Xstart, varEnd=t2d_h.ys.Xend;break;
+		case 'y':varStart=t2d_h.ys_Ystart, varEnd=t2d_h.ys.Xend;break;
 		case 't':varStart=varEnd=t2d_h.solver.T;break;
 		case 'c':varStart=varEnd=(&var.val.r)[c];break;
 		}
@@ -33692,8 +33703,8 @@ void extract_range(int rmode, Variable const &var, int c, double &varStart, doub
 		switch((&var.varTypeR)[c])
 		{
 		case 'x':varStart=c3d.xs.Xstart, varEnd=c3d.xs.Xend;break;
-		case 'y':varStart=c3d.ys.Xstart, varEnd=c3d.ys.Xend;break;
-		case 'z':varStart=c3d.zs.Xstart, varEnd=c3d.zs.Xend;break;
+		case 'y':varStart=c3d.ys_Ystart, varEnd=c3d.ys.Xend;break;
+		case 'z':varStart=c3d.zs_Zstart, varEnd=c3d.zs.Xend;break;
 		case 't':varStart=varEnd=c3d.solver.T;break;
 		case 'c':varStart=varEnd=(&var.val.r)[c];break;
 		}
