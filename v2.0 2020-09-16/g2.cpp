@@ -2292,12 +2292,18 @@ struct		Performance
 		setBkMode(OPAQUE);
 	//	SetBkMode(ghMemDC, OPAQUE);
 	//	const char *hwacc=usingOpenGL?"OpenGL":"Software";
-		GUIPrint(x, y, odd?"[%.10fbest], %.10ffps, %d, %s, %s":"%.10fbest, %.10ffps, %d, %s, %s",
+		GUIPrint(x, y, odd?"[%.2fbest], %.2ffps, %d, %s, %s":"%.10fbest, %.10ffps, %d, %s, %s",
 			1000/best,
 			1000/current,
 			nCalls,
 			simd_method==2?"AVX":simd_method==1?"SSE2":"IA32",
 			usingOpenGL?"OpenGL":"Software");
+		//GUIPrint(x, y, odd?"[%.10fbest], %.10ffps, %d, %s, %s":"%.10fbest, %.10ffps, %d, %s, %s",
+		//	1000/best,
+		//	1000/current,
+		//	nCalls,
+		//	simd_method==2?"AVX":simd_method==1?"SSE2":"IA32",
+		//	usingOpenGL?"OpenGL":"Software");
 	//	GUIPrint(x, y-16, "hwacc = 0x%08X", (int)hwacc);//
 	//	GUIPrint(x, y-16, "usingOpenGL = %d", (int)usingOpenGL);//
 	//	GUIPrint(x, y, odd?"[%.10fbest], %.10ffps, %d, %s, OpenGL":"%.10fbest, %.10ffps, %d, %s, OpenGL", 1000/best, 1000/current, nCalls, simd_method==2?"AVX":simd_method==1?"SSE2":"IA32");
@@ -32881,7 +32887,7 @@ namespace	modes
 		void i_draw();
 		void a_draw();
 	} c3d;
-	const int Color_3D::modes[]={9}, Color_3D::nmodes=sizeof(modes)>>2;
+	const int		Color_3D::modes[]={9}, Color_3D::nmodes=sizeof(modes)>>2;
 	void			Color_3D::i_draw()
 	{
 		if(modes::ready)
@@ -32951,6 +32957,7 @@ namespace	modes
 				"X/Y/Z 6: HPF x/y/z",
 				"0: reset operations",
 				"`: contour",
+				"F : toggle contour wireframe",//
 				"Tab: toggle OpenGL",
 				"Esc: back to text editor"
 			};
