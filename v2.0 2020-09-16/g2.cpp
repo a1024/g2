@@ -401,49 +401,60 @@ struct		Map
 
 #ifdef PROFILER
 typedef std::pair<std::string, double> ProfInfo;
-ProfInfo	longest;
+//ProfInfo	longest;
 std::vector<ProfInfo> prof;
 long long prof_t1=0;
 void prof_start()
 {
-	LARGE_INTEGER li;
-	QueryPerformanceCounter(&li);
-	prof_t1=li.QuadPart;
+	if(showBenchmark)
+	{
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+		prof_t1=li.QuadPart;
 
-//	prof_t1=__rdtsc();
+	//	prof_t1=__rdtsc();
+	}
 }
 void prof_add(const char *label, int divisor=1)
 {
-	LARGE_INTEGER li;
-	QueryPerformanceCounter(&li);
-	long long t2=li.QuadPart;
-	QueryPerformanceFrequency(&li);
-	prof.push_back(ProfInfo(std::string(label), 1000.*double(t2-prof_t1)/(li.QuadPart*divisor)));
-	QueryPerformanceCounter(&li);
-	prof_t1=li.QuadPart;
+	if(showBenchmark)
+	{
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+		long long t2=li.QuadPart;
+		QueryPerformanceFrequency(&li);
+		prof.push_back(ProfInfo(std::string(label), 1000.*double(t2-prof_t1)/(li.QuadPart*divisor)));
+		QueryPerformanceCounter(&li);
+		prof_t1=li.QuadPart;
 
-	//long long t2=__rdtsc();
-	//prof.push_back(ProfInfo(std::string(label), double(t2-prof_t1)/divisor));
-	//prof_t1=__rdtsc();
+		//long long t2=__rdtsc();
+		//prof.push_back(ProfInfo(std::string(label), double(t2-prof_t1)/divisor));
+		//prof_t1=__rdtsc();
+	}
 }
 void prof_print()
 {
-	int xpos=w-400, xpos2=w-200;
-	int k=0;
-	for(int kEnd=prof.size();k<kEnd;++k)
+	if(showBenchmark)
 	{
-		auto &p=prof[k];
-		if(longest.second<p.second)
-			longest=p;
-		int ypos=k*18;
-		GUIPrint(xpos, ypos, p.first.c_str());
-		GUIPrint(xpos2, ypos, "%lf", p.second);
-	//	GUIPrint(xpos2, ypos, "%g", p.second);
+		int xpos=w-400, xpos2=w-200;
+		int k=0;
+		for(int kEnd=prof.size();k<kEnd;++k)
+		{
+			auto &p=prof[k];
+			//if(longest.second<p.second)
+			//	longest=p;
+			int ypos=k<<4;
+		//	int ypos=k*18;
+			GUIPrint(xpos, ypos, p.first.c_str());
+			GUIPrint(xpos2, ypos, "%lf", p.second);
+		//	GUIPrint(xpos2, ypos, "%g", p.second);
+		}
+		//GUIPrint(xpos, k*18, longest.first.c_str());
+		//GUIPrint(xpos2, k*18, "%lf", longest.second);
+		//copy to clipboard?
+		prof.clear();
+		prof_start();
 	}
-	GUIPrint(xpos, k*18, longest.first.c_str());
-	GUIPrint(xpos2, k*18, "%lf", longest.second);
-	//copy to clipboard?
-	prof.clear();
 }
 #endif
 template<int buffer_size>bool printValue_real		(				char (&buffer)[buffer_size], int &offset, double const &value)
@@ -1622,8 +1633,8 @@ public:
 	{
 		syntaxErrors.clear();
 		discontinuities.clear();
-		lineNo=0, endLineNo=0, boundNo=0, color=0, winColor=0, nx=0, nZ=0, nQ=0, nISD=0, nITD=0;
-		resultMathSet=0;
+		lineNo=0, endLineNo=0, boundNo=0, color=0, winColor=0, glColor=0, nx=0, nZ=0, nQ=0, nISD=0, nITD=0;
+		resultMathSet=0, resultTerm=0;
 		m.clear();
 		variables.clear();
 		//if(n.size()&&n[0].r.size())//
@@ -11374,6 +11385,10 @@ void Compile::compile_expression_global(Expression &expr)
 	{
 		if(expr.i.size())
 			expr.resultTerm=expr.i.rbegin()->result;
+		else if(expr.ni.size())//
+			expr.resultTerm=expr.ni.rbegin()->result;
+		else//
+			expr.resultTerm==0;
 		predictedMathSet=term[expr.resultTerm].mathSet;
 		if(!expr.nISD)//n0d - use numeric instructions on original data
 		{
@@ -17444,9 +17459,9 @@ namespace	modes
 			modes::Xstart=Xstart, modes::Xsample=Xsample, modes::Yend=Yend, modes::Ysample=Ysample, modes::T=T;
 			modes::Xplaces=Xplaces, modes::Yplaces=Yplaces, modes::Zplaces=1, modes::ndrSize=ndrSize;
 
-#ifdef PROFILER
-			prof_start();
-#endif
+//#ifdef PROFILER
+//			prof_start();
+//#endif
 			resize_terms(ex, ndrSize);
 #ifdef PROFILER
 			prof_add("Resize terms");
@@ -17466,9 +17481,9 @@ namespace	modes
 		void toggleColorScheme(){colorScheme^=1;}
 		void updateRGB(Term &n)
 		{
-#ifdef PROFILER
-			prof_start();
-#endif
+//#ifdef PROFILER
+//			prof_start();
+//#endif
 		//	Concurrency::parallel_transform(ndr.begin(), ndr.end(), rgb, (int(*)(Value&))colorFunction);
 			auto prgb=&rgb;
 			void (*cf)(CompP const&, int*);
@@ -20747,7 +20762,7 @@ namespace	modes
 		}
 		void draw()
 		{
-			prof_start();//
+		//	prof_start();//
 			if(usingOpenGL)
 				gl_disabledepthtest();
 			ys.DX=xs.DX*h/(w*AR_Y);
@@ -25913,6 +25928,7 @@ namespace	modes
 		}
 		void draw()
 		{
+			prof_add("entry");
 			if(usingOpenGL)
 				gl_disabledepthtest();
 			auto &VX=xs.VX, &DX=xs.DX, &VY=ys.VX, &DY=ys.DX;
@@ -25941,6 +25957,7 @@ namespace	modes
 							}
 							else
 								(solver.*(solver.partial))(ex, contourOnly);
+							prof_add("partial solve");
 							if(contourOn&&abs(Xoffset)+2<Xplaces&&abs(Yoffset)+2<Yplaces)
 							{
 							//	Rcontours.clear(), Icontours.clear();
@@ -25961,6 +25978,7 @@ namespace	modes
 						time_variance|=ex.nITD;
 						labels.fill(cursorEx);
 						solver.full(ex);
+					//	prof_add("solve");
 						for(auto it=operations.begin();it!=operations.end();++it)
 						{
 							auto &operation=*it;
@@ -25978,6 +25996,7 @@ namespace	modes
 							case 10:inverseHemalyTransform			(ex.n[ex.resultTerm]);break;
 							}
 						}
+						prof_add("operations");
 						if(contourOnly)
 							memset(solver.rgb, 0xFF, Xplaces*Yplaces*sizeof(int));
 						else
@@ -25999,6 +26018,7 @@ namespace	modes
 					if(!paused)
 						solver.synchronize();
 					solver.full(ex);
+				//	prof_add("solve");
 					for(auto it=operations.begin();it!=operations.end();++it)
 					{
 						auto &operation=*it;
@@ -26016,6 +26036,7 @@ namespace	modes
 						case 10:inverseHemalyTransform			(ex.n[ex.resultTerm]);break;
 						}
 					}
+					prof_add("operations");
 					if(contourOnly)
 						memset(solver.rgb, 0xFF, Xplaces*Yplaces*sizeof(int));
 					else
@@ -26026,11 +26047,13 @@ namespace	modes
 				{
 				//	Rcontours.clear(), Icontours.clear();
 					doContour(cursorEx);
+					prof_add("gen contour");
 				}
 			}
 		//	if(!contourOnly)
 			for(int ky=0;ky<h;++ky)//Xplaces=setXplaces(w)
 				std::copy(solver.rgb+Xplaces*ky, solver.rgb+Xplaces*ky+w, gBitmap.rgb+w*ky);
+			prof_add("draw");
 
 			if(!clearScreen)
 			{
@@ -32513,6 +32536,7 @@ namespace	modes
 		}
 		void draw()
 		{
+			prof_add("entry");
 			if(usingOpenGL)
 				gl_enabledepthtest();
 			auto &VX=xs.VX, &DX=xs.DX, &VY=ys.VX, &DY=ys.DX, &VZ=zs.VX, &DZ=zs.DX;
@@ -32526,7 +32550,9 @@ namespace	modes
 					{
 						solver.partial_bounds(VX, DX, VY/AR_Y, DY, VZ/AR_Z, DZ, Xoffset, Yoffset, Zoffset);
 						solver.synchronize();
+						prof_add("prep");
 						(solver.*(ex.nITD?&Solve_3D::full:solver.partial))(ex);
+						prof_add("partial solve");
 					}
 					else
 					{
@@ -32545,7 +32571,9 @@ namespace	modes
 						labels.fill(cursorEx);
 						if(!paused)
 							solver.synchronize();
+						prof_add("prep");
 						solver.full(ex);
+						prof_add("solve");
 						doOperations(ex.n[ex.resultTerm]);
 						if(time_variance)
 						{
@@ -32574,6 +32602,7 @@ namespace	modes
 						Rcontours.clear(), Icontours.clear(), Jcontours.clear(), Kcontours.clear();
 						Rlines.clear(), Ilines.clear(), Jlines.clear(), Klines.clear();
 						doContour(cursorEx);
+						prof_add("gen contour");
 					}
 				}
 			}
@@ -32584,6 +32613,7 @@ namespace	modes
 		//	_3d.newFrame();
 			if(!clearScreen)
 				_3dMode_DrawGridNAxes(_3d, xs, ys, zs, AR_Y, AR_Z);
+			prof_add("grid");
 			if(!contourOnly)//draw the points
 			{
 				unsigned v=0;
@@ -32604,6 +32634,7 @@ namespace	modes
 							//	_3d.point(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k), solver.ndr_rgb[v], solver.ndr_rgb_i[v], solver.ndr_rgb_j[v], solver.ndr_rgb_k[v]);
 					break;
 				}
+				prof_add("points");
 				if(!contourOn)//draw the cross-sections
 				{
 					int txsize=Xplaces*Yplaces;
@@ -32668,6 +32699,7 @@ namespace	modes
 					//mat2 txm(1, 0, 0, 1);
 					//vec2 tx1(0, 0);
 					//_3d.render_textured_transparent(vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), solver.ndr_rgb, Xplaces, Yplaces, tx1, txm);
+					prof_add("planes");
 				}
 			}
 			if(contourOn)//draw the contour
@@ -32740,6 +32772,7 @@ namespace	modes
 						draw_contour(Kcontours, Klines, kColor);
 					}
 				}
+				prof_add("contour");
 				//switch(ex.resultMathSet)
 				//{
 				//case 'R':
@@ -32796,7 +32829,9 @@ namespace	modes
 			if(usingOpenGL)
 			{
 				GL2_3D::end();
+				prof_add("send");
 				GL2_3D::draw(_3d.cam);
+				prof_add("draw");
 			}
 			if(!clearScreen)
 			{
@@ -32867,6 +32902,14 @@ namespace	modes
 			else
 				_3d.text_show();
 			//	_3d.text_dump();
+			prof_add("3D text");
+			if(showBenchmark)
+			{
+				int bkMode=setBkMode(OPAQUE);
+				int xpos=w-200, ypos=h>>1;
+				GUIPrint(xpos, ypos, "%d*%d*%d", Xplaces, Yplaces, Zplaces), ypos+=16;
+				setBkMode(bkMode);
+			}
 			if(kb_VK_F6_msg||kb[VK_F6])
 			{
 				int bkMode=setBkMode(OPAQUE);
@@ -35107,9 +35150,13 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 #ifdef BUILD_1_7
 		if(!modes::active)
 		{
-			puis.clear();
-			var_menu=!var_menu;
-			render();
+			auto &ex=expr[cursorEx];
+			if(bounds[cursorB].second=='e'&&(ex.rmode[0]!=1||ex.nISD+ex.nITD))
+			{
+				puis.clear();
+				var_menu=!var_menu;
+				render();
+			}
 		}
 #endif
 		break;
@@ -36496,7 +36543,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								}
 							}
 						}
-					}
+					}//end lexer loop
 					it->endLineNo=lineNo-((bound==0?0:bounds[bound-1].first)<kEnd&&text[kEnd-1]=='\n');
 					if(exprBound)
 					{

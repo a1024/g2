@@ -239,13 +239,13 @@ namespace		MP
 	
 	inline Comp inv(Comp const &x)
 	{
-		Real inv_mag=1/abs(x);
-		return Comp(x.r*inv_mag, -x.i*inv_mag);
+		Real inv_abs2=1/(x.r*x.r+x.i*x.i);
+		return Comp(x.r*inv_abs2, -x.i*inv_abs2);
 	}
 	inline Quat inv(Quat const &x)
 	{
-		Real inv_mag=1/abs(x);
-		return Quat(x.r*inv_mag, -x.i*inv_mag, -x.j*inv_mag, -x.k*inv_mag);
+		Real inv_abs2=1/(x.r*x.r+x.i*x.i+x.j*x.j+x.k*x.k);
+		return Quat(x.r*inv_abs2, -x.i*inv_abs2, -x.j*inv_abs2, -x.k*inv_abs2);
 	}
 	void  r_r_divide				(Quat &r, Quat const &x)				{r=1/(Real)x;}
 	void  c_c_divide				(Quat &r, Quat const &x)				{r=inv((Comp)x);}
