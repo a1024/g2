@@ -358,6 +358,7 @@ void		render();
 bool		_2d_drag_graph_not_window=false, _dangerous_code=false, _3d_stretch_move_cam=true, _3d_shift_move_cam=false, _3d_zoom_move_cam=false;
 bool		commasInNumbers=false, commentIncompleteScope=true, nestedComments=false, colorComments=false, SSE4_1=false;
 bool		fullscreen=false, showBenchmark=false, showLastModeOnIdle=true, function_timeout=true, contextHelp=false;
+int			test_contourMethod=1;
 int			oldMouse, cursorB, cursorEx, prevCursorEx=0;
 double		logscale_factor=0.1;//0.1 0.2 1
 enum		{ARCH_IA32, ARCH_MMX, ARCH_SSE, ARCH_SSE2, ARCH_SSE3, ARCH_SSE3S, ARCH_SSE4_1, ARCH_SSE4_2, ARCH_AVX, ARCH_AVX2};
@@ -11388,7 +11389,7 @@ void Compile::compile_expression_global(Expression &expr)
 		else if(expr.ni.size())//
 			expr.resultTerm=expr.ni.rbegin()->result;
 		else//
-			expr.resultTerm==0;
+			expr.resultTerm=0;
 		predictedMathSet=term[expr.resultTerm].mathSet;
 		if(!expr.nISD)//n0d - use numeric instructions on original data
 		{
@@ -23703,19 +23704,34 @@ namespace	modes
 		};
 		void solve_quadratic(double a, double b, double c, std::complex<double> &r1, std::complex<double> &r2)
 		{
+			const double lim=1e10;
 			if(a==0)
 				r1=-c/b, r2=_HUGE;
+			else if(std::abs(b)/std::abs(a)>=lim&&std::abs(c)/std::abs(a)>=lim)
+				r1=-c/b, r2=-b/a;
 			else
 			{
-				if(std::abs(b)/std::abs(a)>=1e10&&std::abs(c)/std::abs(a)>=1e10)
-					r1=-c/b, r2=-b/a;
+				b/=a, c/=a;
+				double first=-0.5*b, disc=b*b-4*c;
+				if(disc<0)
+				{
+					disc=sqrt(-disc)*0.5;
+					r1.real(first), r1.imag(disc);
+					r1.real(first), r1.imag(-disc);
+				}
+				else if(disc==0)
+				{
+					r1.real(first), r1.imag(0);
+					r2=r1;
+				}
 				else
 				{
-					b/=a, c/=a;
-					double first=-b;
-					std::complex<double> disc=std::sqrt(b*b-4*c);
-					r1=.5*(first+disc), r2=.5*(first-disc);
+					disc=sqrt(disc)*0.5;
+					r1.real(first+disc), r1.imag(0);
+					r2.real(first-disc), r2.imag(0);
 				}
+				//std::complex<double> disc=std::sqrt(b*b-4*c);
+				//r1=.5*(first+disc), r2=.5*(first-disc);
 			}
 		}
 		void contour_2d_grid(int e, int c, std::unordered_map<int, std::list<std::pair<contour::Double_X_Y, contour::Double_X_Y>>> &contour, int Xplaces, int Yplaces, Scale &xs, Scale &ys, Scale &zs, double AR_Y)
@@ -30567,6 +30583,37 @@ namespace	modes
 		auto &str=LOL_1.str();
 		copy_to_clipboard(str.c_str(), str.size());
 	}
+	void test_drawcube(_3D &_3d, double x1, double x2, double y1, double y2, double z1, double z2)
+	{
+		_3d.line(dvec3(x1, y1, z1), dvec3(x2, y1, z1));//bottom
+		_3d.line(dvec3(x1, y2, z1), dvec3(x2, y2, z1));
+		_3d.line(dvec3(x1, y1, z1), dvec3(x1, y2, z1));
+		_3d.line(dvec3(x2, y1, z1), dvec3(x2, y2, z1));
+
+		_3d.line(dvec3(x1, y1, z1), dvec3(x1, y1, z2));//vertical edges
+		_3d.line(dvec3(x1, y2, z1), dvec3(x1, y2, z2));
+		_3d.line(dvec3(x2, y1, z1), dvec3(x2, y1, z2));
+		_3d.line(dvec3(x2, y2, z1), dvec3(x2, y2, z2));
+
+		_3d.line(dvec3(x1, y1, z2), dvec3(x2, y1, z2));//top
+		_3d.line(dvec3(x1, y2, z2), dvec3(x2, y2, z2));
+		_3d.line(dvec3(x1, y1, z2), dvec3(x1, y2, z2));
+		_3d.line(dvec3(x2, y1, z2), dvec3(x2, y2, z2));
+	}
+	void test_drawtetrahedra(_3D &_3d, double x1, double x2, double y1, double y2, double z1, double z2)
+	{
+		_3d.line(dvec3(x1, y1, z1), dvec3(x2, y2, z1));//bottom
+		_3d.line(dvec3(x1, y1, z2), dvec3(x2, y2, z2));//top
+
+		_3d.line(dvec3(x1, y1, z1), dvec3(x2, y1, z2));//south
+		_3d.line(dvec3(x1, y2, z1), dvec3(x2, y2, z2));//north
+
+		_3d.line(dvec3(x1, y1, z1), dvec3(x1, y2, z2));//west
+		_3d.line(dvec3(x2, y1, z1), dvec3(x2, y2, z2));//east
+
+		_3d.line(dvec3(x1, y1, z1), dvec3(x2, y2, z2));//diagonal
+	}
+	int test_nvertices=0, test_ntriangles=0;
 	class		Color_3D:public _3D_Mode
 	{
 	public:
@@ -30624,6 +30671,7 @@ namespace	modes
 				GL2_L3D::begin();
 			_3d.lineColor=0xFF00FF00;
 			int k2=0;
+			test_nvertices=test_ntriangles=0;
 			for(auto cit=contour.begin();cit!=contour.end();++cit)//for each level
 			{
 				auto &L=cit->first;//level in ticks
@@ -30636,13 +30684,14 @@ namespace	modes
 					color=0x00D0D0D0;
 			//	int idx=0;
 				auto &S=cit->second;
+				test_nvertices+=S.vertices.size(), test_ntriangles+=S.indices.size()/3;//
 			//	_3d.render_solid_transparent(vec3(10, 0, 0), vec3(0, 10, 0), vec3(0, 0, 10), color);
 				if(usingOpenGL)
 				{
 				//	++k2;
 				//	if(k2<4)
 				//		continue;
-					GL2_L3D::push_surface(&S.vertices[0], S.vertices.size(), &S.indices[0], S.indices.size(), swap_rb(color));
+					GL2_L3D::push_surface(S.vertices.data(), S.vertices.size(), S.indices.data(), S.indices.size(), swap_rb(color));
 				//	break;
 				}
 				else// if(RL==-600)//
@@ -30720,6 +30769,118 @@ namespace	modes
 					//	//_3d.line(p->X3, p->Y3, p->Z3, p->X1, p->Y1, p->Z1);
 					//}
 				}
+				_3d.lineColor=0xFFFF00FF;//draw 3D grid
+				double
+					Xstart=xs.VX-xs.DX*0.5, Xend=xs.VX+xs.DX*0.5, Xsample=xs.DX/xs.Xplaces,
+					Ystart=ys.VX-ys.DX*0.5, Yend=ys.VX+ys.DX*0.5, Ysample=ys.DX/ys.Xplaces,
+					Zstart=zs.VX-zs.DX*0.5, Zend=zs.VX+zs.DX*0.5, Zsample=zs.DX/zs.Xplaces;
+				for(int ky=0;ky<=Yplaces;++ky)
+				{
+					for(int kx=0;kx<=Xplaces;++kx)//draw vertical lines
+					{
+						double x=Xstart+kx*Xsample, y=Ystart+ky*Ysample;
+						_3d.line(dvec3(x, y, Zstart), dvec3(x, y, Zend));
+					}
+				}
+				for(int kz=0;kz<=Zplaces;++kz)
+				{
+					for(int kx=0;kx<=Xplaces;++kx)//draw N-S lines
+					{
+						double x=Xstart+kx*Xsample, z=Zstart+kz*Zsample;
+						_3d.line(dvec3(x, Ystart, z), dvec3(x, Yend, z));
+					}
+				}
+				for(int kz=0;kz<=Zplaces;++kz)
+				{
+					for(int ky=0;ky<=Yplaces;++ky)//draw E-W lines
+					{
+						double y=Ystart+ky*Ysample, z=Zstart+kz*Zsample;
+						_3d.line(dvec3(Xstart, y, z), dvec3(Xend, y, z));
+					}
+				}
+				//test
+#if 0
+				double x=xs.VX, y=ys.VX, z=zs.VX+zs.DX;
+				//draw cube
+				_3d.lineColor=0xFF0000FF;//red
+				test_drawcube(_3d, x-1, x+1, y-1, y+1, z-1, z+1);
+				//_3d.line(dvec3(x-1, y-1, z-1), dvec3(x+1, y-1, z-1));//bottom
+				//_3d.line(dvec3(x-1, y+1, z-1), dvec3(x+1, y+1, z-1));
+				//_3d.line(dvec3(x-1, y-1, z-1), dvec3(x-1, y+1, z-1));
+				//_3d.line(dvec3(x+1, y-1, z-1), dvec3(x+1, y+1, z-1));
+				//
+				//_3d.line(dvec3(x-1, y-1, z-1), dvec3(x-1, y-1, z+1));//vertical edges
+				//_3d.line(dvec3(x-1, y+1, z-1), dvec3(x-1, y+1, z+1));
+				//_3d.line(dvec3(x+1, y-1, z-1), dvec3(x+1, y-1, z+1));
+				//_3d.line(dvec3(x+1, y+1, z-1), dvec3(x+1, y+1, z+1));
+				//
+				//_3d.line(dvec3(x-1, y-1, z+1), dvec3(x+1, y-1, z+1));//top
+				//_3d.line(dvec3(x-1, y+1, z+1), dvec3(x+1, y+1, z+1));
+				//_3d.line(dvec3(x-1, y-1, z+1), dvec3(x-1, y+1, z+1));
+				//_3d.line(dvec3(x+1, y-1, z+1), dvec3(x+1, y+1, z+1));
+
+				//draw x's on cube faces
+				_3d.lineColor=0xFF00FF00;//green
+				_3d.line(dvec3(x-1, y-1, z-1), dvec3(x+1, y+1, z-1));//bottom
+				_3d.line(dvec3(x-1, y+1, z-1), dvec3(x+1, y-1, z-1));
+				_3d.line(dvec3(x-1, y-1, z+1), dvec3(x+1, y+1, z+1));//top
+				_3d.line(dvec3(x-1, y+1, z+1), dvec3(x+1, y-1, z+1));
+
+				_3d.line(dvec3(x-1, y-1, z-1), dvec3(x+1, y-1, z+1));//south
+				_3d.line(dvec3(x-1, y-1, z+1), dvec3(x+1, y-1, z-1));
+				_3d.line(dvec3(x-1, y+1, z-1), dvec3(x+1, y+1, z+1));//north
+				_3d.line(dvec3(x-1, y+1, z+1), dvec3(x+1, y+1, z-1));
+
+				_3d.line(dvec3(x-1, y-1, z-1), dvec3(x-1, y+1, z+1));//west
+				_3d.line(dvec3(x-1, y+1, z-1), dvec3(x-1, y-1, z+1));
+				_3d.line(dvec3(x+1, y-1, z-1), dvec3(x+1, y+1, z+1));//east
+				_3d.line(dvec3(x+1, y+1, z-1), dvec3(x+1, y-1, z+1));
+
+				//draw tetrahedra
+				_3d.lineColor=0xFFFF0000;//blue
+				_3d.line(dvec3(x-1, y, z), dvec3(x, y-1, z));//xy
+				_3d.line(dvec3(x, y-1, z), dvec3(x+1, y, z));
+				_3d.line(dvec3(x+1, y, z), dvec3(x, y+1, z));
+				_3d.line(dvec3(x, y+1, z), dvec3(x-1, y, z));
+
+				_3d.line(dvec3(x, y-1, z), dvec3(x, y, z-1));//yz
+				_3d.line(dvec3(x, y, z-1), dvec3(x, y+1, z));
+				_3d.line(dvec3(x, y+1, z), dvec3(x, y, z+1));
+				_3d.line(dvec3(x, y, z+1), dvec3(x, y-1, z));
+
+				_3d.line(dvec3(x, y, z-1), dvec3(x-1, y, z));//xz
+				_3d.line(dvec3(x-1, y, z), dvec3(x, y, z+1));
+				_3d.line(dvec3(x, y, z+1), dvec3(x+1, y, z));
+				_3d.line(dvec3(x+1, y, z), dvec3(x, y, z-1));
+
+				_3d.lineColor=0xFFFF00FF;//pink
+				_3d.line(dvec3(x-1, y, z), dvec3(x+1, y, z));
+				_3d.line(dvec3(x, y-1, z), dvec3(x, y+1, z));
+				_3d.line(dvec3(x, y, z-1), dvec3(x, y, z+1));
+
+				z=zs.VX+zs.DX*1.5;
+				//draw cube
+				_3d.lineColor=0xFF0000FF;//red
+				test_drawcube		(_3d, x-1, x, y-1, y, z-1, z);
+				test_drawcube		(_3d, x+1, x, y-1, y, z-1, z);
+				test_drawcube		(_3d, x-1, x, y+1, y, z-1, z);
+				test_drawcube		(_3d, x+1, x, y+1, y, z-1, z);
+				test_drawcube		(_3d, x-1, x, y-1, y, z+1, z);
+				test_drawcube		(_3d, x+1, x, y-1, y, z+1, z);
+				test_drawcube		(_3d, x-1, x, y+1, y, z+1, z);
+				test_drawcube		(_3d, x+1, x, y+1, y, z+1, z);
+				
+				_3d.lineColor=0xFF00FF00;//green
+				test_drawtetrahedra	(_3d, x-1, x, y-1, y, z-1, z);
+				test_drawtetrahedra	(_3d, x+1, x, y-1, y, z-1, z);
+				test_drawtetrahedra	(_3d, x-1, x, y+1, y, z-1, z);
+				test_drawtetrahedra	(_3d, x+1, x, y+1, y, z-1, z);
+				test_drawtetrahedra	(_3d, x-1, x, y-1, y, z+1, z);
+				test_drawtetrahedra	(_3d, x+1, x, y-1, y, z+1, z);
+				test_drawtetrahedra	(_3d, x-1, x, y+1, y, z+1, z);
+				test_drawtetrahedra	(_3d, x+1, x, y+1, y, z+1, z);
+#endif
+				//end test
 			}
 			else
 			{
@@ -31014,75 +31175,153 @@ namespace	modes
 
 						V_DNW=ndr[idx+Xplaces],				V_DNE=ndr[idx+Xplaces+1];
 						V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
+						if(test_contourMethod==2)//5 tetrahedra
+						{
+							Double_X_Y_Z_V//z: +Up/-Down	y: +North/-South	x: +East/-West
+								P_UNW(X_W, Y_N, Z_U, V_UNW),	P_UNE(X_E, Y_N, Z_U, V_UNE),
+								P_USW(X_W, Y_S, Z_U, V_USW),	P_USE(X_E, Y_S, Z_U, V_USE),
 
-						Double_X_Y_Z_V//z: +Up/-Down	y: +North/-South	x: +East/-West
-							P_UNW(X_W, Y_N, Z_U, V_UNW),							P_UNm(X_m, Y_N, Z_U, (V_UNW+V_UNE)*0.5),										P_UNE(X_E, Y_N, Z_U, V_UNE),
-							P_UmW(X_W, Y_m, Z_U, (V_UNW+V_USW)*0.5),				P_Umm(X_m, Y_m, Z_U, (V_UNW+V_UNE+V_USW+V_USE)*0.25),							P_UmE(X_E, Y_m, Z_U, (V_UNE+V_USE)*0.5),
-							P_USW(X_W, Y_S, Z_U, V_USW),							P_USm(X_m, Y_S, Z_U, (V_USW+V_USE)*0.5),										P_USE(X_E, Y_S, Z_U, V_USE),
+								P_DNW(X_W, Y_N, Z_D, V_DNW),	P_DNE(X_E, Y_N, Z_D, V_DNE),
+								P_DSW(X_W, Y_S, Z_D, V_DSW),	P_DSE(X_E, Y_S, Z_D, V_DSE);
+							if(vx&1^vy&1^vz&1)//put upside-down each time
+							{
+								cutTrap(P_DSW, P_DNE, P_UNW, P_USE);
+								cutTrap(P_DSW, P_DNE, P_UNW, P_DNW);
+								cutTrap(P_DSW, P_USW, P_UNW, P_USE);
+								cutTrap(P_DSW, P_DNE, P_DSE, P_USE);
+								cutTrap(P_UNE, P_DNE, P_UNW, P_USE);
+							}
+							else
+							{
+								cutTrap(P_USW, P_UNE, P_DNW, P_DSE);
+								cutTrap(P_USW, P_UNE, P_DNW, P_UNW);
+								cutTrap(P_USW, P_DSW, P_DNW, P_DSE);
+								cutTrap(P_USW, P_UNE, P_USE, P_DSE);
+								cutTrap(P_DNE, P_UNE, P_DNW, P_DSE);
+							}
+						}
+						else if(test_contourMethod)//28 tetrahedra
+						{
+							Double_X_Y_Z_V//z: +Up/-Down	y: +North/-South	x: +East/-West
+								P_UNW(X_W, Y_N, Z_U, V_UNW),						/*	P_UNm(X_m, Y_N, Z_U, (V_UNW+V_UNE)*0.5),	*/									P_UNE(X_E, Y_N, Z_U, V_UNE),
+							/*	P_UmW(X_W, Y_m, Z_U, (V_UNW+V_USW)*0.5),	*/			P_Umm(X_m, Y_m, Z_U, (V_UNW+V_UNE+V_USW+V_USE)*0.25),						/*	P_UmE(X_E, Y_m, Z_U, (V_UNE+V_USE)*0.5),*/
+								P_USW(X_W, Y_S, Z_U, V_USW),						/*	P_USm(X_m, Y_S, Z_U, (V_USW+V_USE)*0.5),	*/									P_USE(X_E, Y_S, Z_U, V_USE),
 
-							P_mNW(X_W, Y_N, Z_m, (V_UNW+V_DNW)*0.5),				P_mNm(X_m, Y_N, Z_m, (V_UNW+V_DNW+V_UNE+V_DNE)*0.25),							P_mNE(X_E, Y_N, Z_m, (V_UNE+V_DNE)*0.5),
-							P_mmW(X_W, Y_m, Z_m, (V_UNW+V_DNW+V_DSW+V_USW)*0.25),	P_mmm(X_m, Y_m, Z_m, (V_UNW+V_DNW+V_DSW+V_USW+V_UNE+V_DNE+V_USE+V_DSE)*0.125),	P_mmE(X_E, Y_m, Z_m, (V_UNE+V_DNE+V_USE+V_DSE)*0.25),
-							P_mSW(X_W, Y_S, Z_m, (V_DSW+V_USW)*0.5),				P_mSm(X_m, Y_S, Z_m, (V_DSW+V_USW+V_USE+V_DSE)*0.25),							P_mSE(X_E, Y_S, Z_m, (V_USE+V_DSE)*0.5),
+							/*	P_mNW(X_W, Y_N, Z_m, (V_UNW+V_DNW)*0.5),	*/			P_mNm(X_m, Y_N, Z_m, (V_UNW+V_DNW+V_UNE+V_DNE)*0.25),						/*	P_mNE(X_E, Y_N, Z_m, (V_UNE+V_DNE)*0.5),*/
+								P_mmW(X_W, Y_m, Z_m, (V_UNW+V_DNW+V_DSW+V_USW)*0.25),	P_mmm(X_m, Y_m, Z_m, (V_UNW+V_DNW+V_DSW+V_USW+V_UNE+V_DNE+V_USE+V_DSE)*0.125),	P_mmE(X_E, Y_m, Z_m, (V_UNE+V_DNE+V_USE+V_DSE)*0.25),
+							/*	P_mSW(X_W, Y_S, Z_m, (V_DSW+V_USW)*0.5),	*/			P_mSm(X_m, Y_S, Z_m, (V_DSW+V_USW+V_USE+V_DSE)*0.25),						/*	P_mSE(X_E, Y_S, Z_m, (V_USE+V_DSE)*0.5),*/
 
-							P_DNW(X_W, Y_N, Z_D, V_DNW),							P_DNm(X_m, Y_N, Z_D, (V_DNW+V_DNE)*0.5),										P_DNE(X_E, Y_N, Z_D, V_DNE),
-							P_DmW(X_W, Y_m, Z_D, (V_DNW+V_DSW)*0.5),				P_Dmm(X_m, Y_m, Z_D, (V_DNW+V_DSW+V_DNE+V_DSE)*0.25),							P_DmE(X_E, Y_m, Z_D, (V_DNE+V_DSE)*0.5),
-							P_DSW(X_W, Y_S, Z_D, V_DSW),							P_DSm(X_m, Y_S, Z_D, (V_DSW+V_DSE)*0.5),										P_DSE(X_E, Y_S, Z_D, V_DSE);
+								P_DNW(X_W, Y_N, Z_D, V_DNW),						/*	P_DNm(X_m, Y_N, Z_D, (V_DNW+V_DNE)*0.5),	*/									P_DNE(X_E, Y_N, Z_D, V_DNE),
+							/*	P_DmW(X_W, Y_m, Z_D, (V_DNW+V_DSW)*0.5),	*/			P_Dmm(X_m, Y_m, Z_D, (V_DNW+V_DSW+V_DNE+V_DSE)*0.25),						/*	P_DmE(X_E, Y_m, Z_D, (V_DNE+V_DSE)*0.5),*/
+								P_DSW(X_W, Y_S, Z_D, V_DSW),						/*	P_DSm(X_m, Y_S, Z_D, (V_DSW+V_DSE)*0.5),	*/									P_DSE(X_E, Y_S, Z_D, V_DSE);
+							cutTrap(P_USW, P_DSW, P_mmW, P_mSm);
+							cutTrap(P_UNW, P_USW, P_mmW, P_Umm);
+							cutTrap(P_DNW, P_UNW, P_mmW, P_mNm);
+							cutTrap(P_DSW, P_DNW, P_mmW, P_Dmm);
 
-						cutTrap(P_mSW, P_mSm, P_DSW, P_mmm);
-						cutTrap(P_mSm, P_DSm, P_DSW, P_mmm);
-						cutTrap(P_DSm, P_Dmm, P_DSW, P_mmm);
-						cutTrap(P_Dmm, P_DmW, P_DSW, P_mmm);
-						cutTrap(P_DmW, P_mmW, P_DSW, P_mmm);
-						cutTrap(P_mmW, P_mSW, P_DSW, P_mmm);
+							cutTrap(P_USE, P_DSE, P_mmE, P_mSm);
+							cutTrap(P_UNE, P_USE, P_mmE, P_Umm);
+							cutTrap(P_DNE, P_UNE, P_mmE, P_mNm);
+							cutTrap(P_DSE, P_DNE, P_mmE, P_Dmm);
+
+							cutTrap(P_DNE, P_DNW, P_mNm, P_Dmm);
+							cutTrap(P_DSE, P_DSW, P_Dmm, P_mSm);
+							cutTrap(P_USE, P_USW, P_mSm, P_Umm);
+							cutTrap(P_UNE, P_UNW, P_Umm, P_mNm);
+
+							cutTrap(P_UNW, P_mmW, P_Umm, P_mNm);
+							cutTrap(P_USW, P_Umm, P_mmW, P_mSm);
+							cutTrap(P_USE, P_mSm, P_mmE, P_Umm);
+							cutTrap(P_UNE, P_mmE, P_Umm, P_mNm);
+
+							cutTrap(P_DNW, P_mmW, P_Dmm, P_mNm);
+							cutTrap(P_DSW, P_Dmm, P_mmW, P_mSm);
+							cutTrap(P_DSE, P_mSm, P_mmE, P_Dmm);
+							cutTrap(P_DNE, P_mmE, P_Dmm, P_mNm);
+
+							cutTrap(P_mmm, P_mmW, P_Umm, P_mNm);
+							cutTrap(P_mmm, P_Umm, P_mmW, P_mSm);
+							cutTrap(P_mmm, P_mSm, P_mmE, P_Umm);
+							cutTrap(P_mmm, P_mmE, P_Umm, P_mNm);
+
+							cutTrap(P_mmm, P_mmW, P_Dmm, P_mNm);
+							cutTrap(P_mmm, P_Dmm, P_mmW, P_mSm);
+							cutTrap(P_mmm, P_mSm, P_mmE, P_Dmm);
+							cutTrap(P_mmm, P_mmE, P_Dmm, P_mNm);
+						}
+#if 1
+						else//48 tetrahedra
+						{
+							Double_X_Y_Z_V//z: +Up/-Down	y: +North/-South	x: +East/-West
+								P_UNW(X_W, Y_N, Z_U, V_UNW),							P_UNm(X_m, Y_N, Z_U, (V_UNW+V_UNE)*0.5),										P_UNE(X_E, Y_N, Z_U, V_UNE),
+								P_UmW(X_W, Y_m, Z_U, (V_UNW+V_USW)*0.5),				P_Umm(X_m, Y_m, Z_U, (V_UNW+V_UNE+V_USW+V_USE)*0.25),							P_UmE(X_E, Y_m, Z_U, (V_UNE+V_USE)*0.5),
+								P_USW(X_W, Y_S, Z_U, V_USW),							P_USm(X_m, Y_S, Z_U, (V_USW+V_USE)*0.5),										P_USE(X_E, Y_S, Z_U, V_USE),
+
+								P_mNW(X_W, Y_N, Z_m, (V_UNW+V_DNW)*0.5),				P_mNm(X_m, Y_N, Z_m, (V_UNW+V_DNW+V_UNE+V_DNE)*0.25),							P_mNE(X_E, Y_N, Z_m, (V_UNE+V_DNE)*0.5),
+								P_mmW(X_W, Y_m, Z_m, (V_UNW+V_DNW+V_DSW+V_USW)*0.25),	P_mmm(X_m, Y_m, Z_m, (V_UNW+V_DNW+V_DSW+V_USW+V_UNE+V_DNE+V_USE+V_DSE)*0.125),	P_mmE(X_E, Y_m, Z_m, (V_UNE+V_DNE+V_USE+V_DSE)*0.25),
+								P_mSW(X_W, Y_S, Z_m, (V_DSW+V_USW)*0.5),				P_mSm(X_m, Y_S, Z_m, (V_DSW+V_USW+V_USE+V_DSE)*0.25),							P_mSE(X_E, Y_S, Z_m, (V_USE+V_DSE)*0.5),
+
+								P_DNW(X_W, Y_N, Z_D, V_DNW),							P_DNm(X_m, Y_N, Z_D, (V_DNW+V_DNE)*0.5),										P_DNE(X_E, Y_N, Z_D, V_DNE),
+								P_DmW(X_W, Y_m, Z_D, (V_DNW+V_DSW)*0.5),				P_Dmm(X_m, Y_m, Z_D, (V_DNW+V_DSW+V_DNE+V_DSE)*0.25),							P_DmE(X_E, Y_m, Z_D, (V_DNE+V_DSE)*0.5),
+								P_DSW(X_W, Y_S, Z_D, V_DSW),							P_DSm(X_m, Y_S, Z_D, (V_DSW+V_DSE)*0.5),										P_DSE(X_E, Y_S, Z_D, V_DSE);
+
+							cutTrap(P_mSW, P_mSm, P_DSW, P_mmm);
+							cutTrap(P_mSm, P_DSm, P_DSW, P_mmm);
+							cutTrap(P_DSm, P_Dmm, P_DSW, P_mmm);
+							cutTrap(P_Dmm, P_DmW, P_DSW, P_mmm);
+							cutTrap(P_DmW, P_mmW, P_DSW, P_mmm);
+							cutTrap(P_mmW, P_mSW, P_DSW, P_mmm);
 						
-						cutTrap(P_mSE, P_mSm, P_DSE, P_mmm);
-						cutTrap(P_mSm, P_DSm, P_DSE, P_mmm);
-						cutTrap(P_DSm, P_Dmm, P_DSE, P_mmm);
-						cutTrap(P_Dmm, P_DmE, P_DSE, P_mmm);
-						cutTrap(P_DmE, P_mmE, P_DSE, P_mmm);
-						cutTrap(P_mmE, P_mSE, P_DSE, P_mmm);
+							cutTrap(P_mSE, P_mSm, P_DSE, P_mmm);
+							cutTrap(P_mSm, P_DSm, P_DSE, P_mmm);
+							cutTrap(P_DSm, P_Dmm, P_DSE, P_mmm);
+							cutTrap(P_Dmm, P_DmE, P_DSE, P_mmm);
+							cutTrap(P_DmE, P_mmE, P_DSE, P_mmm);
+							cutTrap(P_mmE, P_mSE, P_DSE, P_mmm);
 						
-						cutTrap(P_mNW, P_mNm, P_DNW, P_mmm);
-						cutTrap(P_mNm, P_DNm, P_DNW, P_mmm);
-						cutTrap(P_DNm, P_Dmm, P_DNW, P_mmm);
-						cutTrap(P_Dmm, P_DmW, P_DNW, P_mmm);
-						cutTrap(P_DmW, P_mmW, P_DNW, P_mmm);
-						cutTrap(P_mmW, P_mNW, P_DNW, P_mmm);
+							cutTrap(P_mNW, P_mNm, P_DNW, P_mmm);
+							cutTrap(P_mNm, P_DNm, P_DNW, P_mmm);
+							cutTrap(P_DNm, P_Dmm, P_DNW, P_mmm);
+							cutTrap(P_Dmm, P_DmW, P_DNW, P_mmm);
+							cutTrap(P_DmW, P_mmW, P_DNW, P_mmm);
+							cutTrap(P_mmW, P_mNW, P_DNW, P_mmm);
 						
-						cutTrap(P_mNE, P_mNm, P_DNE, P_mmm);
-						cutTrap(P_mNm, P_DNm, P_DNE, P_mmm);
-						cutTrap(P_DNm, P_Dmm, P_DNE, P_mmm);
-						cutTrap(P_Dmm, P_DmE, P_DNE, P_mmm);
-						cutTrap(P_DmE, P_mmE, P_DNE, P_mmm);
-						cutTrap(P_mmE, P_mNE, P_DNE, P_mmm);
+							cutTrap(P_mNE, P_mNm, P_DNE, P_mmm);
+							cutTrap(P_mNm, P_DNm, P_DNE, P_mmm);
+							cutTrap(P_DNm, P_Dmm, P_DNE, P_mmm);
+							cutTrap(P_Dmm, P_DmE, P_DNE, P_mmm);
+							cutTrap(P_DmE, P_mmE, P_DNE, P_mmm);
+							cutTrap(P_mmE, P_mNE, P_DNE, P_mmm);
 						
-						cutTrap(P_mSW, P_mSm, P_USW, P_mmm);
-						cutTrap(P_mSm, P_USm, P_USW, P_mmm);
-						cutTrap(P_USm, P_Umm, P_USW, P_mmm);
-						cutTrap(P_Umm, P_UmW, P_USW, P_mmm);
-						cutTrap(P_UmW, P_mmW, P_USW, P_mmm);
-						cutTrap(P_mmW, P_mSW, P_USW, P_mmm);
+							cutTrap(P_mSW, P_mSm, P_USW, P_mmm);
+							cutTrap(P_mSm, P_USm, P_USW, P_mmm);
+							cutTrap(P_USm, P_Umm, P_USW, P_mmm);
+							cutTrap(P_Umm, P_UmW, P_USW, P_mmm);
+							cutTrap(P_UmW, P_mmW, P_USW, P_mmm);
+							cutTrap(P_mmW, P_mSW, P_USW, P_mmm);
 						
-						cutTrap(P_mSE, P_mSm, P_USE, P_mmm);
-						cutTrap(P_mSm, P_USm, P_USE, P_mmm);
-						cutTrap(P_USm, P_Umm, P_USE, P_mmm);
-						cutTrap(P_Umm, P_UmE, P_USE, P_mmm);
-						cutTrap(P_UmE, P_mmE, P_USE, P_mmm);
-						cutTrap(P_mmE, P_mSE, P_USE, P_mmm);
+							cutTrap(P_mSE, P_mSm, P_USE, P_mmm);
+							cutTrap(P_mSm, P_USm, P_USE, P_mmm);
+							cutTrap(P_USm, P_Umm, P_USE, P_mmm);
+							cutTrap(P_Umm, P_UmE, P_USE, P_mmm);
+							cutTrap(P_UmE, P_mmE, P_USE, P_mmm);
+							cutTrap(P_mmE, P_mSE, P_USE, P_mmm);
 						
-						cutTrap(P_mNW, P_mNm, P_UNW, P_mmm);
-						cutTrap(P_mNm, P_UNm, P_UNW, P_mmm);
-						cutTrap(P_UNm, P_Umm, P_UNW, P_mmm);
-						cutTrap(P_Umm, P_UmW, P_UNW, P_mmm);
-						cutTrap(P_UmW, P_mmW, P_UNW, P_mmm);
-						cutTrap(P_mmW, P_mNW, P_UNW, P_mmm);
+							cutTrap(P_mNW, P_mNm, P_UNW, P_mmm);
+							cutTrap(P_mNm, P_UNm, P_UNW, P_mmm);
+							cutTrap(P_UNm, P_Umm, P_UNW, P_mmm);
+							cutTrap(P_Umm, P_UmW, P_UNW, P_mmm);
+							cutTrap(P_UmW, P_mmW, P_UNW, P_mmm);
+							cutTrap(P_mmW, P_mNW, P_UNW, P_mmm);
 						
-						cutTrap(P_mNE, P_mNm, P_UNE, P_mmm);
-						cutTrap(P_mNm, P_UNm, P_UNE, P_mmm);
-						cutTrap(P_UNm, P_Umm, P_UNE, P_mmm);
-						cutTrap(P_Umm, P_UmE, P_UNE, P_mmm);
-						cutTrap(P_UmE, P_mmE, P_UNE, P_mmm);
-						cutTrap(P_mmE, P_mNE, P_UNE, P_mmm);
+							cutTrap(P_mNE, P_mNm, P_UNE, P_mmm);
+							cutTrap(P_mNm, P_UNm, P_UNE, P_mmm);
+							cutTrap(P_UNm, P_Umm, P_UNE, P_mmm);
+							cutTrap(P_Umm, P_UmE, P_UNE, P_mmm);
+							cutTrap(P_UmE, P_mmE, P_UNE, P_mmm);
+							cutTrap(P_mmE, P_mNE, P_UNE, P_mmm);
+						}
+#endif
 					}
 				}
 			}
@@ -32903,11 +33142,17 @@ namespace	modes
 				_3d.text_show();
 			//	_3d.text_dump();
 			prof_add("3D text");
+		//	if(!clearScreen)
 			if(showBenchmark)
 			{
 				int bkMode=setBkMode(OPAQUE);
-				int xpos=w-200, ypos=h>>1;
-				GUIPrint(xpos, ypos, "%d*%d*%d", Xplaces, Yplaces, Zplaces), ypos+=16;
+				int xpos=w-300, ypos=h>>1;
+				GUIPrint(xpos, ypos, "%dx%dx%d", Xplaces, Yplaces, Zplaces), ypos+=16;
+				if(contourOn)
+				{
+					GUIPrint(xpos, ypos, "contour: %d tetrahedra", test_contourMethod==2?5:test_contourMethod?28:48), ypos+=16;
+					GUIPrint(xpos, ypos, "%d vertices, %d triangles", test_nvertices, test_ntriangles), ypos+=16;
+				}
 				setBkMode(bkMode);
 			}
 			if(kb_VK_F6_msg||kb[VK_F6])
@@ -33000,6 +33245,7 @@ namespace	modes
 				"X/Y/Z 6: HPF x/y/z",
 				"0: reset operations",
 				"`: contour",
+				"F3: toggle contour method",
 				"F : toggle contour wireframe",//
 				"Tab: toggle OpenGL",
 				"Esc: back to text editor"
@@ -35256,7 +35502,10 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 				render();
 			}
 			break;
-		case VK_F3:
+		case VK_F3://test: toggle contour method
+			test_contourMethod=(test_contourMethod+1)%3;
+			modes::c3d.toSolve=true, modes::c3d.shiftOnly=0;
+			render();
 			break;
 		case VK_F4:
 			if(kb[VK_MENU])//alt F4 quit
