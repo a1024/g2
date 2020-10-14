@@ -27,6 +27,14 @@
 const int			g_buf_size=0x100000;//1MB
 char				g_buf[g_buf_size]={};
 
+void				copy_to_clipboard(const char *a, int size)
+{
+	char *clipboard=(char*)LocalAlloc(LMEM_FIXED, (size+1)*sizeof(char));
+	memcpy(clipboard, a, (size+1)*sizeof(char));
+	clipboard[size]='\0';
+	OpenClipboard(ghWnd), EmptyClipboard(), SetClipboardData(CF_OEMTEXT, (void*)clipboard), CloseClipboard();
+}
+
 char				first_error_msg[e_msg_size]={}, latest_error_msg[e_msg_size]={};
 void				messageboxa(HWND hWnd, const char *title, const char *format, ...)
 {
@@ -35,6 +43,7 @@ void				messageboxa(HWND hWnd, const char *title, const char *format, ...)
 }
 void 				log_error(const char *file, int line, const char *format, ...)
 {
+	bool firsttime=first_error_msg[0]=='\0';
 	char *buf=first_error_msg[0]?latest_error_msg:first_error_msg;
 	va_list args;
 	va_start(args, format);
@@ -47,10 +56,11 @@ void 				log_error(const char *file, int line, const char *format, ...)
 //	int length=snprintf(buf, e_msg_size, "%s\n%s(%d)", g_buf, file, line);
 //	int length=snprintf(buf, e_msg_size, "%s(%d):\n\t%s", file, line, g_buf);
 	int length=sprintf_s(buf, e_msg_size, "%s(%d): %s", file+start, line, g_buf);
-	if(buf!=latest_error_msg)
+	if(firsttime)
+//	if(buf!=latest_error_msg)
 	{
 		memcpy(latest_error_msg, first_error_msg, length);
-		messageboxa(ghWnd, "Error", latest_error_msg);//
+		messageboxa(ghWnd, "Error", latest_error_msg);//redundant, since report_error/emergencyPrint prints both
 	}
 //	LOGE("%s", latest_error_msg);
 }

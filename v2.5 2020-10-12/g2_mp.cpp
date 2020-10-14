@@ -1310,11 +1310,11 @@ namespace		MP
 	void  r_r_beta					(Quat &r, Quat const &x)				{r=beta(x.r, x.r);}
 	void r_rr_beta					(Quat &r, Quat const &x, Quat const &y)	{r=beta(x.r, y.r);}
 	
-	void  r_r_cyl_bessel_j			(Quat &r, Quat const &x)				{r=besselj0(x.r);}
-	void r_rr_cyl_bessel_j			(Quat &r, Quat const &x, Quat const &y)	{r=besseljn(x.r.toLong(), y.r);}
+	void  r_r_bessel_j				(Quat &r, Quat const &x)				{r=besselj0(x.r);}
+	void r_rr_bessel_j				(Quat &r, Quat const &x, Quat const &y)	{r=besseljn(x.r.toLong(), y.r);}
 
-	void  r_r_cyl_neumann			(Quat &r, Quat const &x)				{r=bessely0(x.r);}
-	void r_rr_cyl_neumann			(Quat &r, Quat const &x, Quat const &y)	{r=besselyn(x.r.toLong(), y.r);}
+	void  r_r_bessel_y				(Quat &r, Quat const &x)				{r=bessely0(x.r);}
+	void r_rr_bessel_y				(Quat &r, Quat const &x, Quat const &y)	{r=besselyn(x.r.toLong(), y.r);}
 
 	inline Comp r_hankel1(Real x, Real y)
 	{

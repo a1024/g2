@@ -24,7 +24,7 @@
 char			*programpath=nullptr;//full path to program		//TODO: UNICODE
 const char		statefoldername[]="g2_state",
 				statefilename[]="state.txt",
-				*statedir=nullptr,//full path to the folder containing the state
+				*statedir=nullptr,//full path to the folder containing the state, ends with back slash
 				*statefilepath=nullptr;//full path to file containing the state data
 const char*		alloc_str(std::string const &str)
 {
@@ -37,10 +37,21 @@ const char*		alloc_str(std::string const &str)
 #define 		ALLOC_STR(pointer, str)		if(!(pointer))pointer=alloc_str(str)
 void			init_directories()
 {
-	programpath=(char*)malloc(MAX_PATH+1);
-	GetModuleFileNameA(nullptr, programpath, MAX_PATH);
-	ALLOC_STR(statedir, std::string(programpath)+'/'+statefoldername);
-	ALLOC_STR(statefilepath, std::string(statedir)+'/'+statefilename);
+	if(!programpath)
+	{
+		programpath=(char*)malloc(MAX_PATH+1);
+		GetModuleFileNameA(nullptr, programpath, MAX_PATH);
+		for(int k=strlen(programpath)-1;k>=0;--k)//remove executable name
+		{
+			if(programpath[k]=='/'||programpath[k]=='\\')
+			{
+				programpath[k+1]='\0';
+				break;
+			}
+		}
+	}
+	ALLOC_STR(statedir, std::string(programpath)+statefoldername+'\\');
+	ALLOC_STR(statefilepath, std::string(statedir)+statefilename);
 }
 
 int				saveFile(const char *addr, const char *data, size_t size, bool binary)
@@ -49,7 +60,7 @@ int				saveFile(const char *addr, const char *data, size_t size, bool binary)
 	FILE *file;
 	int error=fopen_s(&file, addr, mode);	//SYS_CHECK();//2: No such file or directory
 //	FILE *file=fopen(addr, binary?"wb":"w");	SYS_CHECK();
-	if(!file)
+	if(error)
 		LOGERROR("Failed to save %s", addr);
 	else
 	{
@@ -57,7 +68,9 @@ int				saveFile(const char *addr, const char *data, size_t size, bool binary)
 		if(byteswritten!=size)
 			LOGERROR("saved %d/%d bytes of %s", byteswritten, size, addr);
 		//	LOGERROR("Failed to save %s", addr);
-		fclose(file);	//SYS_CHECK();//2: No such file or directory
+		int error=fclose(file);
+		if(error==EOF)
+			SYS_CHECK();
 		return 0;
 	}
 #if 0
@@ -91,7 +104,9 @@ int				loadFile(const char *addr, char *&data, size_t &size, bool binary)
 		size_t bytesread=fread(data, 1, size, file);	SYS_CHECK();
 		if(bytesread!=size)
 			LOGERROR("Error reading %s", addr);
-		fclose(file);	SYS_CHECK();
+		int error=fclose(file);	SYS_CHECK();
+		if(error==EOF)
+			SYS_CHECK();
 		return 0;
 	}
 	size=0, data=nullptr;
@@ -103,21 +118,32 @@ int				loadFile(const char *addr, char *&data, size_t &size, bool binary)
 	{
 		SYS_CHECK();
 		size=info.st_size;
-		data=(char*)malloc(size*sizeof(unsigned char));
+		data=(char*)malloc((size+1)*sizeof(unsigned char));
+		data[size]='\0';
 		const char mode[]={'r', char(binary*'b'), '\0'};
 		FILE *file;
-		int error=fopen_s(&file, addr, mode);	SYS_CHECK();
+		int error=fopen_s(&file, addr, mode);
 	//	FILE *file=fopen(addr, binary?"rb":"r");
-		if(file)
+		if(error)
 		{
-			size_t bytesread=fread(data, 1, size, file);	SYS_CHECK();
-			if(bytesread!=size)
-				LOGERROR("Read %d/%d from %s", (int)bytesread, (int)size, addr);
-			fclose(file);	SYS_CHECK();
-			return 0;
+			SYS_CHECK();
+			free(data);
 		}
 		else
-			free(data);
+		{
+			size_t bytesread=fread(data, 1, size, file);	SYS_CHECK();
+			data[bytesread]='\0';
+			int nnl=0;//number of newlines
+			if(!binary)
+				for(unsigned k=0;k<bytesread;++k)
+					nnl+=data[k]=='\n';
+			if(bytesread+nnl!=size)//Windows newlines "\r\n" (2 chars) read as "\n" (1 char)
+				LOGERROR("Read %d/%d from %s", (int)bytesread, (int)size, addr);
+			int error=fclose(file);
+			if(error==EOF)
+				SYS_CHECK();
+			return 0;
+		}
 		//std::ifstream file(addr, std::ios::in|std::ios::binary);
 		//if(file.is_open())
 		//{
@@ -134,25 +160,37 @@ int				loadFile(const char *addr, char *&data, size_t &size, bool binary)
 void			directorycontents(const char *dirpath, std::vector<std::string> &ret)
 {
 	_WIN32_FIND_DATAA data;
-	void *hSearch=FindFirstFileA(dirpath, &data);
-	if(hSearch)
+	std::string dir=dirpath;
+	dir+='*';
+	//char &c=*dir.rbegin();
+	//if(c=='\\'||c=='/')
+	//	dir.pop_back();
+	void *hSearch=FindFirstFileA(dir.c_str(), &data);
+	if(hSearch!=INVALID_HANDLE_VALUE)
 	{
 		do
-			ret.push_back(data.cFileName);
+		{
+			if(strcmp(data.cFileName, ".")&&strcmp(data.cFileName, ".."))
+				ret.push_back(data.cFileName);
+		}
 		while(FindNextFileA(hSearch, &data));
 		FindClose(hSearch);
 	}
 }
 void			mkdir_firsttime(const char *dirpath)
 {
-	struct stat s={};
-	int doesntexist=stat(dirpath, &s);
-	if(doesntexist)
+	int attrib=GetFileAttributesA(dirpath);//https://stackoverflow.com/questions/3828835/how-can-we-check-if-a-file-exists-or-not-using-win32-program
+	//struct stat s={};
+	//int doesntexist=stat(dirpath, &s);//returns -1 even if folder exists
+	if(attrib==INVALID_FILE_ATTRIBUTES)//
 	{
 		int success=CreateDirectoryA(dirpath, nullptr);
 	//	auto fail=mkdir(dirpath, 0777);
-		SYS_CHECK();
+		if(!success)
+			SYS_CHECK();
 	}
+	else if(!(attrib&FILE_ATTRIBUTE_DIRECTORY))//a FILE exists with same name
+		LOGERROR("Please put the program away from the \'g2_state\' file.");
 }
 unsigned 		hexstr2uint(const char *text)
 {
@@ -165,9 +203,9 @@ unsigned 		hexstr2uint(const char *text)
 			if(text[k]>='0'&&text[k]<='9')
 				nibble=char(text[k]-'0');
 			else if(text[k]>='A'&&text[k]<='F')
-				nibble=char(text[k]-'A');
+				nibble=char(10+text[k]-'A');
 			else if(text[k]>='a'&&text[k]<='f')
-				nibble=char(text[k]-'a');
+				nibble=char(10+text[k]-'a');
 			else
 				break;
 			number|=nibble<<((7-k)<<2u);
@@ -189,12 +227,13 @@ void			statefolder_deletecontents()
 	for(int k=0, nitems=contents.size();k<nitems;++k)
 	{
 		const char *name=contents[k].c_str();
-		if(strcmp(name, ".")&&strcmp(name, ".."))
-		{
+	//	if(strcmp(name, ".")&&strcmp(name, ".."))
+	//	{
 		//	LOGI("Deleting %s", name);
-			int fail=remove((statedir+('/'+contents[k])).c_str());
-			SYS_CHECK();
-		}
+			int error=remove((statedir+('/'+contents[k])).c_str());
+			if(error)
+				SYS_CHECK();
+	//	}
 	}
 }
 const char*		version2str()
@@ -202,8 +241,8 @@ const char*		version2str()
 	static char vstr[9]={};
 	for(unsigned k=0;k<8;++k)
 	{
-		char nibble=char(g2_version>>((7-k)<<2u)&15u);
-		vstr[k]=char((nibble>=10?'A':'0')+nibble);
+		char nibble=char(g2_version.id>>((7-k)<<2u)&15u);
+		vstr[k]=char((nibble>=10?'A':'0')+nibble%10);
 	}
 	return vstr;
 }

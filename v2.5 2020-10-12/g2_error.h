@@ -21,8 +21,11 @@ extern HWND__		*ghWnd;
 extern const int	g_buf_size;//1MB
 extern char			g_buf[0x100000];
 
+void				copy_to_clipboard(const char *a, int size);
+
 static const int	e_msg_size=2048;
 extern char			first_error_msg[e_msg_size], latest_error_msg[e_msg_size];
+void				messageboxa(HWND hWnd, const char *title, const char *format, ...);
 void 				log_error(const char *file, int line, const char *format, ...);
 #define 			LOGERROR(...)				log_error(__FILE__, __LINE__, __VA_ARGS__)
 #define 			LOGERROR_LINE(LINE, ...)	log_error(__FILE__, LINE, __VA_ARGS__)

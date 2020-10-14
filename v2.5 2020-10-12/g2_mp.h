@@ -1168,11 +1168,11 @@ namespace		MP
 	void  r_r_beta					(Quat &r, Quat const &x);
 	void r_rr_beta					(Quat &r, Quat const &x, Quat const &y);
 	
-	void  r_r_cyl_bessel_j			(Quat &r, Quat const &x);
-	void r_rr_cyl_bessel_j			(Quat &r, Quat const &x, Quat const &y);
+	void  r_r_bessel_j				(Quat &r, Quat const &x);
+	void r_rr_bessel_j				(Quat &r, Quat const &x, Quat const &y);
 
-	void  r_r_cyl_neumann			(Quat &r, Quat const &x);
-	void r_rr_cyl_neumann			(Quat &r, Quat const &x, Quat const &y);
+	void  r_r_bessel_y				(Quat &r, Quat const &x);
+	void r_rr_bessel_y				(Quat &r, Quat const &x, Quat const &y);
 
 	void  c_r_hankel1				(Quat &r, Quat const &x);
 	void  c_c_hankel1				(Quat &r, Quat const &x);

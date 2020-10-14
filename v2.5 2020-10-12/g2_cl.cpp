@@ -24,6 +24,11 @@
 int				OCL_state=CL_NOTHING;
 bool			cl_gl_interop=false;
 
+	const bool	loadbinary=true;
+//	const bool	loadbinary=false;//
+
+int				*rgb=nullptr;
+
 //OpenCL API
 #define 		DECL_CL_FUNC(clFunc)	decltype(clFunc) *p_##clFunc=nullptr
 //#define			CL_API_DECL_START	__LINE__
@@ -77,7 +82,7 @@ void 			load_OpenCL_API()
 		//	"/usr/lib64/libOpenCL.so",
 		//	"/usr/lib32/libOpenCL.so",
 		};
-		const int npaths=sizeof(opencl_so_paths)>>3;
+		const int npaths=sizeof(opencl_so_paths)/sizeof(char*);
 		for(int k=0;k<npaths&&!hOpenCL;++k)
 			hOpenCL=LoadLibraryA(opencl_so_paths[k]);
 		if(!hOpenCL)
@@ -3188,11 +3193,23 @@ __kernel void c2d_rgb2(__global const int *size, __global const float *xr, __glo
 	};
 }//end CLSource
 const int		nprograms=sizeof(CLSource::programs)/sizeof(const char*);
+struct 			ProgramBinary
+{
+	unsigned char *bin;
+	size_t size;
+	void free()
+	{
+		if(bin)
+			::free(bin);
+		bin=nullptr, size=0;
+	}
+};
 cl_platform_id	platform=nullptr;//0x00000000de763ed3
 cl_device_id	device=nullptr;//changes when app is launched
 cl_context		context=nullptr;//changes when resuming
 cl_command_queue commandqueue=nullptr;//changes when resuming
 cl_kernel		kernels[N_KERNELS]={nullptr};//all kernels
+size_t 			g_maxlocalsize=0, g_maxlocaldim=0;
 namespace 		G2_CL
 {
 	cl_program programs[nprograms]={nullptr};
@@ -4150,7 +4167,18 @@ void			cl_test()
 void			programname2g_buf(int kp)
 {
 	init_directories();
-	sprintf_s(g_buf, g_buf_size, "%s/cl_program%02d.bin", statedir, kp);
+	sprintf_s(g_buf, g_buf_size, "%scl_program%02d.bin", statedir, kp);
+//	sprintf_s(g_buf, g_buf_size, "%s/cl_program%02d.bin", statedir, kp);
+}
+void			checkforbuildfailure(int error, cl_program *programs, int prog_idx, cl_device_id device, std::string &err_msg)
+{
+	if(error)
+	{
+		size_t length=0;
+		error=p_clGetProgramBuildInfo(programs[prog_idx], device, CL_PROGRAM_BUILD_LOG, g_buf_size, g_buf, &length);	CL_CHECK(error);
+		err_msg+="\n\n\tPROGRAM "+std::to_string(prog_idx)+"\n\n"+g_buf;
+	//	LOGE("PROGRAM %d: %s", prog_idx, g_buf);
+	}
 }
 void			cl_compile()
 {
@@ -4172,21 +4200,22 @@ void			cl_compile()
 		char *text=nullptr;
 		size_t textlen=0;
 		statefolder_readstate(text, textlen);
-		{
-			std::string str;
-			for(unsigned k=0;k<textlen;++k)
-			{
-				char c=text[k];
-				if(c>=32&&c<127)
-					str+=c;
-				else
-					str+='<'+std::to_string((int)c)+'>';
-			}
-		//	LOGI("%s: %s", statefilename, str.c_str());
-		}
+		//{
+		//	std::string str;
+		//	for(unsigned k=0;k<textlen;++k)
+		//	{
+		//		char c=text[k];
+		//		if(c>=32&&c<127)
+		//			str+=c;
+		//		else
+		//			str+='<'+std::to_string((int)c)+'>';
+		//	}
+		//	//LOGI("%s: %s", statefilename, str.c_str());
+		//}
 		unsigned version=hexstr2uint(text);
-		if(version!=g2_version)
+		if(version!=g2_version.id)
 		{
+			messageboxa(ghWnd, "Warning", "State version mismatch.\nAbout to delete everything in the folder:\n%s", statedir);
 		//	LOGI("G2_CL: Wrong state version, deleting state.");
 			statefolder_deletecontents();
 			statefolder_writestate();
@@ -4243,10 +4272,11 @@ void			cl_compile()
 			for(int kp=0;kp<nprograms;++kp)
 			{
 				OCL_state=CL_COMPILING_PROGRAM00+kp;
-				auto &bin=binaries[kp];
+				ProgramBinary bin={};
 				programname2g_buf(kp);
+				std::string programpath=g_buf;
 			//	snprintf(g_buf, g_buf_size, "%s/cl_program%02d.bin", statedir, kp);
-				if(loadbinary&&!loadFile(g_buf, (char*&)bin.bin, bin.size))//binary file is there
+				if(loadbinary&&!loadFile(programpath.c_str(), (char*&)bin.bin, bin.size))//binary file is there
 				{
 					int status=0;
 					programs[kp]=p_clCreateProgramWithBinary(context, 1, &device, &bin.size, (const unsigned char**)&bin.bin, &status, &error);	CL_CHECK(error);
@@ -4283,7 +4313,7 @@ void			cl_compile()
 			}
 			OCL_state=CL_PROGRAMS_COMPILED;
 			if(!err_msg.empty())
-				LOGE_long(err_msg.c_str(), err_msg.size());
+				copy_to_clipboard(err_msg.c_str(), err_msg.size());
 #if 0
 			else//build successful, retrieve binaries
 			{
@@ -4322,7 +4352,8 @@ void			cl_compile()
 					{
 						kernels[kernel.idx]=p_clCreateKernel(programs[kp], kernel.name, &error);		CL_CHECK(error);
 						if(error)
-							LOGE("Error line %d:\n\n\tFailed to retrieve kernel %d from program %d:\t%s\n\n", __LINE__, kk, kp, kernel.name);
+							LOGERROR("Failed to retrieve kernel %d - %s from program %d.", kk, kernel.name, kp);
+						//	LOGE("Error line %d:\n\n\tFailed to retrieve kernel %d from program %d:\t%s\n\n", __LINE__, kk, kp, kernel.name);
 					}
 					//TODO: disc_idx
 				}
@@ -4381,12 +4412,12 @@ void 			cl_initiate()
 		{
 			auto gl_context=wglGetCurrentContext();//changes when resuming
 			auto hDC=wglGetCurrentDC();
-			properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context,//https://stackoverflow.com/questions/26802905/getting-opengl-buffers-using-opencl
+			properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context,	//Win32		https://stackoverflow.com/questions/26802905/getting-opengl-buffers-using-opencl
 			properties[2]=CL_WGL_HDC_KHR,		properties[3]=(cl_context_properties)hDC,
 			properties[4]=CL_CONTEXT_PLATFORM,	properties[5]=(cl_context_properties)platform,//OpenCL platform object
 			properties[6]=0,					properties[7]=0;
 
-		//	properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context;//Android
+		//	properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context;	//Android
 		//	properties[2]=CL_EGL_DISPLAY_KHR,	properties[3]=(cl_context_properties)egl_display;
 		//	properties[4]=CL_CONTEXT_PLATFORM,	properties[5]=(cl_context_properties)platform;
 		//	properties[6]=0, properties[7]=0;
@@ -4399,8 +4430,9 @@ void 			cl_initiate()
 		context=p_clCreateContext(properties, 1, &device, nullptr, nullptr, &error);	CL_CHECK(error);
 		commandqueue=p_clCreateCommandQueue(context, device, 0, &error);				CL_CHECK(error);
 		OCL_state=CL_CONTEXT_CREATED;
-		std::thread thr_cl_init(cl_compile);
-		thr_cl_init.detach();
+		cl_compile();
+	//	std::thread thr_cl_init(cl_compile);
+	//	thr_cl_init.detach();
 #if 0
 		{
 			error=p_clGetPlatformIDs(1, &platform, &n_platforms);							CL_CHECK(error);//
@@ -4494,5 +4526,991 @@ __kernel void myfunc(__global const float *in1, __global const float *in2, __glo
 		error=p_clFinish(commandqueue);	CL_CHECK(error);
 		unload_OpenCL_API();//
 #endif
+	}
+}
+
+struct			CLTerm
+{
+	char mathSet;
+	cl_mem r, i, j, k;
+	CLTerm():mathSet(0), r(nullptr), i(nullptr), j(nullptr), k(nullptr){}
+};
+struct 			DebugBuffer
+{
+	cl_mem buffer;
+	const char *name;
+};
+void			debug_printbuffer(cl_mem buffer, int nfloats, int stride, const char *bufname=nullptr)
+{
+	auto result=(float*)malloc(nfloats*sizeof(float));
+	int error=p_clEnqueueReadBuffer(commandqueue, buffer, CL_TRUE, 0, nfloats*sizeof(float), result, 0, nullptr, nullptr);	CL_CHECK(error);
+	std::string str;
+	for(int k=0;k<nfloats;k+=stride)
+		str+=bufname?bufname:"buffer", str+='[', str+=std::to_string(k), str+="] = ", str+=std::to_string((double)result[k]), str+="\r\n";
+	//	LOGI("G2_CL: %s[%d] = %g", bufname?bufname:"buffer", k, (double)result[k]);
+	copy_to_clipboard(str.c_str(), str.size());
+	free(result);
+}
+void			debug_printbuffers(DebugBuffer *buffers, int nbuffers, int nfloats, int stride)
+{
+	auto result=(float*)malloc(nbuffers*nfloats*sizeof(float));
+	for(int k=0;k<nbuffers;++k)
+	{
+		int error=p_clEnqueueReadBuffer(commandqueue, buffers[k].buffer, CL_TRUE, 0, nfloats*sizeof(float), result+k*nfloats, 0, nullptr, nullptr);
+		CL_CHECK(error);
+	}
+	std::stringstream LOL_1;
+	for(int k=0;k<nfloats;k+=stride)
+	{
+		LOL_1<<"G2_CL: ["<<k<<"] ";
+		for(int kb=0;kb<nbuffers;++kb)
+		{
+			const char *name=buffers[kb].name;
+			LOL_1<<(name?name:"buffer")<<": "<<result[nfloats*kb+k]<<", ";
+		}
+		LOL_1<<"\r\n";
+	//	LOGI("%s", LOL_1.str().c_str());
+	}
+	auto &str=LOL_1.str();
+	copy_to_clipboard(str.c_str(), str.size());
+	free(result);
+}
+static size_t	host_sizes[3]={},//{globalwidth, globalheight, globaldepth}
+				host_sizes_local[3]={};//{localwidth, localheight, localdepth}
+//static float 	Xstart=0, Xsample=0,
+//				Yend=0, mYsample=0;//negative Ysample for C2D
+void 			create_resize_buffer(cl_mem &buffer, unsigned nfloats)
+{
+	int error=0;
+	buffer=p_clCreateBuffer(context, CL_MEM_READ_WRITE, nfloats*sizeof(float), nullptr, &error);
+	CL_CHECK(error);
+}
+void			initialize_const_comp(cl_mem &buffer, unsigned nfloats, float value, cl_mem size_buf, cl_mem args_buf)
+{
+	int error=0;
+	if(!buffer)
+		create_resize_buffer(buffer, nfloats);
+
+	float host_args[3]={value, 0, 0};
+	error=p_clEnqueueWriteBuffer(commandqueue, args_buf, CL_FALSE, 0, 3*sizeof(float), host_args, 0, nullptr, nullptr);	CL_CHECK(error);
+	cl_kernel k_fill=kernels[V_INITIALIZE_PARAMETER];
+	error=p_clSetKernelArg(k_fill, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+	error=p_clSetKernelArg(k_fill, 1, sizeof(cl_mem), &buffer);		CL_CHECK(error);
+	error=p_clSetKernelArg(k_fill, 2, sizeof(cl_mem), &args_buf);	CL_CHECK(error);
+	error=p_clEnqueueNDRangeKernel(commandqueue, k_fill, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+
+//	float pattern[4]={value};
+//	error=p_clEnqueueFillBuffer(commandqueue, buffer, &value, sizeof(float), 0, nfloats*sizeof(float), 0, nullptr, nullptr); CL_CHECK(error);//CRASH SIGSEGV on Galaxy S5
+	//error=p_clEnqueueFillBuffer(commandqueue, buffer, pattern, sizeof(float), 0, sizeof(float), 0, nullptr, nullptr); CL_CHECK(error);
+#ifdef DEBUG2
+	float testval=0;
+	error=p_clEnqueueReadBuffer(commandqueue, buffer, CL_TRUE, 0, 1*sizeof(float), &testval, 0, nullptr, nullptr);	CL_CHECK(error);
+	LOGI("G2_CL: const = %f", testval);
+#endif
+}
+void 			initialize_component(ModeParameters const &mp, cl_mem &buffer, unsigned nfloats, char varType, float value, float time, cl_mem size_buf, cl_mem args_buf)
+{
+	int dimension=-1;//-1: fill with constant 'value'
+	float data=0;
+	switch(varType)
+	{
+	case 'x':dimension=0;break;
+	case 'y':dimension=1;break;
+	case 'z':dimension=2;break;
+	case 'c':data=value;break;
+	case 't':data=time;break;
+	default:dimension=3;break;
+	}
+	if(dimension==-1)
+		initialize_const_comp(buffer, nfloats, data, size_buf, args_buf);
+	else if(dimension<3)
+//	else if(dimension<2)//C2D: exactly 2 input dimensions
+	{
+		if(!buffer)
+			create_resize_buffer(buffer, nfloats);
+		int error=0;
+		float host_args[3];
+		if(dimension==0)
+			host_args[0]=(float)mp.cx, host_args[1]=(float)mp.mx;
+		else if(dimension==1)
+			host_args[0]=(float)mp.cy, host_args[1]=(float)mp.my;
+		else
+			host_args[0]=(float)mp.cz, host_args[1]=(float)mp.mz;
+		//if(dimension==0)
+		//	host_args[0]=Xstart, host_args[1]=Xsample;
+		//else
+		//	host_args[0]=Yend, host_args[1]=mYsample;
+		host_args[2]=(float)dimension;
+		error=p_clEnqueueWriteBuffer(commandqueue, args_buf, CL_FALSE, 0, 3*sizeof(float), host_args, 0, nullptr, nullptr);	CL_CHECK(error);
+		cl_kernel k_fill=kernels[V_INITIALIZE_PARAMETER];
+		error=p_clSetKernelArg(k_fill, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+		error=p_clSetKernelArg(k_fill, 1, sizeof(cl_mem), &buffer);		CL_CHECK(error);
+		error=p_clSetKernelArg(k_fill, 2, sizeof(cl_mem), &args_buf);	CL_CHECK(error);
+		int error0=error;
+		error=p_clEnqueueNDRangeKernel(commandqueue, k_fill, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+#ifdef DEBUG2
+		LOGI("G2_CL: error: %d -> %d, lsizes={%d, %d, %d}", error0, error, (int)host_sizes_local[0], (int)host_sizes_local[1], (int)host_sizes_local[2]);
+#endif
+		//if(blocking)
+		//	{error=p_clFinish(commandqueue);		CL_CHECK(error);}
+#ifdef DEBUG2
+		float testval=0;
+		error=p_clEnqueueReadBuffer(commandqueue, buffer, CL_TRUE, 0, 1*sizeof(float), &testval, 0, nullptr, nullptr);	CL_CHECK(error);
+		LOGI("G2_CL: buffer[0] = %f", testval);
+#endif
+	}
+}
+void			cl_free_buffer(cl_mem &buffer)
+{
+	if(buffer)
+	{
+		int error=p_clReleaseMemObject(buffer);
+		CL_CHECK(error);
+		if(!error)
+			buffer=nullptr;
+	}
+}
+#if 0
+inline float	max(float a, float b){return (a+b+abs(a-b))*0.5f;}
+inline float 	rsqrt(float x){return 1.f/sqrt(x);}
+float alpha_from_line(float x1, float y1, float x2, float y2)
+{
+	float a=x2-x1, b=y1-y2;
+	return max(0.f, 1.f-fabs(a*y1+b*x1)*rsqrt(a*a+b*b));
+}
+float do_quadrant(float m, float R, float U, float UR)
+{
+	bool down=(m>0)!=(R>0), right=(R>0)!=(UR>0), up=(UR>0)!=(U>0), left=(U>0)!=(m>0);
+//	return (float)(down||right||up||left);//
+	float yL=m/(m-U), xD=m/(m-R), yR=R/(R-UR), xU=U/(U-UR);
+	if(left)
+	{
+		if(down)//case 4 & 16
+			return alpha_from_line(0, yL, xD, 0);
+		if(right)//case 7
+			return alpha_from_line(0, yL, 1, yR);
+		return alpha_from_line(0, yL, xU, 1);//up	case 11
+	}
+	if(down)//cases 6 & 10
+	{
+		if(right)//	case 6
+			return alpha_from_line(xD, 0, 1, yR);
+		return alpha_from_line(xD, 0, xU, 1);//up	case 10
+	}
+	if(up)//&&right	case 13
+		return alpha_from_line(xU, 1, 1, yR);
+	return 0;//case 1
+}
+void ti2d_rgb(int kx, int ky, const int *size, const float *xr, const float *curvecolor, int *rgb)
+{//size{Xplaces, Yplaces, 1, appwidth, appheight}
+	const int w=size[0], h=size[1], idx=size[0]*ky+kx;
+	const int
+		xsub=1&-(kx>0), xadd=1&-(kx<w-1),//
+		ysub=w&-(ky>0), yadd=w&-(ky<h-1);
+	float
+		Vnw=xr[idx-ysub-xsub], Vnm=xr[idx-ysub], Vne=xr[idx-ysub+xadd],
+		Vmw=xr[idx     -xsub], Vmm=xr[idx     ], Vme=xr[idx     +xadd],
+		Vsw=xr[idx+yadd-xsub], Vsm=xr[idx+yadd], Vse=xr[idx+yadd+xadd];
+	float alpha=Vmm==0;
+	if(alpha!=1)
+	{
+		alpha=do_quadrant(Vmm, Vme, Vnm, Vne);
+		alpha=max(alpha, do_quadrant(Vmm, Vnm, Vmw, Vnw));
+		alpha=max(alpha, do_quadrant(Vmm, Vmw, Vsm, Vsw));
+		alpha=max(alpha, do_quadrant(Vmm, Vsm, Vme, Vse));
+	}
+//	//write_imagef(rgb, (int2)(kx, ky), (float4)(curvecolor[0], curvecolor[1], curvecolor[2], alpha));
+//	write_imagef(rgb, (int2)(kx, ky), (float4)(alpha*curvecolor[0], alpha*curvecolor[1], alpha*curvecolor[2], 1));//plain white
+//	//write_imagef(rgb, (int2)(kx, ky), (float4)((1-alpha)*curvecolor[0], (1-alpha)*curvecolor[1], (1-alpha)*curvecolor[2], 1));//points exactly on curve
+	unsigned char c=(unsigned char)(255*(1-alpha));
+//	unsigned char c=(unsigned char)(255*alpha);
+	rgb[size[3]*ky+kx]=c<<16|c<<8|c;
+}
+#endif
+#if 1
+void			colorFunction_bcw(Comp1d const &v, int *color)
+{
+	const double r=v.real(), i=v.imag();
+	if(r!=r||i!=i)
+		*color=0x7F7F7F;
+	else if(abs(r)==_HUGE||abs(i)==_HUGE)
+		*color=0xFFFFFF;
+	else
+	{
+		double threshold=10, inv_th=1/threshold;//1			//black->color->white		81.98 cycles/px
+		const double cos_pi_6=0.866025403784439, sin_pi_6=0.5;
+		double hyp=sqrt(r*r+i*i), cosx=r/hyp, sinx=i/hyp,
+			mag=255*exp(-hyp*G2::_ln2*inv_th);
+		double red=1+cosx*cos_pi_6-sinx*sin_pi_6, green=1+sinx, blue=1+cosx*-cos_pi_6-sinx*sin_pi_6;
+		if(hyp<threshold)
+			mag=255-mag, red*=mag, green*=mag, blue*=mag;
+		else
+			red=255-mag*(2-red), green=255-mag*(2-green), blue=255-mag*(2-blue);
+		auto p=(unsigned char*)color;
+		p[0]=(unsigned char)red, p[1]=(unsigned char)green, p[2]=(unsigned char)blue, p[3]=0xFF;//0xAABBGGRR	//argb
+	}
+}
+#endif
+unsigned		dimension_work_size(unsigned places){return places&~(g_maxlocaldim-1);}
+inline void		read_buffer(cl_mem buffer, float *&data, unsigned nfloats)
+{
+	if(buffer)
+	{
+		data=(float*)malloc(nfloats*sizeof(float));
+		int error=p_clEnqueueReadBuffer(commandqueue, buffer, CL_TRUE, 0, nfloats*sizeof(float), data, 0, nullptr, nullptr);	CL_CHECK(error);
+	}
+}
+namespace		SW
+{
+	double
+		dpxr=0, dpxi=0, dpxj=0, dpxk=0,//op1
+		dpyr=0, dpyi=0, dpyj=0, dpyk=0,//op2
+		dprr=0, dpri=0, dprj=0, dprk=0;//res
+	inline VectP in1(float *xr)
+	{
+		dpxr=*xr;
+		return &dpxr;
+	}
+	inline CompP in1(float *xr, float *xi)
+	{
+		dpxr=*xr, dpxi=*xi;
+		return CompP(&dpxr, &dpxi);
+	}
+	inline QuatP in1(float *xr, float *xi, float *xj, float *xk)
+	{
+		dpxr=*xr, dpxi=*xi, dpxj=*xj, dpxk=*xk;
+		return QuatP(&dpxr, &dpxi, &dpxj, &dpxk);
+	}
+	inline VectP in2(float *yr)
+	{
+		dpyr=*yr;
+		return &dpyr;
+	}
+	inline CompP in2(float *yr, float *yi)
+	{
+		dpyr=*yr, dpyi=*yi;
+		return CompP(&dpyr, &dpyi);
+	}
+	inline QuatP in2(float *yr, float *yi, float *yj, float *yk)
+	{
+		dpyr=*yr, dpyi=*yi, dpyj=*yj, dpyk=*yk;
+		return QuatP(&dpyr, &dpyi, &dpyj, &dpyk);
+	}
+	inline void out(float *rr){*rr=(float)dprr;}
+	inline void out(float *rr, float *ri){*rr=(float)dprr, *ri=(float)dpri;}
+	inline void out(float *rr, float *ri, float *rj, float *rk){*rr=(float)dprr, *ri=(float)dpri, *rj=(float)dprj, *rk=(float)dprk;}
+}
+void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, unsigned gl_texture)
+{//expression -> OpenGL texture
+	if(OCL_state<CL_READY_UNTESTED)
+		return;
+	//	LOGERROR("Solve: OCL_state = %s", cl_state2str(OCL_state));
+	else
+	{
+		if(OCL_state==CL_READY_UNTESTED)
+			cl_test();
+		{//size_t								//GA70	GS5
+			auto sp=sizeof(void*);				//8		4
+			auto ssize=sizeof(size_t);			//8		4
+			auto schar=sizeof(char);			//1		1
+			auto sshort=sizeof(short);			//2		2
+			auto swchar_t=sizeof(wchar_t);		//4		4
+			auto sint=sizeof(int);				//4		4
+			auto suint=sizeof(unsigned);		//4		4
+			auto slong=sizeof(long);			//8		4
+			auto sllong=sizeof(long long);		//8		8
+			auto sfloat=sizeof(float);			//4		4
+			auto sdouble=sizeof(double);		//8		8
+			auto sldouble=sizeof(long double);	//16	8
+			int LOL_1=0;
+		}//
+		prof_add("cl_solve entry");
+		glFlush();
+		prof_add("glFlush");
+		unsigned ndrSize=mp.Xplaces*mp.Yplaces*mp.Zplaces;
+		//unsigned ndrSize=Xplaces*Yplaces;
+		//Xstart=float(VX-DX*0.5), Xsample	=float(DX/Xplaces);
+		//Yend	=float(VY+DY*0.5), mYsample	=float(-DY/Yplaces);
+		auto ftime=(float)time;
+		int error=0;
+		cl_mem size_buf=p_clCreateBuffer(context, CL_MEM_READ_ONLY, 5*sizeof(int), nullptr, &error);	CL_CHECK(error);
+		cl_mem args_buf=p_clCreateBuffer(context, CL_MEM_READ_ONLY, 3*sizeof(float), nullptr, &error);	CL_CHECK(error);
+		unsigned host_sizes32[6]={};
+		switch(mp.mode_idx)//determine local work dimensions
+		{
+		case MODE_I1D:
+		case MODE_T1D:
+		case MODE_T1D_C:
+		case MODE_T1D_H:
+		//	g_maxlocaldim=g_maxlocaldim;
+			g_maxlocaldim=(size_t)sqrt(g_maxlocalsize);
+			g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
+			host_sizes32[0]=dimension_work_size(mp.Xplaces), host_sizes32[1]=1, host_sizes32[2]=1;
+			host_sizes32[3]=mp.Xplaces, host_sizes32[4]=1, host_sizes32[5]=1;
+			host_sizes[0]=host_sizes32[0], host_sizes[1]=host_sizes32[1], host_sizes[2]=host_sizes32[2];
+			host_sizes_local[0]=g_maxlocaldim, host_sizes_local[1]=1, host_sizes_local[2]=1;
+			break;
+		case MODE_I2D:
+		case MODE_T2D:
+		case MODE_C2D:
+		case MODE_T2D_H:
+			g_maxlocaldim=(size_t)sqrt(g_maxlocalsize);
+			g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
+			host_sizes32[0]=dimension_work_size(mp.Xplaces), host_sizes32[1]=dimension_work_size(mp.Yplaces), host_sizes32[2]=1;
+			host_sizes32[3]=mp.Xplaces, host_sizes32[4]=mp.Yplaces, host_sizes32[5]=1;
+			host_sizes[0]=host_sizes32[0], host_sizes[1]=host_sizes32[1], host_sizes[2]=host_sizes32[2];
+			host_sizes_local[0]=g_maxlocaldim, host_sizes_local[1]=g_maxlocaldim, host_sizes_local[2]=1;
+			break;
+		case MODE_I3D:
+		case MODE_C3D:
+			g_maxlocaldim=(size_t)cbrt(g_maxlocalsize);
+		//	g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
+			host_sizes32[0]=dimension_work_size(mp.Xplaces), host_sizes32[1]=dimension_work_size(mp.Yplaces), host_sizes32[2]=dimension_work_size(mp.Zplaces);
+			host_sizes32[3]=mp.Xplaces, host_sizes32[4]=mp.Yplaces, host_sizes32[5]=mp.Zplaces;
+			host_sizes[0]=host_sizes32[0], host_sizes[1]=host_sizes32[1], host_sizes[2]=host_sizes32[2];
+			host_sizes_local[0]=g_maxlocaldim, host_sizes_local[1]=g_maxlocaldim, host_sizes_local[2]=g_maxlocaldim;
+			break;
+		}
+		error=p_clEnqueueWriteBuffer(commandqueue, size_buf, CL_FALSE, 0, 5*sizeof(int), host_sizes32, 0, nullptr, nullptr);	CL_CHECK(error);//send size buffer
+#ifdef DEBUG2
+		LOGI("G2_CL: hsizes={%d, %d, %d, %d, %d}", host_sizes32[0], host_sizes32[1], host_sizes32[2], host_sizes32[3], host_sizes32[4]);
+		int sizes[5]={};
+		error=p_clEnqueueReadBuffer(commandqueue, size_buf, CL_TRUE, 0, 5*sizeof(int), sizes, 0, nullptr, nullptr);	CL_CHECK(error);
+		LOGI("G2_CL: sizes={%d, %d, %d, %d, %d}", sizes[0], sizes[1], sizes[2], sizes[3], sizes[4]);
+#endif
+		int nterms=ex.n.size();
+		std::vector<CLTerm> terms(nterms);
+		prof_add("prep");
+		for(int kn=0;kn<nterms;++kn)//initialize terms
+		{
+			auto &term=terms[kn];
+			auto &n=ex.n[kn];
+			auto &val=ex.data[kn];
+			if(n.constant)
+			{
+				term.mathSet=n.mathSet;
+				initialize_const_comp(term.r, ndrSize, (float)val.r, size_buf, args_buf);
+				if(n.mathSet>='c')
+				{
+					initialize_const_comp(term.i, ndrSize, (float)val.i, size_buf, args_buf);
+					if(n.mathSet>='h')
+					{
+						initialize_const_comp(term.j, ndrSize, (float)val.j, size_buf, args_buf);
+						initialize_const_comp(term.k, ndrSize, (float)val.k, size_buf, args_buf);
+					}
+				}
+			}
+			else//variable term
+			{
+				auto &var=ex.variables[n.varNo];
+				term.mathSet=var.mathSet;
+				initialize_component(mp, term.r, ndrSize, var.varTypeR, (float)val.r, ftime, size_buf, args_buf);
+				if(n.mathSet>='c')
+				{
+					initialize_component(mp, term.i, ndrSize, var.varTypeI, (float)val.i, ftime, size_buf, args_buf);
+					if(n.mathSet>='h')
+					{
+						initialize_component(mp, term.j, ndrSize, var.varTypeJ, (float)val.j, ftime, size_buf, args_buf);
+						initialize_component(mp, term.k, ndrSize, var.varTypeK, (float)val.k, ftime, size_buf, args_buf);
+					}
+				}
+			}
+		}
+#if 0
+		if(terms.size()==3)
+		{
+			DebugBuffer buffers[]=
+			{
+				{terms[0].r, "x"},
+				{terms[1].i, "i"},
+				{terms[2].r, "y"},
+			};
+			debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), ndrSize, 512);
+		}
+#endif
+		prof_add("initialization");
+		for(int i=0, nInstr=ex.i.size();i<nInstr;++i)//solve
+		{
+			auto &in=ex.i[i];
+			auto kernel=kernels[in.cl_idx];
+			if(mp.mode_idx==MODE_I2D&&i==nInstr-1&&ex.resultLogicType>=2)
+			{
+				switch(in.type)
+				{
+				case SIG_NOOP:								kernel=kernels[CL_NOOP];	break;
+				case SIG_R_R:case SIG_C_R:					kernel=kernels[R_R_MINUS];	break;
+				case SIG_C_C:case SIG_R_C:					kernel=kernels[C_C_MINUS];	break;
+				case SIG_Q_Q:case SIG_C_Q:case SIG_R_Q:		kernel=kernels[Q_Q_MINUS];	break;
+				case SIG_R_RR:case SIG_C_RR:				kernel=kernels[R_RR_MINUS];	break;
+				case SIG_C_RC:case SIG_R_RC:				kernel=kernels[C_RC_MINUS];	break;
+				case SIG_Q_RQ:case SIG_R_RQ:				kernel=kernels[Q_RQ_MINUS];	break;
+				case SIG_C_CR:case SIG_R_CR:				kernel=kernels[C_CR_MINUS];	break;
+				case SIG_C_CC:case SIG_R_CC:				kernel=kernels[C_CC_MINUS];	break;
+				case SIG_Q_CQ:case SIG_R_CQ:				kernel=kernels[Q_CQ_MINUS];	break;
+				case SIG_Q_QR:case SIG_R_QR:				kernel=kernels[Q_QR_MINUS];	break;
+				case SIG_Q_QC:case SIG_R_QC:case SIG_C_QC:	kernel=kernels[Q_QC_MINUS];	break;
+				case SIG_Q_QQ:case SIG_R_QQ:				kernel=kernels[Q_QQ_MINUS];	break;
+
+				default://unreachable
+				//case SIG_INLINE_IF:
+				//case SIG_CALL:
+				//case SIG_BIF:
+				//case SIG_BIN:
+				//case SIG_JUMP:
+				//case SIG_RETURN:
+					kernel=kernels[CL_NOOP];
+					break;
+				}
+			}
+			if(kernel)//TODO: user function -> OpenCL kernel		TODO: inline if
+			{
+				if(in.type<SIG_INLINE_IF)
+				{
+					int arg_number=0;
+					error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &size_buf);	CL_CHECK(error);	++arg_number;
+					auto &res=terms[in.result], &op1=terms[in.op1];
+					error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &res.r);	CL_CHECK(error);	++arg_number;
+					if(in.r_ms>='c')
+					{
+						error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &res.i);	CL_CHECK(error);	++arg_number;
+						if(in.r_ms>='h')
+						{
+							error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &res.j);	CL_CHECK(error);	++arg_number;
+							error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &res.j);	CL_CHECK(error);	++arg_number;
+						}
+					}
+					error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op1.r);	CL_CHECK(error);	++arg_number;
+					if(in.op1_ms>='c')
+					{
+						error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op1.i);	CL_CHECK(error);	++arg_number;
+						if(in.op1_ms>='h')
+						{
+							error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op1.j);	CL_CHECK(error);	++arg_number;
+							error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op1.j);	CL_CHECK(error);	++arg_number;
+						}
+					}
+					if(in.op2_ms>='R')
+					{
+						auto &op2=terms[in.op2];
+						error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op2.r);	CL_CHECK(error);	++arg_number;
+						if(in.op2_ms>='c')
+						{
+							error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op2.i);	CL_CHECK(error);	++arg_number;
+							if(in.op2_ms>='h')
+							{
+								error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op2.j);	CL_CHECK(error);	++arg_number;
+								error=p_clSetKernelArg(kernel, arg_number, sizeof(cl_mem), &op2.j);	CL_CHECK(error);//	++arg_number;
+							}
+						}
+					}
+				}
+				else if(in.type==SIG_INLINE_IF)
+				{
+					auto &res=terms[in.result], &op1=terms[in.op1], &op2=terms[in.op2], &op3=terms[in.op3];
+					error=p_clSetKernelArg(kernel,  0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+
+					error=p_clSetKernelArg(kernel,  1, sizeof(cl_mem), &res.r);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel,  2, sizeof(cl_mem), &res.i);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel,  3, sizeof(cl_mem), &res.j);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel,  4, sizeof(cl_mem), &res.k);		CL_CHECK(error);
+
+					error=p_clSetKernelArg(kernel,  5, sizeof(cl_mem), &op1.r);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel,  6, sizeof(cl_mem), &op1.i);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel,  7, sizeof(cl_mem), &op1.j);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel,  8, sizeof(cl_mem), &op1.k);		CL_CHECK(error);
+
+					error=p_clSetKernelArg(kernel,  9, sizeof(cl_mem), &op2.r);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 10, sizeof(cl_mem), &op2.i);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 11, sizeof(cl_mem), &op2.j);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 12, sizeof(cl_mem), &op2.k);		CL_CHECK(error);
+
+					error=p_clSetKernelArg(kernel, 13, sizeof(cl_mem), &op3.r);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 14, sizeof(cl_mem), &op3.i);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 15, sizeof(cl_mem), &op3.j);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 16, sizeof(cl_mem), &op3.k);		CL_CHECK(error);
+				}
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+				//if(blocking)
+				//	{error=p_clFinish(commandqueue);		CL_CHECK(error);}
+			}
+			else//kernel missing, solve in software
+#if 1
+			{
+				float
+					*rr=nullptr, *ri=nullptr, *rj=nullptr, *rk=nullptr,
+					*xr=nullptr, *xi=nullptr, *xj=nullptr, *xk=nullptr,
+					*yr=nullptr, *yi=nullptr, *yj=nullptr, *yk=nullptr;
+				auto &res=terms[in.result], &op1=terms[in.op1];
+				read_buffer(res.r, rr, ndrSize);
+				read_buffer(res.i, ri, ndrSize);
+				read_buffer(res.j, rj, ndrSize);
+				read_buffer(res.k, rk, ndrSize);
+
+				read_buffer(op1.r, xr, ndrSize);
+				read_buffer(op1.i, xi, ndrSize);
+				read_buffer(op1.j, xj, ndrSize);
+				read_buffer(op1.k, xk, ndrSize);
+				if(in.is_binary())
+				{
+					auto &op2=terms[in.op2];
+					read_buffer(op2.r, yr, ndrSize);
+					read_buffer(op2.i, yi, ndrSize);
+					read_buffer(op2.j, yj, ndrSize);
+					read_buffer(op2.k, yk, ndrSize);
+				}
+				int Xplaces=(int)mp.Xplaces, Yplaces=(int)mp.Yplaces, Zplaces=(int)mp.Zplaces;
+				int workSize=(int)ndrSize, offset=0;
+				int x1=0, x2=Xplaces, y1=0, y2=Yplaces, z1=0, z2=Zplaces;//
+				int dx=x2-x1, dy=y2-y1;
+				using namespace SW;
+				auto res_r=VectP(&dprr);
+				auto res_c=CompP(&dprr, &dpri);
+				auto res_q=QuatP(&dprr, &dpri, &dprj, &dprk);
+#define			IDX		int x=x1+k%dx, y=y1+(k/dx)%dy, z=z1+k/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x
+#define			IN1R	in1(xr+idx)
+#define			IN1C	in1(xr+idx, xi+idx)
+#define			IN1Q	in1(xr+idx, xi+idx, xj+idx, xk+idx)
+#define			IN2R	in1(yr+idx)
+#define			IN2C	in1(yr+idx, yi+idx)
+#define			IN2Q	in1(yr+idx, yi+idx, yj+idx, yk+idx)
+#define			OUTR	out(rr+idx)
+#define			OUTC	out(rr+idx, ri+idx)
+#define			OUTQ	out(rr+idx, ri+idx, rj+idx, rk+idx)
+				switch(in.type)
+				{
+				//case 'c':
+				//	{
+				//		Solve_UserFunction uf(ex, in, false);
+				//		for(int k=0;k<workSize;++k)
+				//		{
+				//			IDX;
+				//			uf(idx);
+				//		}
+				//	}
+				//	break;
+				case SIG_R_R://r_r
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_r(res_r, IN1R);
+						OUTR;
+					//	rr[idx]=in.r_r(xr[idx]);
+					}
+					break;
+				case SIG_C_C://c_c
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_c(res_c, IN1C);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_c(Comp1d(xr[idx], xi[idx]));
+					}
+					break;
+				case SIG_Q_Q://q_q
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.q_q(res_q, IN1Q);
+						OUTQ;
+					//	QuatRef32(rr[idx], ri[idx], rj[idx], rj[idx])=
+					//		in.q_q(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]));
+					}
+					break;
+				case SIG_R_RR://r_rr
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_rr(res_r, IN1R, IN2R);
+						OUTR;
+					//	rr[idx]=in.r_rr(xr[idx], yr[idx]);
+					}
+					break;
+				case SIG_C_RC://c_rc
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_rc(res_c, IN1R, IN2C);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_rc(xr[idx], Comp1d(yr[idx], yi[idx]));
+					}
+					break;
+				case SIG_Q_RQ://q_rq
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.q_rq(res_q, IN1R, IN2Q);
+						OUTQ;
+					//	QuatRef32(rr[idx], ri[idx], rj[idx], rk[idx])=
+					//		in.q_rq(xr[idx], Quat1d(yr[idx], yi[idx], yj[idx], yk[idx]));
+					}
+					break;
+				case SIG_C_CR://c_cr
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_cr(res_c, IN1C, IN2R);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_cr(Comp1d(xr[idx], xi[idx]), yr[idx]);
+					}
+					break;
+				case SIG_C_CC://c_cc
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_cc(res_c, IN1C, IN2C);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_cc(Comp1d(xr[idx], xi[idx]), Comp1d(yr[idx], yi[idx]));
+					}
+					break;
+				case SIG_Q_CQ://q_cq
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.q_cq(res_q, IN1C, IN2Q);
+						OUTQ;
+					//	QuatRef32(rr[idx], ri[idx], rj[idx], rk[idx])=
+					//		in.q_cq(Comp1d(xr[idx], xi[idx]), Quat1d(yr[idx], yi[idx], yj[idx], yk[idx]));
+					}
+					break;
+				case SIG_Q_QR://q_qr
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.q_qr(res_q, IN1Q, IN2R);
+						OUTQ;
+					//	QuatRef32(rr[idx], ri[idx], rj[idx], rk[idx])=
+					//		in.q_qr(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]), yr[idx]);
+					}
+					break;
+				case SIG_Q_QC://q_qc
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.q_qc(res_q, IN1Q, IN2C);
+						OUTQ;
+					//	QuatRef32(rr[idx], ri[idx], rj[idx], rk[idx])=
+					//		in.q_qc(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]), Comp1d(yr[idx], yi[idx]));
+					}
+					break;
+				case SIG_Q_QQ://q_qq
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.q_qq(res_q, IN1Q, IN2Q);
+						OUTQ;
+					//	QuatRef32(rr[idx], ri[idx], rj[idx], rk[idx])=
+					//		in.q_qq(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]), Quat1d(yr[idx], yi[idx], yj[idx], yk[idx]));
+					}
+					break;
+
+				case SIG_C_R://c_r
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_r(res_c, IN1R);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_r(xr[idx]);
+					}
+					break;
+				case SIG_C_Q://c_q
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_q(res_c, IN1Q);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_q(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]));
+					}
+					break;
+
+				case SIG_R_C://r_c
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_c(res_r, IN1C);
+						OUTR;
+					//	rr[idx]=in.r_c(Comp1d(xr[idx], xi[idx]));
+					}
+					break;
+				case SIG_R_Q://r_q
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_q(res_r, IN1Q);
+						OUTR;
+					//	rr[idx]=in.r_q(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]));
+					}
+					break;
+
+				case SIG_C_RR://c_rr
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_rr(res_c, IN1R, IN2R);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_rr(xr[idx], yr[idx]);
+					}
+					break;
+
+				case SIG_R_RC://r_rc
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_rc(res_r, IN1R, IN2C);
+						OUTR;
+					//	rr[idx]=in.r_rc(xr[idx], Comp1d(yr[idx], yi[idx]));
+					}
+					break;
+				case SIG_R_RQ://r_rq
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_rq(res_r, IN1R, IN2Q);
+						OUTR;
+					//	rr[idx]=in.r_rq(xr[idx], Quat1d(yr[idx], yi[idx], yj[idx], yk[idx]));
+					}
+					break;
+				case SIG_R_CR://r_cr
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_cr(res_r, IN1C, IN2R);
+						OUTR;
+					//	rr[idx]=in.r_cr(Comp1d(xr[idx], xi[idx]), yr[idx]);
+					}
+					break;
+				case SIG_R_CC://r_cc
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_cc(res_r, IN1C, IN2C);
+						OUTR;
+					//	rr[idx]=in.r_cc(Comp1d(xr[idx], xi[idx]), Comp1d(yr[idx], yi[idx]));
+					}
+					break;
+				case SIG_R_CQ://r_cq
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_cq(res_r, IN1C, IN2Q);
+						OUTR;
+					//	rr[idx]=in.r_cq(Comp1d(xr[idx], xi[idx]), Quat1d(yr[idx], yi[idx], yj[idx], yk[idx]));
+					}
+					break;
+				case SIG_R_QR://r_qr
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_qr(res_r, IN1Q, IN2R);
+						OUTR;
+					//	rr[idx]=in.r_qr(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]), yr[idx]);
+					}
+					break;
+				case SIG_R_QC://r_qc
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_qc(res_r, IN1Q, IN2C);
+						OUTR;
+					//	rr[idx]=in.r_qc(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]), Comp1d(yr[idx], yi[idx]));
+					}
+					break;
+				case SIG_R_QQ://r_qq
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.r_qq(res_r, IN1Q, IN2Q);
+						OUTR;
+					//	rr[idx]=in.r_qq(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]), Quat1d(yr[idx], yi[idx], yj[idx], yk[idx]));
+					}
+					break;
+
+				case SIG_C_QC://c_qc
+					for(int k=0;k<workSize;++k)
+					{
+						IDX;
+						in.ia32.c_qc(res_c, IN1Q, IN2C);
+						OUTC;
+					//	CompRef32(rr[idx], ri[idx])=in.c_qc(Quat1d(xr[idx], xi[idx], xj[idx], xk[idx]), Comp1d(yr[idx], yi[idx]));
+					}
+					break;
+				}
+			}
+#endif
+		}
+#if 0
+		if(terms.size()==3)
+		{
+			DebugBuffer buffers[]=
+			{
+				{terms[0].r, "x"},
+				{terms[1].i, "i"},
+				{terms[2].r, "y"},
+			};
+			debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), ndrSize, 512);
+		}
+#endif
+		prof_add("solve");
+		static cl_context context0=nullptr;
+		static cl_mem image=nullptr;
+		switch(mp.mode_idx)
+		{
+		case MODE_I2D:
+			{
+				auto &result=terms[ex.resultTerm];
+#if 0//DEBUG
+				auto xr=(float*)malloc(ndrSize*sizeof(float));
+				error=p_clEnqueueReadBuffer(commandqueue, result.r, CL_TRUE, 0, ndrSize*sizeof(float), xr, 0, nullptr, nullptr);	CL_CHECK(error);
+				rgb=(int*)realloc(rgb, ndrSize*sizeof(int));
+				int size[]={(int)dimension_work_size(mp.Xplaces), (int)dimension_work_size(mp.Yplaces), 1, (int)mp.Xplaces, (int)mp.Yplaces, 1};
+				float curvecolor[]={1, 1, 1};
+				for(int ky=0;ky<mp.Yplaces;++ky)
+					for(int kx=0;kx<mp.Xplaces;++kx)
+						ti2d_rgb(kx, ky, size, xr, curvecolor, rgb);
+				free(xr);
+#endif
+#if 1//RELEASE
+				cl_kernel kernel=nullptr;
+			//	if(cl_gl_interop)
+			//	{
+					kernel=kernels[V_TI2D_RGB];
+				//	if(context0!=context)
+				//	{
+						context0=context;
+						cl_free_buffer(image);
+						image=p_clCreateFromGLTexture(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, gl_texture, &error);	CL_CHECK(error);
+				//	}
+			//	}
+			//	else
+			//	{
+			//		kernel=kernels[];
+			//		image=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(int), nullptr, &error);	CL_CHECK(error);
+			//	}
+				cl_mem color_buf=p_clCreateBuffer(context, CL_MEM_READ_ONLY, 3*sizeof(float), nullptr, &error);	CL_CHECK(error);
+				float color[3];
+				if(mp.nExpr>1)
+				{
+					int c=ex.getColor();
+					color[0]=(float)(unsigned char)c*inv255, color[1]=(float)(unsigned char)(c>>8)*inv255, color[2]=(float)(unsigned char)(c>>16)*inv255;
+				}
+				else
+					color[0]=color[1]=color[2]=0;
+			//	float color[]={1, 1, 1};//white for debug purposes
+				error=p_clEnqueueWriteBuffer(commandqueue, color_buf, CL_FALSE, 0, 3*sizeof(float), color, 0, nullptr, nullptr);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &result.r);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &color_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &image);		CL_CHECK(error);
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 2, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+#endif
+				prof_add("raster");
+			}
+			break;
+		case MODE_C2D:
+			{
+				auto &result=terms[ex.resultTerm];					//result -> rgb
+				if(result.mathSet=='c')//always true for C2D
+				{
+					cl_kernel kernel=nullptr;
+					if(cl_gl_interop)
+					{
+						kernel=kernels[V_C2D_RGB];
+						if(context0!=context)
+						{
+							context0=context;
+							cl_free_buffer(image);
+						//	image=p_clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_texture, &error);	CL_CHECK(error);//
+							image=p_clCreateFromGLTexture(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, gl_texture, &error);	CL_CHECK(error);
+						}
+					}
+					else
+					{
+						kernel=kernels[V_C2D_RGB2];
+						image=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(int), nullptr, &error);	CL_CHECK(error);
+					}
+					error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &result.r);	CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &result.i);	CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &image);		CL_CHECK(error);
+					error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 2, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+					if(!cl_gl_interop)
+					{
+						rgb=(int*)realloc(rgb, ndrSize*sizeof(int));
+						error=p_clEnqueueReadBuffer(commandqueue, image, CL_FALSE, 0, ndrSize*sizeof(int), rgb, 0, nullptr, nullptr);	CL_CHECK(error);
+						cl_free_buffer(image);
+#ifdef DEBUG2
+						LOGI("G2_CL: rgb[0] = 0x%08X", rgb[0]);
+#endif
+					}
+				//	if(blocking)
+				//		{error=p_clFinish(commandqueue);		CL_CHECK(error);}
+#if 1
+					error=p_clFinish(commandqueue);	CL_CHECK(error);	//DEBUG
+					prof_add("clFinish");
+					auto
+						ndr_r=(float*)malloc(ndrSize*sizeof(float)),
+						ndr_i=(float*)malloc(ndrSize*sizeof(float));
+					error=p_clEnqueueReadBuffer(commandqueue, result.r, CL_TRUE, 0, ndrSize*sizeof(float), ndr_r, 0, nullptr, nullptr);	CL_CHECK(error);
+					error=p_clEnqueueReadBuffer(commandqueue, result.i, CL_TRUE, 0, ndrSize*sizeof(float), ndr_i, 0, nullptr, nullptr);	CL_CHECK(error);
+					prof_add("DEBUG read");
+					rgb=(int*)realloc(rgb, ndrSize*sizeof(int));
+					for(unsigned k=0;k<ndrSize;++k)
+					{
+						colorFunction_bcw(Comp1d(ndr_r[k], ndr_i[k]), rgb+k);
+						//if(!(k&15))
+						//	LOGE("\nXY(%g, %g)\t0x%08X", ndr_r[k], ndr_i[k], rgb[k]);
+					}
+					prof_add("DEBUG rgb");
+					LOGERROR("G2_CL: TOPRIGHT CORNER = %f + %f i, rgb[0] = 0x%08X", ndr_r[0], ndr_i[0], rgb[0]);//DEBUG2
+				//	display_texture(0, Xplaces, 0, Yplaces, rgb, Xplaces, Yplaces);
+				//	glFlush();
+					free(ndr_r);
+					free(ndr_i);
+					//free(rgb);
+#endif
+				}
+				prof_add("rgb");
+			}
+			break;
+		}
+#if 0
+		{
+			DebugBuffer buffers[]=
+			{
+				{image, "image"},
+			};
+			debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), ndrSize, 512);
+		}
+#endif
+		for(int kn=0;kn<nterms;++kn)//free memory
+		{
+			auto &term=terms[kn];
+			cl_free_buffer(term.r);
+			cl_free_buffer(term.i);
+			cl_free_buffer(term.j);
+			cl_free_buffer(term.k);
+		}
+		prof_add("free");
+#if 0//DEBUG
+		error=p_clFinish(commandqueue);	CL_CHECK(error);//DEBUG
+		prof_add("clFinish");
+		rgb=(int*)realloc(rgb, ndrSize*sizeof(int));
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gl_texture);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgb);
+#endif
+	}
+}
+void			cl_finish()
+{
+	if(OCL_state<CL_READY)
+		return;
+	//	LOGERROR("cl_finish: OCL_state = %d", OCL_state);
+//	if(OCL_API_not_loaded)
+//		LOGERROR("OpenCL API not loaded.");
+	else
+	{
+		int error=p_clFinish(commandqueue);
+		CL_CHECK(error);
+		prof_add("clFinish");
 	}
 }

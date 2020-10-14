@@ -26,6 +26,7 @@
 extern int		w, h, X0, Y0;
 extern HDC		ghDC;
 //extern HDC	ghMemDC;//exposed for debug tests only
+enum			UsingOpenGL{MODE_SOFTWARE, MODE_OPENGL, MODE_CL_GL_INTEROP, N_GRAPHICS_MODES};
 extern char		usingOpenGL;
 //extern long long broken;
 
@@ -34,6 +35,7 @@ extern bool		SSE4_1;
 extern int		simd_method;
 
 //vector algebra:
+extern const float inv255;
 //extern const float _pi, _2pi, pi_2, inv_2pi, sqrt2, torad, infinity, inv255, inv256, inv128;
 template<typename Type>struct	tvec2
 {
@@ -682,4 +684,9 @@ namespace		GL2_3D
 	void		end();
 	void		draw(Camera const &cam);
 }
+
+//CL-GL interop.
+void 			generate_glcl_texture(unsigned &tx_id, int Xplaces, int Yplaces);
+void 			display_gl_texture(unsigned &tx_id);
+void			display_texture(int x1, int x2, int y1, int y2, int *rgb, int txw, int txh, unsigned char alpha=0xFF);//no CL-GL interop.
 #endif

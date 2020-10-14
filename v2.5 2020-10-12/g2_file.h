@@ -18,7 +18,7 @@
 #define			G2_FILE_H
 #include		<vector>
 extern char		*programpath;//full path to program
-extern const char *statedir,//full path to the folder containing the state
+extern const char *statedir,//full path to the folder containing the state, ends with back slash
 				*statefilepath;//full path to file containing the state data
 void			init_directories();
 
