@@ -6485,17 +6485,18 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						ret.set((th-A.w)/(B.w-A.w), 1);
 					else
 						ret=solvecubic(a, b, c, d);
+					float3 coords;
 					if(ret.y)
 					{
 						float3 pa={A.x, A.y, A.z}, pb={B.x, B.y, B.z};
-						float3 coords=mix(pa, pb, ret.x);
+						coords=mix(pa, pb, ret.x);
 						vstore3(coords, id*6, vertices);
 					}
 					else//solvecubic failed
 					{
 						ret.set((th-A.w)/(B.w-A.w), 1);
 						float3 pa={A.x, A.y, A.z}, pb={B.x, B.y, B.z};
-						float3 coords=mix(pa, pb, ret.x);
+						coords=mix(pa, pb, ret.x);
 						vstore3(coords, id*6, vertices);
 
 						debug_info.push_back(DebugInfo(kx, ky, kz, ke, id, ret.x, coords.x, coords.y, coords.z));
@@ -6508,6 +6509,49 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						}
 					//	LOGERROR("solvecubic(%f, %f, %f, %f) failed.", a, b, c, d);//
 					}
+					//V_DSW_DSE = V_DSE-V_DSW
+					//V_DNW_DNE = V_DNE-V_DNW
+					//V_USW_USE = V_USE-V_USW
+					//V_UNW_UNE = V_UNE-V_UNW
+					//V_DS = V_DSW+V_DSW_DSE*ax
+					//V_DN = V_DNW+V_DNW_DNE*ax
+					//V_US = V_USW+V_USW_USE*ax
+					//V_UN = V_UNW+V_UNW_UNE*ax
+					//TY = [V_DSW_DSE+(V_DNW_DNE-V_DSW_DSE)*ay]
+					//<
+					//	TY+([V_USW_USE+(V_UNW_UNE-V_USW_USE)*ay]-TY)*az,
+					//	[V_DN-V_DS]+([V_UN-V_US]-[V_DN-V_DS])*az,
+					//	[V_US+(V_UN-V_US)*ay]-[V_DS+(V_DN-V_DS)*ay]
+					//>
+					float3 normal;
+					{
+						float3 a;
+						a.set((coords.x-X_W)/Xsample, (coords.y-Y_S)/Ysample, (coords.z-Z_D)/Zsample);
+						float
+							V_DSW_DSE=V_DSE-V_DSW,
+							V_DNW_DNE=V_DNE-V_DNW,
+							V_USW_USE=V_USE-V_USW,
+							V_UNW_UNE=V_UNE-V_UNW,
+							V_DS=V_DSW+V_DSW_DSE*a.x,
+							V_DN=V_DNW+V_DNW_DNE*a.x,
+							V_US=V_USW+V_USW_USE*a.x,
+							V_UN=V_UNW+V_UNW_UNE*a.x,
+							TY=V_DSW_DSE+(V_DNW_DNE-V_DSW_DSE)*a.y,
+							V_D_SN=V_DN-V_DS, V_U_SN=V_UN-V_US;
+						normal.set
+						(
+							TY+((V_USW_USE+(V_UNW_UNE-V_USW_USE)*a.y)-TY)*a.z,
+							V_D_SN+(V_U_SN-V_D_SN)*a.z,
+							(V_US+V_U_SN*a.y)-(V_DS+V_D_SN*a.y)
+						);
+						float inv_abs=sqrt(normal.x*normal.x+normal.y*normal.y+normal.z*normal.z);
+						if(inv_abs)
+						{
+							inv_abs=1/inv_abs;
+							normal.x*=inv_abs, normal.y*=inv_abs, normal.z*=inv_abs;
+						}
+					}
+					vstore3(normal, id*6+3, vertices);
 				}
 				//auto &str=LOL_1.str();
 				//if(str.size())
@@ -6519,49 +6563,14 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 
 				//CPU-side code 2: fill 'indices'
 				std::vector<int> indices(ntrgl_total*3, 0);
-			//	WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant bits, access: [(ke-33)<<2]={Xoffset, Yoffset, Zoffset, ke2}
-			//	//int we_offsets[(54-33)<<2]=
-			//	{//	(x, y,		z)offset		normal,		x-,			y-,			xy-,		z-,			xz-,		yz-,		xyz-
-			//		{1, 0,			0,			{DSW_DNW,	}},//DSE_DNE
-			//		{0, Xplaces,	0,			{DSW_DSE}},//DNE_DNW
-			//		{1, 0,			0,			{DSW_USW}},//DSE_USE
-			//		{1, Xplaces,	0,			{DSW_USW}},//DNE_UNE
-			//		{0, Xplaces,	0,			{DSW_USW}},//DNW_UNW
-			//		{0, 0,			XYplaces,	{DSW_DSE}},//USW_USE
-			//		{1, 0,			XYplaces,	{DSW_DNW}},//USE_UNE//<-
-			//		{0, Xplaces,	XYplaces,	{DSW_DSE}},//UNE_UNW
-			//		{0, 0,			XYplaces,	{DSW_DNW}},//UNW_USW
-			//
-			//		{1, 0,			0,			{mmW_DSW}},//mmE_DSE
-			//		{1, 0,			0,			{mmW_USW}},//mmE_USE
-			//		{1, 0,			0,			{mmW_UNW}},//mmE_UNE
-			//		{1, 0,			0,			{mmW_DNW}},//mmE_DNE
-			//
-			//		{0, Xplaces,	0,			{mSm_DSW}},//mNm_DNW
-			//		{0, Xplaces,	0,			{mSm_USW}},//mNm_UNW
-			//		{0, Xplaces,	0,			{mSm_USE}},//mNm_UNE
-			//		{0, Xplaces,	0,			{mSm_DSE}},//mNm_DNE
-			//
-			//		{0, 0,			XYplaces,	{Dmm_DSW}},//Umm_USW
-			//		{0, 0,			XYplaces,	{Dmm_DSE}},//Umm_USE
-			//		{0, 0,			XYplaces,	{Dmm_DNE}},//Umm_UNE
-			//		{0, 0,			XYplaces,	{Dmm_DNW}},//Umm_UNW
-			//	};
-				for(unsigned kw=0, kv=0, ki=0, ktr=0;kw<ndrSize;++kw)//why work ndrSize times if there is workidx?
+				for(unsigned kw=0, ki=0, ktr=0;kw<ndrSize;++kw)//for each data cube		//why work ndrSize times if there is workidx?
 				{
 					auto work=edgeinfo[kw];
 					if(work)
 					{
 						short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
 						auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
-						//if(kx==Xplaces-2||ky==Yplaces-2||kz==Zplaces-2)//
-						//	int LOL_1=0;//
-					//	int offset=ki;
-						int bi[54]={};
-						for(int kb=0;kb<33;++kb)//fill array of bit indices bi[54]
-					//	for(int kb=0;kb<54;++kb)
-							bi[kb]=kv+=work>>kb&1;
-						for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra
+						for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra in the data cube
 						{
 							//if(kx==6&&ky==4&&kz==0&&kth==1)//
 							//	int LOL_1=0;//
@@ -6576,23 +6585,16 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 								getbit(work, ti[kt6+5]),
 							},
 								esum=0;
-							int ei[6]={};//edge indices
-							char kb2=0;
-							for(int kb=0;kb<6;++kb)//for each tetrahedron edge
+							int tcvi[6]={};//tetrahedron cut vertex indices
+							for(char kb=0;kb<6;++kb)//for each tetrahedron edge
 							{
 								if(e[kb])
 								{
-									++esum;
 									char ke=ti[kth*6+kb];//relative edge index
 									WorkIdx idx;
-								//	int idx=0;
 									char original=getbit(mask, ke);
 									if(original)//original bit, in this data point		note: all bits are original at boundary
-								//	if(kx==Xplaces-2||ky==Yplaces-2||kz==Zplaces-2||ke<33)
-								//	if(ke<33)
 										idx.set(kx, ky, kz, ke);
-									//	idx=kw<<6|ke;
-									//	idx=33*kw+ke;
 									else//redundant bit, look up in another data point
 									{
 										auto &weo=we_offsets[ke-33];
@@ -6602,30 +6604,15 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 											ky2=ky+(weo.dy&-ybc),
 											kz2=kz+(weo.dz&-zbc),
 											ke2=weo.ke2[zbc<<2|ybc<<1|xbc];
-										//int kw2=kw+(weo.dx&-(kx<Xplaces-2))+(Xplaces&weo.dy_mask&-(ky<Yplaces-2))+(XYplaces&weo.dz_mask&-(kz<Zplaces-2));
-										//short kx2=kw2%Xplaces, ky2=kw2/Xplaces%Yplaces, kz2=kw2/XYplaces;
-										//if(kx2==Xplaces-1||ky2==Yplaces-1||kz2==Zplaces-1)//redundant
-										//	idx.set(kx, ky, kz, ke);
-										//	//idx=kw<<6|ke;
-										//else
-										//{
-											//ke2=we_offsets[ke2+3];
-											//ke2=we_offsets[ke2+1];
-											idx.set(kx2, ky2, kz2, ke2);
-										//	idx=kw2<<6|ke2;
-										//	idx=33*kw2+ke2;
-										//}
+										idx.set(kx2, ky2, kz2, ke2);
 									}
 									auto it=bitindices.find(idx);
 									if(it!=bitindices.end())
-										ei[kb2]=it->second;
+										tcvi[esum]=it->second;
 									else
 										LOGERROR("(%d, %d, %d, %d) not found.", idx.kx, idx.ky, idx.kz, idx.ke);
-								//	ei[kb2]=bitindices[idx];
-									++kb2;
+									++esum;
 								}
-								//	ei[kb2]=bi[ti[kth*6+kb]], ++kb2;
-								//	ei[kb2]=offset+bi[ti[kth*6+kb]], ++kb2;
 							}
 							if(esum==4)//there are edges producing verteces
 							{
@@ -6637,19 +6624,16 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 								//if(ktr==8||ktr==9)//
 								//	int LOL_1=0;//
 								++ktr;//
-								indices[ki]=ei[0], ++ki;
-								indices[ki]=ei[1], ++ki;
-								indices[ki]=ei[2], ++ki;
+								indices[ki]=tcvi[0], ++ki;
+								indices[ki]=tcvi[1], ++ki;
+								indices[ki]=tcvi[2], ++ki;
 
 								//if(ktr==8||ktr==9)//
 								//	int LOL_1=0;//
 								++ktr;//
-								indices[ki]=ei[1], ++ki;
-								indices[ki]=ei[2], ++ki;
-								indices[ki]=ei[3], ++ki;
-								//indices[ki]=ei[2], ++ki;
-								//indices[ki]=ei[3], ++ki;
-								//indices[ki]=ei[0], ++ki;
+								indices[ki]=tcvi[1], ++ki;
+								indices[ki]=tcvi[2], ++ki;
+								indices[ki]=tcvi[3], ++ki;
 							}
 							else if(esum==3)
 							{
@@ -6662,9 +6646,9 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 								//if(ktr==8||ktr==9)//
 								//	int LOL_1=0;//
 								++ktr;//
-								indices[ki]=ei[0], ++ki;
-								indices[ki]=ei[1], ++ki;
-								indices[ki]=ei[2], ++ki;
+								indices[ki]=tcvi[0], ++ki;
+								indices[ki]=tcvi[1], ++ki;
+								indices[ki]=tcvi[2], ++ki;
 							}
 							else if(esum)
 								LOGERROR("Tetrahedron produced %d vertices", esum);
@@ -6674,9 +6658,9 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 							//	for(int kb=0;kb<6;++kb)			//X no triangle fans, just GL_TRIANGLES
 							//		if(emask>>kb&1)
 							//			indices[ki]=offset+bi[ti[kth*6+kb]], ++ki;//original bit indices
-						}
+						}//end tetrahedron loop
 					}
-				}
+				}//end work loop
 				prof_add("CPU2 indices");
 #if 0//DEBUG - results to clipboard
 				std::stringstream LOL_1;
@@ -6713,8 +6697,6 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 					nvertices=3*ntriangles;
 				if((int)indices.size()>nvertices)
 					indices.resize(nvertices);
-				debug_vertices.assign(vertices, vertices+nvert_total*6);
-				debug_indices=indices;
 
 
 				//float vert2[]=//DEBUG
@@ -6730,6 +6712,10 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				//indices.push_back(0);
 				//indices.push_back(1);
 				//indices.push_back(2);
+#endif
+#if 1//DEBUG - expose vertices & indices
+				debug_vertices.assign(vertices, vertices+nvert_total*6);
+				debug_indices=indices;
 #endif
 				g_nvert=nvert_total, g_ntrgl=indices.size()/3;
 				gl_buf->create_VN_I(vertices, nvert_total*6, indices.data(), indices.size());

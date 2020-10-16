@@ -31577,6 +31577,12 @@ namespace	modes
 				//if(!debug_info.size())
 				//	draw_contour_debuggrid(0x40FF00FF);
 #if 1
+				_3d.lineColor=0x400080FF;//orange
+				for(int k=0;k<debug_vertices.size();k+=6)
+				{
+					dvec3 p1(debug_vertices[k], debug_vertices[k+1], debug_vertices[k+2]);
+					_3d.line(p1, p1+dvec3(debug_vertices[k+3], debug_vertices[k+4], debug_vertices[k+5]));
+				}
 				if(debug_info.size())
 				{
 					double
