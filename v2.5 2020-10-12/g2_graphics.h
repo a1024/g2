@@ -653,7 +653,8 @@ struct			GPUBuffer
 {
 	unsigned	VBO, EBO;
 	int			vertices_stride, vertices_start, normals_stride, normals_start, n_vertices;
-	GPUBuffer():VBO(0), EBO(0), n_vertices(0){}
+	GPUBuffer():VBO(0), EBO(0), n_vertices(0),
+		vertices_stride(0), vertices_start(0), normals_stride(0), normals_start(0){}
 	void create_VN_I(float *VVVNNN, int n_floats, int *indices, int n_ints);
 };
 int				gl_print(int x, int y, int tab_origin, const char *format, ...);
@@ -685,8 +686,83 @@ namespace		GL2_3D
 	void		draw(Camera const &cam);
 }
 
+//extended OpenGL API
+#define			GL_MAJOR_VERSION		0x821B
+#define			GL_MINOR_VERSION		0x821C
+#define			GL_TEXTURE0				0x84C0
+#define			GL_TEXTURE1				0x84C1
+#define			GL_TEXTURE2				0x84C2
+#define			GL_TEXTURE3				0x84C3
+#define			GL_TEXTURE4				0x84C4
+#define			GL_TEXTURE5				0x84C5
+#define			GL_TEXTURE6				0x84C6
+#define			GL_TEXTURE7				0x84C7
+#define			GL_TEXTURE8				0x84C8
+#define			GL_TEXTURE9				0x84C9
+#define			GL_TEXTURE10			0x84CA
+#define			GL_TEXTURE11			0x84CB
+#define			GL_TEXTURE12			0x84CC
+#define			GL_TEXTURE13			0x84CD
+#define			GL_TEXTURE14			0x84CE
+#define			GL_TEXTURE15			0x84CF
+#define			GL_TEXTURE_RECTANGLE	0x84F5
+#define			GL_PROGRAM_POINT_SIZE	0x8642
+#define			GL_BUFFER_SIZE			0x8764
+#define			GL_ARRAY_BUFFER			0x8892
+#define			GL_ELEMENT_ARRAY_BUFFER	0x8893
+#define			GL_STATIC_DRAW			0x88E4
+#define			GL_FRAGMENT_SHADER		0x8B30
+#define			GL_VERTEX_SHADER		0x8B31
+#define			GL_COMPILE_STATUS		0x8B81
+#define			GL_LINK_STATUS			0x8B82
+#define			GL_INFO_LOG_LENGTH		0x8B84
+#define			GL_DEBUG_OUTPUT			0x92E0//OpenGL 4.3+
+//extern void	(__stdcall *glGenVertexArrays)(int n, unsigned *arrays);//OpenGL 3.0
+//extern void	(__stdcall *glDeleteVertexArrays)(int n, unsigned *arrays);//OpenGL 3.0
+extern void		(__stdcall *glBindVertexArray)(unsigned array);
+extern void		(__stdcall *glGenBuffers)(int n, unsigned *buffers);
+extern void		(__stdcall *glBindBuffer)(unsigned target, unsigned buffer);
+extern void		(__stdcall *glBufferData)(unsigned target, int size, const void *data, unsigned usage);
+extern void		(__stdcall *glBufferSubData)(unsigned target, int offset, int size, const void *data);
+//extern void	(__stdcall *glGetBufferSubData)(unsigned target, int offset, int size, void *data);
+extern void		(__stdcall *glEnableVertexAttribArray)(unsigned index);
+extern void		(__stdcall *glVertexAttribPointer)(unsigned index, int size, unsigned type, unsigned char normalized, int stride, const void *pointer);
+extern void		(__stdcall *glDisableVertexAttribArray)(unsigned index);
+extern unsigned	(__stdcall *glCreateShader)(unsigned shaderType);
+extern void		(__stdcall *glShaderSource)(unsigned shader, int count, const char **string, const int *length);
+extern void		(__stdcall *glCompileShader)(unsigned shader);
+extern void		(__stdcall *glGetShaderiv)(unsigned shader, unsigned pname, int *params);
+extern void		(__stdcall *glGetShaderInfoLog)(unsigned shader, int maxLength, int *length, char *infoLog);
+extern unsigned	(__stdcall *glCreateProgram)();
+extern void		(__stdcall *glAttachShader)(unsigned program, unsigned shader);
+extern void		(__stdcall *glLinkProgram)(unsigned program);
+extern void		(__stdcall *glGetProgramiv)(unsigned program, unsigned pname, int *params);
+extern void		(__stdcall *glGetProgramInfoLog)(unsigned program, int maxLength, int *length, char *infoLog);
+extern void		(__stdcall *glDetachShader)(unsigned program, unsigned shader);
+extern void		(__stdcall *glDeleteShader)(unsigned shader);
+extern void		(__stdcall *glUseProgram)(unsigned program);
+extern int		(__stdcall *glGetAttribLocation)(unsigned program, const char *name);
+extern void		(__stdcall *glDeleteProgram)(unsigned program);
+extern void		(__stdcall *glDeleteBuffers)(int n, const unsigned *buffers);
+extern int		(__stdcall *glGetUniformLocation)(unsigned program, const char *name);
+extern void		(__stdcall *glUniform1f)(int location, float v0);
+extern void		(__stdcall *glUniformMatrix3fv)(int location, int count, unsigned char transpose, const float *value);
+extern void		(__stdcall *glUniformMatrix4fv)(int location, int count, unsigned char transpose, const float *value);
+extern void		(__stdcall *glGetBufferParameteriv)(unsigned target, unsigned value, int *data);
+extern void		(__stdcall *glActiveTexture)(unsigned texture);
+extern void		(__stdcall *glUniform1i)(int location, int v0);
+extern void		(__stdcall *glUniform2f)(int location, float v0, float v1);
+extern void		(__stdcall *glUniform3f)(int location, float v0, float v1, float v2);
+extern void		(__stdcall *glUniform3fv)(int location, int count, const float *value);
+extern void		(__stdcall *glUniform4f)(int location, float v0, float v1, float v2, float v3);
+
 //CL-GL interop.
 void 			generate_glcl_texture(unsigned &tx_id, int Xplaces, int Yplaces);
 void 			display_gl_texture(unsigned &tx_id);
 void			display_texture(int x1, int x2, int y1, int y2, int *rgb, int txw, int txh, unsigned char alpha=0xFF);//no CL-GL interop.
+inline void		generate_glcl_buffer(unsigned &buffer)
+{
+	if(!buffer)
+		glGenBuffers(1, &buffer);
+}
 #endif

@@ -90,6 +90,7 @@ const char*			glerr2str(int error)
 	const char *a=nullptr;
 	switch(error)
 	{
+	case 0:a="SUCCESS";break;
 	EC(GL_INVALID_ENUM);
 	EC(GL_INVALID_VALUE);
 	EC(GL_INVALID_OPERATION);
@@ -99,6 +100,7 @@ const char*			glerr2str(int error)
 	case 0x0506:a="GL_INVALID_FRAMEBUFFER_OPERATION";break;
 	case 0x0507:a="GL_CONTEXT_LOST";break;
 	case 0x8031:a="GL_TABLE_TOO_LARGE";break;
+	default:a="???";break;
 	}
 	return a;
 #undef				EC

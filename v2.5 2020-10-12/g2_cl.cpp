@@ -24,10 +24,18 @@
 int				OCL_state=CL_NOTHING;
 bool			cl_gl_interop=false;
 
+//	#define		COPY_INITIALIZATION
+	#define		BLOCKING_INITIALIZATION
+//	#define		DEBUG3
+	#define		V5_CPU
+//	#define		DEBUG2//performance impact
+
 	const bool	loadbinary=true;
 //	const bool	loadbinary=false;//
 
 int				*rgb=nullptr;
+std::vector<float> debug_vertices;
+std::vector<int> debug_indices;
 
 //OpenCL API
 #define 		DECL_CL_FUNC(clFunc)	decltype(clFunc) *p_##clFunc=nullptr
@@ -38,6 +46,8 @@ DECL_CL_FUNC(clGetPlatformInfo);
 DECL_CL_FUNC(clGetDeviceIDs);
 DECL_CL_FUNC(clGetDeviceInfo);
 DECL_CL_FUNC(clCreateContext);
+DECL_CL_FUNC(clReleaseContext);
+DECL_CL_FUNC(clRetainContext);
 DECL_CL_FUNC(clGetContextInfo);
 DECL_CL_FUNC(clCreateCommandQueue);
 DECL_CL_FUNC(clCreateProgramWithSource);
@@ -52,6 +62,7 @@ DECL_CL_FUNC(clEnqueueFillBuffer);
 DECL_CL_FUNC(clEnqueueWriteBuffer);
 DECL_CL_FUNC(clEnqueueNDRangeKernel);
 DECL_CL_FUNC(clEnqueueReadBuffer);
+DECL_CL_FUNC(clFlush);
 DECL_CL_FUNC(clFinish);
 DECL_CL_FUNC(clCreateFromGLBuffer);
 DECL_CL_FUNC(clCreateFromGLTexture);
@@ -101,6 +112,8 @@ void 			load_OpenCL_API()
 			GET_CL_FUNC(hOpenCL, clGetDeviceIDs);
 			GET_CL_FUNC(hOpenCL, clGetDeviceInfo);
 			GET_CL_FUNC(hOpenCL, clCreateContext);
+			GET_CL_FUNC(hOpenCL, clReleaseContext);
+			GET_CL_FUNC(hOpenCL, clRetainContext);
 			GET_CL_FUNC(hOpenCL, clGetContextInfo);
 			GET_CL_FUNC(hOpenCL, clCreateCommandQueue);
 			GET_CL_FUNC(hOpenCL, clCreateProgramWithSource);
@@ -115,6 +128,7 @@ void 			load_OpenCL_API()
 			GET_CL_FUNC(hOpenCL, clEnqueueWriteBuffer);
 			GET_CL_FUNC(hOpenCL, clEnqueueNDRangeKernel);
 			GET_CL_FUNC(hOpenCL, clEnqueueReadBuffer);
+			GET_CL_FUNC(hOpenCL, clFlush);
 			GET_CL_FUNC(hOpenCL, clFinish);
 			GET_CL_FUNC(hOpenCL, clCreateFromGLBuffer);
 			GET_CL_FUNC(hOpenCL, clCreateFromGLTexture);
@@ -3209,7 +3223,7 @@ cl_device_id	device=nullptr;//changes when app is launched
 cl_context		context=nullptr;//changes when resuming
 cl_command_queue commandqueue=nullptr;//changes when resuming
 cl_kernel		kernels[N_KERNELS]={nullptr};//all kernels
-size_t 			g_maxlocalsize=0, g_maxlocaldim=0;
+size_t 			g_maxlocalsize=0, g_maxlocalX=0, g_maxlocalY=0, g_maxlocalZ=0;
 namespace 		G2_CL
 {
 	cl_program programs[nprograms]={nullptr};
@@ -4364,9 +4378,7 @@ void			cl_compile()
 			OCL_state=CL_READY_UNTESTED;
 	}
 }
-void 			cl_reset()
-{
-}
+void 			cl_reset(){}
 void 			cl_initiate()
 {
 	load_OpenCL_API();
@@ -4386,8 +4398,10 @@ void 			cl_initiate()
 		//	firsttime=false;
 		unsigned n_platforms=0, n_devices=0;
 		// Fetch the Platform and Device IDs; we only want one.		//https://donkey.vernier.se/~yann/hellocl.c
-		error=p_clGetPlatformIDs(1, &platform, &n_platforms);							CL_CHECK(error);
-		error=p_clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, &n_devices);	CL_CHECK(error);//was CL_DEVICE_TYPE_ALL
+		if(!platform)
+			{error=p_clGetPlatformIDs(1, &platform, &n_platforms);							CL_CHECK(error);}
+		if(!device)
+			{error=p_clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, &n_devices);	CL_CHECK(error);}//was CL_DEVICE_TYPE_ALL
 
 		error=p_clGetPlatformInfo(platform, CL_PLATFORM_VERSION, g_buf_size, g_buf, &retlen);	CL_CHECK(error);
 	//	LOGI("%s", g_buf);
@@ -4407,27 +4421,36 @@ void 			cl_initiate()
 	//		LOGI("cl_khr_gl_sharing not supported");
 		//}
 
-		cl_context_properties properties[8]={};
-		if(cl_gl_interop)
+		if(!context)
 		{
-			auto gl_context=wglGetCurrentContext();//changes when resuming
-			auto hDC=wglGetCurrentDC();
-			properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context,	//Win32		https://stackoverflow.com/questions/26802905/getting-opengl-buffers-using-opencl
-			properties[2]=CL_WGL_HDC_KHR,		properties[3]=(cl_context_properties)hDC,
-			properties[4]=CL_CONTEXT_PLATFORM,	properties[5]=(cl_context_properties)platform,//OpenCL platform object
-			properties[6]=0,					properties[7]=0;
-
-		//	properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context;	//Android
-		//	properties[2]=CL_EGL_DISPLAY_KHR,	properties[3]=(cl_context_properties)egl_display;
-		//	properties[4]=CL_CONTEXT_PLATFORM,	properties[5]=(cl_context_properties)platform;
-		//	properties[6]=0, properties[7]=0;
+			cl_context_properties properties[8]={};
+			if(cl_gl_interop)
+			{
+				auto gl_context=wglGetCurrentContext();
+				auto hDC=wglGetCurrentDC();
+				properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context,	//Win32		https://stackoverflow.com/questions/26802905/getting-opengl-buffers-using-opencl
+				properties[2]=CL_WGL_HDC_KHR,		properties[3]=(cl_context_properties)hDC,
+				properties[4]=CL_CONTEXT_PLATFORM,	properties[5]=(cl_context_properties)platform,//OpenCL platform object
+				properties[6]=0,					properties[7]=0;
+				
+			//	auto gl_context=eglGetCurrentContext();//changes when resuming
+			//	auto egl_display=eglGetCurrentDisplay();
+			//	properties[0]=CL_GL_CONTEXT_KHR,	properties[1]=(cl_context_properties)gl_context;	//Android
+			//	properties[2]=CL_EGL_DISPLAY_KHR,	properties[3]=(cl_context_properties)egl_display;
+			//	properties[4]=CL_CONTEXT_PLATFORM,	properties[5]=(cl_context_properties)platform;
+			//	properties[6]=0, properties[7]=0;
+			}
+			else
+			{
+				properties[0]=CL_CONTEXT_PLATFORM, properties[1]=(cl_context_properties)platform;
+				properties[2]=0, properties[3]=0;
+			}
+			context=p_clCreateContext(properties, 1, &device, nullptr, nullptr, &error);	CL_CHECK(error);
 		}
 		else
 		{
-			properties[0]=CL_CONTEXT_PLATFORM, properties[1]=(cl_context_properties)platform;
-			properties[2]=0, properties[3]=0;
+			error=p_clRetainContext(context);												CL_CHECK(error);
 		}
-		context=p_clCreateContext(properties, 1, &device, nullptr, nullptr, &error);	CL_CHECK(error);
 		commandqueue=p_clCreateCommandQueue(context, device, 0, &error);				CL_CHECK(error);
 		OCL_state=CL_CONTEXT_CREATED;
 		cl_compile();
@@ -4528,6 +4551,10 @@ __kernel void myfunc(__global const float *in1, __global const float *in2, __glo
 #endif
 	}
 }
+void			cl_terminate()
+{
+	int error=p_clReleaseContext(context);	CL_CHECK(error);
+}
 
 struct			CLTerm
 {
@@ -4540,19 +4567,42 @@ struct 			DebugBuffer
 	cl_mem buffer;
 	const char *name;
 };
-void			debug_printbuffer(cl_mem buffer, int nfloats, int stride, const char *bufname=nullptr)
+void			debug_printbuffer(cl_mem buffer, int Xplaces, int Yplaces, int Zplaces, int stride, const char *bufname=nullptr)
 {
+	int nfloats=Xplaces*Yplaces*Zplaces;
 	auto result=(float*)malloc(nfloats*sizeof(float));
 	int error=p_clEnqueueReadBuffer(commandqueue, buffer, CL_TRUE, 0, nfloats*sizeof(float), result, 0, nullptr, nullptr);	CL_CHECK(error);
-	std::string str;
-	for(int k=0;k<nfloats;k+=stride)
-		str+=bufname?bufname:"buffer", str+='[', str+=std::to_string(k), str+="] = ", str+=std::to_string((double)result[k]), str+="\r\n";
-	//	LOGI("G2_CL: %s[%d] = %g", bufname?bufname:"buffer", k, (double)result[k]);
-	copy_to_clipboard(str.c_str(), str.size());
+	std::stringstream LOL_1;
+	if(bufname)
+		LOL_1<<bufname<<"\r\n";
+	for(int kz=0;kz<Zplaces;kz+=stride)
+	{
+		LOL_1<<"z="<<kz<<'\t';
+		for(int kx=0;kx<Xplaces;kx+=stride)
+			LOL_1<<"\t["<<kx<<']';
+		LOL_1<<"\r\n";
+		for(int ky=0;ky<Yplaces;ky+=stride)
+		{
+			LOL_1<<"["<<ky<<"] ";
+			for(int kx=0;kx<Xplaces;kx+=stride)
+			{
+				int idx=Xplaces*(Yplaces*kz+ky)+kx;
+				LOL_1<<result[idx]<<"="<<std::hex<<(int&)result[idx]<<", ";
+			}
+			LOL_1<<"\r\n";
+		}
+		LOL_1<<"\r\n";
+	}
+	//for(int k=0;k<nfloats;k+=stride)
+	//	str+=bufname?bufname:"buffer", str+='[', str+=std::to_string(k), str+="] = ", str+=std::to_string((double)result[k]), str+="\r\n";
+	//	//LOGI("G2_CL: %s[%d] = %g", bufname?bufname:"buffer", k, (double)result[k]);
+	copy_to_clipboard(LOL_1.str());
 	free(result);
 }
-void			debug_printbuffers(DebugBuffer *buffers, int nbuffers, int nfloats, int stride)
+void			debug_printbuffers(DebugBuffer *buffers, int nbuffers, int Xplaces, int Yplaces, int stride)
+//void			debug_printbuffers(DebugBuffer *buffers, int nbuffers, int nfloats, int stride)
 {
+	int nfloats=Xplaces*Yplaces;
 	auto result=(float*)malloc(nbuffers*nfloats*sizeof(float));
 	for(int k=0;k<nbuffers;++k)
 	{
@@ -4560,16 +4610,26 @@ void			debug_printbuffers(DebugBuffer *buffers, int nbuffers, int nfloats, int s
 		CL_CHECK(error);
 	}
 	std::stringstream LOL_1;
-	for(int k=0;k<nfloats;k+=stride)
+	for(int kx=0;kx<Xplaces;kx+=stride)
+		LOL_1<<"\t["<<kx<<']';
+	LOL_1<<"\r\n";
+	for(int ky=0;ky<Yplaces;ky+=stride)
 	{
-		LOL_1<<"G2_CL: ["<<k<<"] ";
-		for(int kb=0;kb<nbuffers;++kb)
+		LOL_1<<"["<<ky<<"] ";
+		for(int kx=0;kx<Xplaces;kx+=stride)
 		{
-			const char *name=buffers[kb].name;
-			LOL_1<<(name?name:"buffer")<<": "<<result[nfloats*kb+k]<<", ";
+			int idx=Xplaces*ky+kx;
+		//	LOL_1<<"["<<kx<<", "<<ky<<"] ";
+		//	LOL_1<<"G2_CL: ["<<k<<"] ";
+			for(int kb=0;kb<nbuffers;++kb)
+			{
+				const char *name=buffers[kb].name;
+				LOL_1<<(name?name:"buffer")<<": "<<result[nfloats*kb+idx]<<"="<<std::hex<<(int&)result[nfloats*kb+idx]<<", ";
+			}
+		//	LOL_1<<"\r\n";
+		//	LOGI("%s", LOL_1.str().c_str());
 		}
 		LOL_1<<"\r\n";
-	//	LOGI("%s", LOL_1.str().c_str());
 	}
 	auto &str=LOL_1.str();
 	copy_to_clipboard(str.c_str(), str.size());
@@ -4585,6 +4645,10 @@ void 			create_resize_buffer(cl_mem &buffer, unsigned nfloats)
 	buffer=p_clCreateBuffer(context, CL_MEM_READ_WRITE, nfloats*sizeof(float), nullptr, &error);
 	CL_CHECK(error);
 }
+#ifdef DEBUG3
+int				g_Xplaces=0, g_Yplaces=0, g_Zplaces=0;//DEBUG
+//const char	*g_bufname=nullptr;
+#endif
 void			initialize_const_comp(cl_mem &buffer, unsigned nfloats, float value, cl_mem size_buf, cl_mem args_buf)
 {
 	int error=0;
@@ -4598,10 +4662,27 @@ void			initialize_const_comp(cl_mem &buffer, unsigned nfloats, float value, cl_m
 	error=p_clSetKernelArg(k_fill, 1, sizeof(cl_mem), &buffer);		CL_CHECK(error);
 	error=p_clSetKernelArg(k_fill, 2, sizeof(cl_mem), &args_buf);	CL_CHECK(error);
 	error=p_clEnqueueNDRangeKernel(commandqueue, k_fill, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+#ifdef BLOCKING_INITIALIZATION
+//	error=p_clFlush(commandqueue);		CL_CHECK(error);//wrong results
+	error=p_clFinish(commandqueue);		CL_CHECK(error);//correct results
+#endif
 
 //	float pattern[4]={value};
 //	error=p_clEnqueueFillBuffer(commandqueue, buffer, &value, sizeof(float), 0, nfloats*sizeof(float), 0, nullptr, nullptr); CL_CHECK(error);//CRASH SIGSEGV on Galaxy S5
 	//error=p_clEnqueueFillBuffer(commandqueue, buffer, pattern, sizeof(float), 0, sizeof(float), 0, nullptr, nullptr); CL_CHECK(error);
+#if 0
+	std::vector<float> args(3);
+	error=p_clEnqueueReadBuffer(commandqueue, args_buf, CL_TRUE, 0, 3*sizeof(float), args.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+	args[0]=args[0];
+	std::vector<float> debug_buf(nfloats);
+	error=p_clEnqueueReadBuffer(commandqueue, buffer, CL_TRUE, 0, nfloats*sizeof(float), debug_buf.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+	debug_buf[0]=debug_buf[0];
+	std::stringstream LOL_1;
+	LOL_1<<value<<"\r\n";
+	LOL_1<<args[0]<<' '<<args[1]<<' '<<args[2]<<"\r\n";
+	LOL_1<<debug_buf[0]<<"\r\n";
+	copy_to_clipboard(LOL_1.str());
+#endif
 #ifdef DEBUG2
 	float testval=0;
 	error=p_clEnqueueReadBuffer(commandqueue, buffer, CL_TRUE, 0, 1*sizeof(float), &testval, 0, nullptr, nullptr);	CL_CHECK(error);
@@ -4648,6 +4729,15 @@ void 			initialize_component(ModeParameters const &mp, cl_mem &buffer, unsigned 
 		error=p_clSetKernelArg(k_fill, 2, sizeof(cl_mem), &args_buf);	CL_CHECK(error);
 		int error0=error;
 		error=p_clEnqueueNDRangeKernel(commandqueue, k_fill, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+#ifdef BLOCKING_INITIALIZATION
+	//	error=p_clFlush(commandqueue);		CL_CHECK(error);//wrong results
+		error=p_clFinish(commandqueue);		CL_CHECK(error);//correct results
+#endif
+#ifdef COPY_INITIALIZATION
+		const char bufname[]={varType, '\0'};
+		debug_printbuffer(buffer, g_Xplaces, g_Yplaces, 1, 1, bufname);
+		messageboxa(ghWnd, "Information", "%s sent to clipboard", bufname?bufname:"Data");//
+#endif
 #ifdef DEBUG2
 		LOGI("G2_CL: error: %d -> %d, lsizes={%d, %d, %d}", error0, error, (int)host_sizes_local[0], (int)host_sizes_local[1], (int)host_sizes_local[2]);
 #endif
@@ -4751,7 +4841,11 @@ void			colorFunction_bcw(Comp1d const &v, int *color)
 	}
 }
 #endif
-unsigned		dimension_work_size(unsigned places){return places&~(g_maxlocaldim-1);}
+unsigned		dimension_work_size(unsigned places, size_t maxlocaldim)
+{
+	return places-places%maxlocaldim;//when maxlocaldim isn't a power of 2
+//	return places&~(g_maxlocaldim-1);
+}
 inline void		read_buffer(cl_mem buffer, float *&data, unsigned nfloats)
 {
 	if(buffer)
@@ -4800,7 +4894,451 @@ namespace		SW
 	inline void out(float *rr, float *ri){*rr=(float)dprr, *ri=(float)dpri;}
 	inline void out(float *rr, float *ri, float *rj, float *rk){*rr=(float)dprr, *ri=(float)dpri, *rj=(float)dprj, *rk=(float)dprk;}
 }
-void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, unsigned gl_texture)
+void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces)
+{
+	int nd=0;
+	switch(mode_idx)
+	{
+	case MODE_I1D:
+	case MODE_T1D:
+	case MODE_T1D_C:
+	case MODE_T1D_H:
+		{
+			int log_mld=floor_log2(g_maxlocalsize);
+			g_maxlocalX=1<<(log_mld>>1), g_maxlocalY=1, g_maxlocalZ=1;
+			nd=1;
+		}
+		break;
+	case MODE_I2D:
+	case MODE_T2D:
+	case MODE_C2D:
+	case MODE_T2D_H:
+		{
+			int log_mld=floor_log2(g_maxlocalsize);
+			g_maxlocalY=g_maxlocalX=1<<(log_mld>>1), g_maxlocalZ=1;
+			nd=2;
+		}
+		break;
+	case MODE_I3D:
+	case MODE_C3D:
+		{
+			int log_mld=floor_log2(g_maxlocalsize);
+			int log_xy=log_mld/3+(log_mld%3!=0), log_z=log_mld-(log_xy<<1);
+			g_maxlocalY=g_maxlocalX=1<<log_xy, g_maxlocalZ=1<<log_z;
+			nd=3;
+		}
+		break;
+	}
+	if(nd)
+	{
+		if(*Xplaces<(int)g_maxlocalX)
+			*Xplaces=g_maxlocalX;
+		if(nd>=2)
+		{
+			if(*Yplaces<(int)g_maxlocalY)
+				*Yplaces=g_maxlocalY;
+			if(nd>=3)
+			{
+				if(*Zplaces<(int)g_maxlocalZ)
+					*Zplaces=g_maxlocalZ;
+			}
+		}
+	}
+}
+#ifdef V5_CPU
+typedef unsigned long long ulong;
+static const unsigned char nt[16]=//number of triangles produced from tetrahedron given 4 bit vertex condition
+{//	00	01	10	11	lo/hi
+	0,	1,	1,	2,//00
+	1,	2,	2,	1,//01
+	1,	2,	2,	1,//10
+	2,	1,	1,	0,//11
+};
+char hammingweight(unsigned long long x)//https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+{
+	x-=x>>1&0x5555555555555555;
+	x=(x&0x3333333333333333)+(x>>2&0x3333333333333333);
+	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;
+}
+union			WorkIdx
+{
+	struct{unsigned short ke, kx, ky, kz;};
+//	struct{unsigned short kx, ky, kz, ke;};
+	unsigned long long idx;
+	WorkIdx():idx(0){}
+	WorkIdx(short kx, short ky, short kz, short ke):kx(kx), ky(ky), kz(kz), ke(ke){}
+	void set(short kx, short ky, short kz, short ke){this->kx=kx, this->ky=ky, this->kz=kz, this->ke=ke;}
+};
+bool operator<(WorkIdx const &a, WorkIdx const &b){return a.idx<b.idx;}
+enum ExEdgeBitIdx//54edges
+{
+//	main (new) edge indices
+	DSW_DSE, DSW_DNW, DSW_USW,
+
+	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
+	DSW_mSm, USW_mSm, USE_mSm, DSE_mSm,
+	DSW_Dmm, DSE_Dmm, DNE_Dmm, DNW_Dmm,
+
+	mmW_Dmm, mmW_mSm, mmW_Umm, mmW_mNm,
+	Umm_mNm, mNm_Dmm, Dmm_mSm, mSm_Umm,
+	mmE_Dmm, mmE_mSm, mmE_Umm, mmE_mNm,
+
+	mmm_Dmm, mmm_mSm, mmm_mmW, mmm_Umm, mmm_mNm, mmm_mmE,
+
+	//extended (redundant) edge indices
+	DSE_DNE, DNE_DNW, DSE_USE, DNE_UNE, DNW_UNW, USW_USE, USE_UNE, UNE_UNW, UNW_USW,
+	mmE_DSE, mmE_USE, mmE_UNE, mmE_DNE,
+	mNm_DNW, mNm_UNW, mNm_UNE, mNm_DNE,
+	Umm_USW, Umm_USE, Umm_UNE, Umm_UNW,
+};
+enum ExEdgeBitIdxRev//54edges
+{
+//	main (new) edge indices
+	DSE_DSW, DNW_DSW, USW_DSW,
+
+	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
+	mSm_DSW, mSm_USW, mSm_USE, mSm_DSE,
+	Dmm_DSW, Dmm_DSE, Dmm_DNE, Dmm_DNW,
+
+	Dmm_mmW, mSm_mmW, Umm_mmW, mNm_mmW,
+	mNm_Umm, Dmm_mNm, mSm_Dmm, Umm_mSm,
+	Dmm_mmE, mSm_mmE, Umm_mmE, mNm_mmE,
+
+	Dmm_mmm, mSm_mmm, mmW_mmm, Umm_mmm, mNm_mmm, mmE_mmm,
+
+	//extended (redundant) edge indices
+	DNE_DSE, DNW_DNE, USE_DSE, UNE_DNE, UNW_DNW, USE_USW, UNE_USE, UNW_UNE, USW_UNW,
+	DSE_mmE, USE_mmE, UNE_mmE, DNE_mmE,
+	DNW_mNm, UNW_mNm, UNE_mNm, DNE_mNm,
+	USW_Umm, USE_Umm, UNE_Umm, UNW_Umm,
+};
+const ulong		obsmask[8]=//original bit selection mask
+{
+	0x00000001FFFFFFFF,//all coords inside
+	(1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE)|0x00000001FFFFFFFF,//x at end: DSE's originals
+	(1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//y at end: DNW's originals
+	(1ULL<<DNE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//x&y at end: (DSE, DNW & DNE)'s originals
+
+	(1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//z at end: USW's originals
+	(1ULL<<USE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//x&z at end: (DSE, USW & USE)'s originals
+	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
+	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
+};
+struct WE_Offset//work-edge offset, used by CPU-side part 2
+{
+	short dx, dy, dz;
+	char ke2[8];//{normal jump, (x, y, xy, z, xz, yz, xyz)@end}
+//	char ke2[2];//{normal jump, @end (use original)}
+};
+static const WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant bits, access: [ke-33]={Xoffset, Yomask, Zomask, ke2[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)]}
+{//	(dx, dy, dz)	(xyz,		yz,			xz,			z,			xy,			y,			x)@end		normal jump,			
+	{1, 0, 0,		{DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW}},//DSE_DNE
+	{0, 1, 0,		{DNE_DNW,	DNE_DNW,	DSW_DSE,	DSW_DSE,	DNE_DNW,	DNE_DNW,	DSW_DSE,	DSW_DSE}},//DNE_DNW
+	{1, 0, 0,		{DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW}},//DSE_USE
+	{1, 1, 0,		{DNE_UNE,	DNW_UNW,	DSE_USE,	DSW_USW,	DNE_UNE,	DNW_UNW,	DSE_USE,	DSW_USW}},//DNE_UNE//2D jump
+	{0, 1, 0,		{DNW_UNW,	DNW_UNW,	DSW_USW,	DSW_USW,	DNW_UNW,	DNW_UNW,	DSW_USW,	DSW_USW}},//DNW_UNW
+	{0, 0, 1,		{USW_USE,	USW_USE,	USW_USE,	USW_USE,	DSW_DSE,	DSW_DSE,	DSW_DSE,	DSW_DSE}},//USW_USE
+	{1, 0, 1,		{USE_UNE,	USW_UNW,	USE_UNE,	USW_UNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW}},//USE_UNE//2D jump
+	{0, 1, 1,		{UNE_UNW,	UNE_UNW,	USW_USE,	USW_USE,	DNE_DNW,	DNE_DNW,	DSW_DSE,	DSW_DSE}},//UNE_UNW//2D jump
+	{0, 0, 1,		{UNW_USW,	UNW_USW,	UNW_USW,	UNW_USW,	DSW_DNW,	DSW_DNW,	DSW_DNW,	DSW_DNW}},//UNW_USW
+
+	{1, 0, 0,		{mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW}},//mmE_DSE
+	{1, 0, 0,		{mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW}},//mmE_USE
+	{1, 0, 0,		{mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW}},//mmE_UNE
+	{1, 0, 0,		{mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW}},//mmE_DNE
+
+	{0, 1, 0,		{mNm_DNW,	mNm_DNW,	mSm_DSW,	mSm_DSW,	mNm_DNW,	mNm_DNW,	mSm_DSW,	mSm_DSW}},//mNm_DNW
+	{0, 1, 0,		{mNm_UNW,	mNm_UNW,	mSm_USW,	mSm_USW,	mNm_UNW,	mNm_UNW,	mSm_USW,	mSm_USW}},//mNm_UNW
+	{0, 1, 0,		{mNm_UNE,	mNm_UNE,	mSm_USE,	mSm_USE,	mNm_UNE,	mNm_UNE,	mSm_USE,	mSm_USE}},//mNm_UNE
+	{0, 1, 0,		{mNm_DNE,	mNm_DNE,	mSm_DSE,	mSm_DSE,	mNm_DNE,	mNm_DNE,	mSm_DSE,	mSm_DSE}},//mNm_DNE
+
+	{0, 0, 1,		{Umm_USW,	Umm_USW,	Umm_USW,	Umm_USW,	Dmm_DSW,	Dmm_DSW,	Dmm_DSW,	Dmm_DSW}},//Umm_USW
+	{0, 0, 1,		{Umm_USE,	Umm_USE,	Umm_USE,	Umm_USE,	Dmm_DSE,	Dmm_DSE,	Dmm_DSE,	Dmm_DSE}},//Umm_USE
+	{0, 0, 1,		{Umm_UNE,	Umm_UNE,	Umm_UNE,	Umm_UNE,	Dmm_DNE,	Dmm_DNE,	Dmm_DNE,	Dmm_DNE}},//Umm_UNE
+	{0, 0, 1,		{Umm_UNW,	Umm_UNW,	Umm_UNW,	Umm_UNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW}},//Umm_UNW
+};
+//static const WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant bits, access: [ke-33]={Xoffset, Yomask, Zomask, ke2[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)]}
+//{//(dx, ym, zm)	normal jump, (x,		y,			xy,			z,			xz,			yz,			xyz)@end
+//	{1,  0,  0,		{}},//{DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE}},//DSE_DNE
+//	{0, -1,	 0,		{}},//{DSW_DSE,	DSW_DSE,	DNE_DNW,	DNE_DNW,	DSW_DSE,	DSW_DSE,	DNE_DNW,	DNE_DNW}},//DNE_DNW
+//	{1,  0,  0,		{}},//{DSW_USW,	DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW,	DSE_USE}},//DSE_USE
+//	{1, -1,	 0,		{}},//{DSW_USW,	DSE_USE,	DNW_UNW,	DNE_UNE,	DSW_USW,	DSE_USE,	DNW_UNW,	DNE_UNE}},//DNE_UNE//2D jump
+//	{0, -1,	 0,		{}},//{DSW_USW,	DSW_USW,	DNW_UNW,	DNW_UNW,	DSW_USW,	DSW_USW,	DNW_UNW,	DNW_UNW}},//DNW_UNW
+//	{0,  0, -1,		{}},//{DSW_DSE,	DSW_DSE,	DSW_DSE,	DSW_DSE,	USW_USE,	USW_USE,	USW_USE,	USW_USE}},//USW_USE
+//	{1,  0, -1,		{}},//{DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	USW_UNW,	USE_UNE,	USW_UNW,	USE_UNE}},//USE_UNE//2D jump
+//	{0, -1,	-1,		{}},//{DSW_DSE,	DSW_DSE,	DNE_DNW,	DNE_DNW,	USW_USE,	USW_USE,	UNE_UNW,	UNE_UNW}},//UNE_UNW//2D jump
+//	{0,  0, -1,		{}},//{DSW_DNW,	DSW_DNW,	DSW_DNW,	DSW_DNW,	UNW_USW,	UNW_USW,	UNW_USW,	UNW_USW}},//UNW_USW
+//
+//	{1,  0,  0,		{}},//{mmW_DSW,	mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW,	mmE_DSE}},//mmE_DSE
+//	{1,  0,  0,		{}},//{mmW_USW,	mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW,	mmE_USE}},//mmE_USE
+//	{1,  0,  0,		{}},//{mmW_UNW,	mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW,	mmE_UNE}},//mmE_UNE
+//	{1,  0,  0,		{}},//{mmW_DNW,	mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW,	mmE_DNE}},//mmE_DNE
+//
+//	{0, -1,  0,		{}},//{mSm_DSW,	mSm_DSW,	mNm_DNW,	mNm_DNW,	mSm_DSW,	mSm_DSW,	mNm_DNW,	mNm_DNW}},//mNm_DNW
+//	{0, -1,  0,		{}},//{mSm_USW,	mSm_USW,	mNm_UNW,	mNm_UNW,	mSm_USW,	mSm_USW,	mNm_UNW,	mNm_UNW}},//mNm_UNW
+//	{0, -1,  0,		{}},//{mSm_USE,	mSm_USE,	mNm_UNE,	mNm_UNE,	mSm_USE,	mSm_USE,	mNm_UNE,	mNm_UNE}},//mNm_UNE
+//	{0, -1,  0,		{}},//{mSm_DSE,	mSm_DSE,	mNm_DNE,	mNm_DNE,	mSm_DSE,	mSm_DSE,	mNm_DNE,	mNm_DNE}},//mNm_DNE
+//
+//	{0,  0, -1,		{}},//{Dmm_DSW,	Dmm_DSW,	Dmm_DSW,	Dmm_DSW,	Umm_USW,	Umm_USW,	Umm_USW,	Umm_USW}},//Umm_USW
+//	{0,  0, -1,		{}},//{Dmm_DSE,	Dmm_DSE,	Dmm_DSE,	Dmm_DSE,	Umm_USE,	Umm_USE,	Umm_USE,	Umm_USE}},//Umm_USE
+//	{0,  0, -1,		{}},//{Dmm_DNE,	Dmm_DNE,	Dmm_DNE,	Dmm_DNE,	Umm_UNE,	Umm_UNE,	Umm_UNE,	Umm_UNE}},//Umm_UNE
+//	{0,  0, -1,		{}},//{Dmm_DNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW,	Umm_UNW,	Umm_UNW,	Umm_UNW,	Umm_UNW}},//Umm_UNW
+//};
+//static const WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant bits, access: [ke-33]={Xoffset, Yomask, Zomask, ke2[?]}
+//{//	(dx, ym, zm)	normal jump, @end (original)
+//	{1,  0,  0,		{DSW_DNW,	DSE_DNE}},//DSE_DNE
+//	{0, -1,	 0,		{DSW_DSE,	DNE_DNW}},//DNE_DNW
+//	{1,  0,  0,		{DSW_USW,	DSE_USE}},//DSE_USE
+//	{1, -1,	 0,		{DSW_USW,	DNE_UNE}},//DNE_UNE
+//	{0, -1,	 0,		{DSW_USW,	DNW_UNW}},//DNW_UNW
+//	{0,  0, -1,		{DSW_DSE,	USW_USE}},//USW_USE
+//	{1,  0, -1,		{DSW_DNW,	USE_UNE}},//USE_UNE//<-
+//	{0, -1,	-1,		{DSW_DSE,	UNE_UNW}},//UNE_UNW
+//	{0,  0, -1,		{DSW_DNW,	UNW_USW}},//UNW_USW
+//
+//	{1,  0,  0,		{mmW_DSW,	mmE_DSE}},//mmE_DSE
+//	{1,  0,  0,		{mmW_USW,	mmE_USE}},//mmE_USE
+//	{1,  0,  0,		{mmW_UNW,	mmE_UNE}},//mmE_UNE
+//	{1,  0,  0,		{mmW_DNW,	mmE_DNE}},//mmE_DNE
+//
+//	{0, -1,  0,		{mSm_DSW,	mNm_DNW}},//mNm_DNW
+//	{0, -1,  0,		{mSm_USW,	mNm_UNW}},//mNm_UNW
+//	{0, -1,  0,		{mSm_USE,	mNm_UNE}},//mNm_UNE
+//	{0, -1,  0,		{mSm_DSE,	mNm_DNE}},//mNm_DNE
+//
+//	{0,  0, -1,		{Dmm_DSW,	Umm_USW}},//Umm_USW
+//	{0,  0, -1,		{Dmm_DSE,	Umm_USE}},//Umm_USE
+//	{0,  0, -1,		{Dmm_DNE,	Umm_UNE}},//Umm_UNE
+//	{0,  0, -1,		{Dmm_DNW,	Umm_UNW}},//Umm_UNW
+//};
+#define		TEHE(V0, V1, V2, V3)		V0##_##V1, V0##_##V2, V0##_##V3, V1##_##V2, V1##_##V3, V2##_##V3
+static const unsigned char ti[28*6]=//tetrahedron edge indices
+{
+	TEHE(USW, DSW, mmW, mSm),
+	TEHE(UNW, USW, mmW, Umm),
+	TEHE(DNW, UNW, mmW, mNm),
+	TEHE(DSW, DNW, mmW, Dmm),
+
+	TEHE(USE, DSE, mmE, mSm),
+	TEHE(UNE, USE, mmE, Umm),
+	TEHE(DNE, UNE, mmE, mNm),
+	TEHE(DSE, DNE, mmE, Dmm),
+
+	TEHE(DNE, DNW, mNm, Dmm),
+	TEHE(DSE, DSW, Dmm, mSm),
+	TEHE(USE, USW, mSm, Umm),
+	TEHE(UNE, UNW, Umm, mNm),
+
+	TEHE(UNW, mmW, Umm, mNm),
+	TEHE(USW, Umm, mmW, mSm),
+	TEHE(USE, mSm, mmE, Umm),
+	TEHE(UNE, mmE, Umm, mNm),
+
+	TEHE(DNW, mmW, Dmm, mNm),
+	TEHE(DSW, Dmm, mmW, mSm),
+	TEHE(DSE, mSm, mmE, Dmm),
+	TEHE(DNE, mmE, Dmm, mNm),
+
+	TEHE(mmm, mmW, Umm, mNm),
+	TEHE(mmm, Umm, mmW, mSm),
+	TEHE(mmm, mSm, mmE, Umm),
+	TEHE(mmm, mmE, Umm, mNm),
+
+	TEHE(mmm, mmW, Dmm, mNm),
+	TEHE(mmm, Dmm, mmW, mSm),
+	TEHE(mmm, mSm, mmE, Dmm),
+	TEHE(mmm, mmE, Dmm, mNm),
+};
+#undef			TEHE
+inline char		getbit(long long x, char bit){return x>>bit&1;}
+struct			float2
+{
+	float x, y;
+	void set(float x, float y){this->x=x, this->y=y;}
+};
+struct			float3
+{
+	float x, y, z;
+	void set(float x, float y, float z){this->x=x, this->y=y, this->z=z;}
+};
+struct			float4
+{
+	float x, y, z, w;
+	void set(float x, float y, float z, float w){this->x=x, this->y=y, this->z=z, this->w=w;}
+};
+enum DataPointIdx
+{
+	P_UNW,			P_UNE,
+			P_Umm,
+	P_USW,			P_USE,
+
+			P_mNm,
+	P_mmW,	P_mmm,	P_mmE,
+			P_mSm,
+
+	P_DNW,			P_DNE,
+			P_Dmm,
+	P_DSW,			P_DSE,
+};
+static const unsigned char e2v1[54]=//edge index to first vertex (data point) index
+{
+	//main (new) edge indices
+	P_DSW, P_DSW, P_DSW,
+
+	P_mmW, P_mmW, P_mmW, P_mmW,
+	P_mSm, P_mSm, P_mSm, P_mSm,
+	P_Dmm, P_Dmm, P_Dmm, P_Dmm,
+
+	P_mmW, P_mmW, P_mmW, P_mmW,
+	P_Umm, P_mNm, P_Dmm, P_mSm,
+	P_mmE, P_mmE, P_mmE, P_mmE,
+
+	P_mmm, P_mmm, P_mmm, P_mmm, P_mmm, P_mmm,
+
+	//extended (redundant) edge indices
+	P_DSE, P_DNE, P_DSE, P_DNE, P_DNW, P_USW, P_USE, P_UNE, P_UNW,
+	P_mmE, P_mmE, P_mmE, P_mmE,
+	P_mNm, P_mNm, P_mNm, P_mNm,
+	P_Umm, P_Umm, P_Umm, P_Umm,
+};
+static const unsigned char e2v2[54]=//edge index to second vertex (data point) index
+{
+	//main (new) edge indices
+	P_DSE, P_DNW, P_USW,
+
+	P_DSW, P_USW, P_UNW, P_DNW,
+	P_DSW, P_USW, P_USE, P_DSE,
+	P_DSW, P_DSE, P_DNE, P_DNW,
+
+	P_Dmm, P_mSm, P_Umm, P_mNm,
+	P_mNm, P_Dmm, P_mSm, P_Umm,
+	P_Dmm, P_mSm, P_Umm, P_mNm,
+
+	P_Dmm, P_mSm, P_mmW, P_Umm, P_mNm, P_mmE,
+
+	//extended (redundant) edge indices
+	P_DNE, P_DNW, P_USE, P_UNE, P_UNW, P_USE, P_UNE, P_UNW, P_USW,
+	P_DSE, P_USE, P_UNE, P_DNE,
+	P_DNW, P_UNW, P_UNE, P_DNE,
+	P_USW, P_USE, P_UNE, P_UNW,
+};
+#define			_pi		3.14159265358979f
+#define			_sqrt3	1.73205080756888f
+float4			solvequadratic(float a, float b, float c)//returns (r1, i1, r2, i2)
+{
+	const float lim=1e10f;
+	float4 ret;
+	if(a==0)
+		ret.set(-c/b, 0, INFINITY, 0);
+	//	ret=(float4)(-c/b, 0, INFINITY, 0);
+	else if(abs(b)/abs(a)>=lim&&abs(c)/abs(a)>=lim)
+		ret.set(-c/b, 0, -b/a, 0);
+	//	ret=(float4)(-c/b, 0, -b/a, 0);
+	else
+	{
+		b/=a, c/=a;
+		float first=-0.5f*b, disc2=b*b-4*c;
+		float disc=0.5f*sqrt(abs(disc2));
+		if(disc2<0)
+			ret.set(first, disc, first, -disc);
+		//	ret=(float4)(first, disc, first, -disc);
+		else
+			ret.set(first+disc, 0, first-disc, 0);
+		//	ret=(float4)(first+disc, 0, first-disc, 0);
+	}
+	return ret;
+}
+float2			solvecubic(float a, float b, float c, float d)
+{
+	float2 ret;
+	//if(a==0&&b==0&&c==0)
+	//{
+	//	ret.x=(Vx-A.V)/(B.V-A.V);
+	//	ret.y=1;
+	//	return;
+	//}
+	float r1, r2r, r2i, r3r, r3i;
+	//http://easycalculation.com/algebra/learn-cubic-equation.php
+	//http://stackoverflow.com/questions/13328676/c-solving-cubic-equations
+	if(a==0)
+	{
+		r1=INFINITY;
+		float4 ret2=solvequadratic(b, c, d);
+		r2r=ret2.x, r2i=ret2.y, r3r=ret2.z, r3i=ret2.w;
+	}
+	else if(d==0)
+	{
+		r1=0;
+		float4 ret2=solvequadratic(a, b, c);
+		r2r=ret2.x, r2i=ret2.y, r3r=ret2.z, r3i=ret2.w;
+	}
+	else
+	{
+		float inv_a=1/a, disc, q, r, dum1, s, t, term1, r13;
+		b*=inv_a, c*=inv_a, d*=inv_a;
+		q=(3*c-b*b)/9;
+		r=-27*d+b*(9*c-2*b*b);
+		r/=54;
+		disc=q*q*q+r*r;
+		term1=b/3;
+		if(disc>0)
+		{
+			s=r+sqrt(disc);
+			s=cbrt(s);
+		//	s=s<0?-pow(-s, 1.f/3):pow(s, 1.f/3);
+			t=r-sqrt(disc);
+			t=cbrt(t);
+		//	t=t<0?-pow(-t, 1.f/3):pow(t, 1.f/3);
+			r1=-term1+s+t;//The first root is always real
+			term1+=(s+t)/2;
+			float term2=_sqrt3*(-t+s)/2;
+			r2r=r3r=-term1, r2i=term2, r3i=-term2;
+		}
+		else if(disc==0)//The remaining options are all real
+		{
+			r13=cbrt(r);
+		//	float sign=(r>0)-(r<0);
+		//	r13=sign*pow(sign*r, 1.f/3);
+		//	r13=r<0?-pow(-r, 1.f/3):pow(r, 1.f/3);
+			r1=-term1+2*r13;
+			r3r=r2r=-(r13+term1);//at least two are equal
+			r2i=r3i=0;
+		}
+		else//Only option left is that all roots are real and unequal (to get here, q < 0)
+		{
+			q=-q;
+			dum1=q*q*q;
+			dum1=acos(r/sqrt(dum1));
+			r13=2*sqrt(q);
+			r1=-term1+r13*cos(dum1/3);
+			r2r=-term1+r13*cos((dum1+2*_pi)/3), r2i=0;
+			r3r=-term1+r13*cos((dum1+4*_pi)/3), r3i=0;
+		}
+	}
+	const float tol=1e-5f;//tolerance
+		 if(r1 >=0		&&r1 <=1)		ret.x=r1, ret.y=1;
+	else if(r2r>=0		&&r2r<=1)		ret.x=r2r, ret.y=1;//what
+	else if(r3r>=0		&&r3r<=1)		ret.x=r3r, ret.y=1;
+	else if(r1 >=-tol	&&r1 <=1+tol)	ret.x=r1, ret.y=1;
+	else if(r2r>=-tol	&&r2r<=1+tol)	ret.x=r2r, ret.y=1;//what
+	else if(r3r>=-tol	&&r3r<=1+tol)	ret.x=r3r, ret.y=1;
+	else if(r1 >=-tol	&&r1 <=1+tol)	ret.x=r1, ret.y=1;
+	else if(r2r>=-tol	&&r2r<=1+tol)	ret.x=r2r, ret.y=1;//what
+	else if(r3r>=-tol	&&r3r<=1+tol)	ret.x=r3r, ret.y=1;
+	else								ret.x=-1, ret.y=0;
+	return ret;
+}
+float3			mix(float3 const &a, float3 const &b, float alpha)
+{
+	float3 ret;
+	ret.x=a.x+(b.x-a.x)*alpha;
+	ret.y=a.y+(b.y-a.y)*alpha;
+	ret.z=a.z+(b.z-a.z)*alpha;
+	return ret;
+}
+void			vstore3(float3 const &result, int idx, float *a){a[idx]=result.x, a[idx+1]=result.y, a[idx+2]=result.z;}
+#endif
+void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ...)
 {//expression -> OpenGL texture
 	if(OCL_state<CL_READY_UNTESTED)
 		return;
@@ -4809,21 +5347,24 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 	{
 		if(OCL_state==CL_READY_UNTESTED)
 			cl_test();
-		{//size_t								//GA70	GS5
-			auto sp=sizeof(void*);				//8		4
-			auto ssize=sizeof(size_t);			//8		4
-			auto schar=sizeof(char);			//1		1
-			auto sshort=sizeof(short);			//2		2
-			auto swchar_t=sizeof(wchar_t);		//4		4
-			auto sint=sizeof(int);				//4		4
-			auto suint=sizeof(unsigned);		//4		4
-			auto slong=sizeof(long);			//8		4
-			auto sllong=sizeof(long long);		//8		8
-			auto sfloat=sizeof(float);			//4		4
-			auto sdouble=sizeof(double);		//8		8
-			auto sldouble=sizeof(long double);	//16	8
-			int LOL_1=0;
-		}//
+		//{//size_t								//GA70	GS5	Win32
+		//	auto sp=sizeof(void*);				//8		4	4
+		//	auto ssize=sizeof(size_t);			//8		4	4
+		//	auto schar=sizeof(char);			//1		1	1
+		//	auto sshort=sizeof(short);			//2		2	2
+		//	auto swchar_t=sizeof(wchar_t);		//4		4	2
+		//	auto sint=sizeof(int);				//4		4	4
+		//	auto suint=sizeof(unsigned);		//4		4	4
+		//	auto slong=sizeof(long);			//8		4	4
+		//	auto sllong=sizeof(long long);		//8		8	8
+		//	auto sfloat=sizeof(float);			//4		4	4
+		//	auto sdouble=sizeof(double);		//8		8	8
+		//	auto sldouble=sizeof(long double);	//16	8	8
+		//	int LOL_1=0;
+		//}//
+#ifdef DEBUG3
+		g_Xplaces=mp.Xplaces, g_Yplaces=mp.Yplaces, g_Zplaces=mp.Zplaces;
+#endif
 		prof_add("cl_solve entry");
 		glFlush();
 		prof_add("glFlush");
@@ -4842,35 +5383,49 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 		case MODE_T1D:
 		case MODE_T1D_C:
 		case MODE_T1D_H:
-		//	g_maxlocaldim=g_maxlocaldim;
-			g_maxlocaldim=(size_t)sqrt(g_maxlocalsize);
-			g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
-			host_sizes32[0]=dimension_work_size(mp.Xplaces), host_sizes32[1]=1, host_sizes32[2]=1;
+			{
+				int log_mld=floor_log2(g_maxlocalsize);
+				g_maxlocalX=1<<(log_mld>>1), g_maxlocalY=1, g_maxlocalZ=1;
+			}
+		//	//g_maxlocaldim=g_maxlocaldim;
+		//	g_maxlocaldim=(size_t)sqrt(g_maxlocalsize);
+		//	g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
+			host_sizes32[0]=dimension_work_size(mp.Xplaces, g_maxlocalX), host_sizes32[1]=1, host_sizes32[2]=1;
 			host_sizes32[3]=mp.Xplaces, host_sizes32[4]=1, host_sizes32[5]=1;
 			host_sizes[0]=host_sizes32[0], host_sizes[1]=host_sizes32[1], host_sizes[2]=host_sizes32[2];
-			host_sizes_local[0]=g_maxlocaldim, host_sizes_local[1]=1, host_sizes_local[2]=1;
+			host_sizes_local[0]=g_maxlocalX, host_sizes_local[1]=g_maxlocalY, host_sizes_local[2]=g_maxlocalZ;
 			break;
 		case MODE_I2D:
 		case MODE_T2D:
 		case MODE_C2D:
 		case MODE_T2D_H:
-			g_maxlocaldim=(size_t)sqrt(g_maxlocalsize);
-			g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
-			host_sizes32[0]=dimension_work_size(mp.Xplaces), host_sizes32[1]=dimension_work_size(mp.Yplaces), host_sizes32[2]=1;
+			{
+				int log_mld=floor_log2(g_maxlocalsize);
+				g_maxlocalY=g_maxlocalX=1<<(log_mld>>1), g_maxlocalZ=1;
+			}
+		//	g_maxlocaldim=(size_t)sqrt(g_maxlocalsize);
+		//	g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
+			host_sizes32[0]=dimension_work_size(mp.Xplaces, g_maxlocalX), host_sizes32[1]=dimension_work_size(mp.Yplaces, g_maxlocalY), host_sizes32[2]=1;
 			host_sizes32[3]=mp.Xplaces, host_sizes32[4]=mp.Yplaces, host_sizes32[5]=1;
 			host_sizes[0]=host_sizes32[0], host_sizes[1]=host_sizes32[1], host_sizes[2]=host_sizes32[2];
-			host_sizes_local[0]=g_maxlocaldim, host_sizes_local[1]=g_maxlocaldim, host_sizes_local[2]=1;
+			host_sizes_local[0]=g_maxlocalX, host_sizes_local[1]=g_maxlocalY, host_sizes_local[2]=g_maxlocalZ;
 			break;
 		case MODE_I3D:
 		case MODE_C3D:
-			g_maxlocaldim=(size_t)cbrt(g_maxlocalsize);
-		//	g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
-			host_sizes32[0]=dimension_work_size(mp.Xplaces), host_sizes32[1]=dimension_work_size(mp.Yplaces), host_sizes32[2]=dimension_work_size(mp.Zplaces);
+			{
+				int log_mld=floor_log2(g_maxlocalsize);
+				int log_xy=log_mld/3+(log_mld%3!=0), log_z=log_mld-(log_xy<<1);
+				g_maxlocalY=g_maxlocalX=1<<log_xy, g_maxlocalZ=1<<log_z;
+			}
+		//	g_maxlocaldim=(size_t)cbrt(g_maxlocalsize);
+		//	//g_maxlocaldim=1<<floor_log2(g_maxlocaldim);
+			host_sizes32[0]=dimension_work_size(mp.Xplaces, g_maxlocalX), host_sizes32[1]=dimension_work_size(mp.Yplaces, g_maxlocalY), host_sizes32[2]=dimension_work_size(mp.Zplaces, g_maxlocalZ);
 			host_sizes32[3]=mp.Xplaces, host_sizes32[4]=mp.Yplaces, host_sizes32[5]=mp.Zplaces;
 			host_sizes[0]=host_sizes32[0], host_sizes[1]=host_sizes32[1], host_sizes[2]=host_sizes32[2];
-			host_sizes_local[0]=g_maxlocaldim, host_sizes_local[1]=g_maxlocaldim, host_sizes_local[2]=g_maxlocaldim;
+			host_sizes_local[0]=g_maxlocalX, host_sizes_local[1]=g_maxlocalY, host_sizes_local[2]=g_maxlocalZ;
 			break;
 		}
+		host_sizes32[0]=host_sizes32[3], host_sizes32[1]=host_sizes32[4], host_sizes32[2]=host_sizes32[5];
 		error=p_clEnqueueWriteBuffer(commandqueue, size_buf, CL_FALSE, 0, 5*sizeof(int), host_sizes32, 0, nullptr, nullptr);	CL_CHECK(error);//send size buffer
 #ifdef DEBUG2
 		LOGI("G2_CL: hsizes={%d, %d, %d, %d, %d}", host_sizes32[0], host_sizes32[1], host_sizes32[2], host_sizes32[3], host_sizes32[4]);
@@ -4889,14 +5444,14 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 			if(n.constant)
 			{
 				term.mathSet=n.mathSet;
-				initialize_const_comp(term.r, ndrSize, (float)val.r, size_buf, args_buf);
+				initialize_const_comp(term.r, ndrSize, val.r.toFloat(), size_buf, args_buf);
 				if(n.mathSet>='c')
 				{
-					initialize_const_comp(term.i, ndrSize, (float)val.i, size_buf, args_buf);
+					initialize_const_comp(term.i, ndrSize, val.i.toFloat(), size_buf, args_buf);
 					if(n.mathSet>='h')
 					{
-						initialize_const_comp(term.j, ndrSize, (float)val.j, size_buf, args_buf);
-						initialize_const_comp(term.k, ndrSize, (float)val.k, size_buf, args_buf);
+						initialize_const_comp(term.j, ndrSize, val.j.toFloat(), size_buf, args_buf);
+						initialize_const_comp(term.k, ndrSize, val.k.toFloat(), size_buf, args_buf);
 					}
 				}
 			}
@@ -4904,14 +5459,14 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 			{
 				auto &var=ex.variables[n.varNo];
 				term.mathSet=var.mathSet;
-				initialize_component(mp, term.r, ndrSize, var.varTypeR, (float)val.r, ftime, size_buf, args_buf);
+				initialize_component(mp, term.r, ndrSize, var.varTypeR, val.r.toFloat(), ftime, size_buf, args_buf);
 				if(n.mathSet>='c')
 				{
-					initialize_component(mp, term.i, ndrSize, var.varTypeI, (float)val.i, ftime, size_buf, args_buf);
+					initialize_component(mp, term.i, ndrSize, var.varTypeI, val.i.toFloat(), ftime, size_buf, args_buf);
 					if(n.mathSet>='h')
 					{
-						initialize_component(mp, term.j, ndrSize, var.varTypeJ, (float)val.j, ftime, size_buf, args_buf);
-						initialize_component(mp, term.k, ndrSize, var.varTypeK, (float)val.k, ftime, size_buf, args_buf);
+						initialize_component(mp, term.j, ndrSize, var.varTypeJ, val.j.toFloat(), ftime, size_buf, args_buf);
+						initialize_component(mp, term.k, ndrSize, var.varTypeK, val.k.toFloat(), ftime, size_buf, args_buf);
 					}
 				}
 			}
@@ -4922,10 +5477,15 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 			DebugBuffer buffers[]=
 			{
 				{terms[0].r, "x"},
-				{terms[1].i, "i"},
-				{terms[2].r, "y"},
+				{terms[1].r, "y"},
+				{terms[2].r, "z"},
+
+			//	{terms[0].r, "x"},
+			//	{terms[1].i, "i"},
+			//	{terms[2].r, "y"},
 			};
-			debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), ndrSize, 512);
+			debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), mp.Xplaces, mp.Yplaces, 1);
+		//	debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), mp.Xplaces, mp.Yplaces, mp.Xplaces/10);
 		}
 #endif
 		prof_add("initialization");
@@ -4933,7 +5493,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 		{
 			auto &in=ex.i[i];
 			auto kernel=kernels[in.cl_idx];
-			if(mp.mode_idx==MODE_I2D&&i==nInstr-1&&ex.resultLogicType>=2)
+			if(mp.mode_idx==MODE_I2D&&i==nInstr-1&&ex.resultLogicType>=2)//logic result: subtract NDRs at the end
 			{
 				switch(in.type)
 				{
@@ -5336,27 +5896,49 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 				}
 			}
 #endif
-		}
+		}//end solve
 #if 0
 		if(terms.size()==3)
 		{
 			DebugBuffer buffers[]=
 			{
 				{terms[0].r, "x"},
-				{terms[1].i, "i"},
-				{terms[2].r, "y"},
+				{terms[1].r, "y"},
+				{terms[2].r, "z"},
+
+			//	{terms[0].r, "x"},
+			//	{terms[1].i, "i"},
+			//	{terms[2].r, "y"},
 			};
-			debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), ndrSize, 512);
+			debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), mp.Xplaces, mp.Yplaces, 1);
+		//	debug_printbuffers(buffers, sizeof(buffers)/sizeof(DebugBuffer), mp.Xplaces, mp.Yplaces, mp.Xplaces/10);
 		}
 #endif
 		prof_add("solve");
+		unsigned gl_texture=0;
+		GPUBuffer *gl_buf=nullptr;
+	//	unsigned gl_vertex_buf=0, gl_idx_buf=0;
+		{
+			auto p=(unsigned*)(&time+1);
+			switch(mp.mode_idx)
+			{
+			case MODE_I2D:
+			case MODE_C2D:
+				gl_texture=p[0];
+				break;
+			case MODE_C3D:
+				gl_buf=(GPUBuffer*)*p;
+			//	gl_vertex_buf=p[1], gl_idx_buf=p[2];
+				break;
+			}
+		}
 		static cl_context context0=nullptr;
 		static cl_mem image=nullptr;
+		auto &result=terms[ex.resultTerm];
 		switch(mp.mode_idx)
 		{
 		case MODE_I2D:
 			{
-				auto &result=terms[ex.resultTerm];
 #if 0//DEBUG
 				auto xr=(float*)malloc(ndrSize*sizeof(float));
 				error=p_clEnqueueReadBuffer(commandqueue, result.r, CL_TRUE, 0, ndrSize*sizeof(float), xr, 0, nullptr, nullptr);	CL_CHECK(error);
@@ -5405,22 +5987,21 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 				prof_add("raster");
 			}
 			break;
-		case MODE_C2D:
+		case MODE_C2D:					//result -> rgb
 			{
-				auto &result=terms[ex.resultTerm];					//result -> rgb
 				if(result.mathSet=='c')//always true for C2D
 				{
 					cl_kernel kernel=nullptr;
 					if(cl_gl_interop)
 					{
 						kernel=kernels[V_C2D_RGB];
-						if(context0!=context)
-						{
+						//if(context0!=context)
+						//{
 							context0=context;
 							cl_free_buffer(image);
 						//	image=p_clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, gl_texture, &error);	CL_CHECK(error);//
 							image=p_clCreateFromGLTexture(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, gl_texture, &error);	CL_CHECK(error);
-						}
+						//}
 					}
 					else
 					{
@@ -5443,7 +6024,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 					}
 				//	if(blocking)
 				//		{error=p_clFinish(commandqueue);		CL_CHECK(error);}
-#if 1
+#if 0
 					error=p_clFinish(commandqueue);	CL_CHECK(error);	//DEBUG
 					prof_add("clFinish");
 					auto
@@ -5469,6 +6050,575 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, un
 #endif
 				}
 				prof_add("rgb");
+			}
+			break;
+		case MODE_C3D:
+			{
+#ifdef V5_CPU
+				float th=1;//isovalue
+				//auto Xplaces=mp.Xplaces, Yplaces=mp.Yplaces, Zplaces=mp.Zplaces;
+				//auto Xplaces1=Xplaces+1, Yplaces1=Yplaces+1, Zplaces1=Zplaces+1;
+				//auto XYplaces1=Xplaces1*Yplaces1, ndrSize1=Xplaces1*Yplaces1*Zplaces1;
+
+				int Xplaces=mp.Xplaces, Yplaces=mp.Yplaces, Zplaces=mp.Zplaces;
+				int XYplaces=Xplaces*Yplaces;
+				auto ndr=(float*)malloc(ndrSize*5*sizeof(float));
+			//	memset(ndr, 0, ndrSize*5*sizeof(float));//
+				memset(ndr, 0xCD, ndrSize*5*sizeof(float));//
+#ifdef DEBUG3
+				debug_printbuffer(result.r, Xplaces, Yplaces, Zplaces, 1, "result");
+				messageboxa(ghWnd, "Information", "Result sent to clipboard");
+#endif
+				error=p_clEnqueueReadBuffer(commandqueue, result.r, CL_TRUE, 0, ndrSize*sizeof(float), ndr, 0, nullptr, nullptr);	CL_CHECK(error);
+				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.1: compute average (interpolated) values
+				{
+					for(int ky=0, yend=Yplaces-1;ky<yend;++ky)
+					{
+						for(int kx=0, xend=Xplaces-1;kx<xend;++kx)//for each data cube
+						{
+							int idx=Xplaces*(Yplaces*kz+ky)+kx;
+							float
+								V_UNW=ndr[idx+XYplaces+Xplaces],	V_UNE=ndr[idx+XYplaces+Xplaces+1],
+								V_USW=ndr[idx+XYplaces],			V_USE=ndr[idx+XYplaces+1],
+
+								V_DNW=ndr[idx+Xplaces],				V_DNE=ndr[idx+Xplaces+1],
+								V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
+							float
+								V_mmW=(V_UNW+V_DNW+V_DSW+V_USW)*0.25f,
+								V_mSm=(V_DSW+V_USW+V_USE+V_DSE)*0.25f,
+								V_Dmm=(V_DNW+V_DSW+V_DNE+V_DSE)*0.25f,
+								V_mmm=(V_UNW+V_DNW+V_DSW+V_USW+V_UNE+V_DNE+V_USE+V_DSE)*0.125f;
+							ndr[ndrSize+(idx<<2)  ]=V_Dmm;
+							ndr[ndrSize+(idx<<2)+1]=V_mSm;
+							ndr[ndrSize+(idx<<2)+2]=V_mmW;
+							ndr[ndrSize+(idx<<2)+3]=V_mmm;
+						}
+					}
+				}
+				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.2: compute average (interpolated) values on east NDR face
+				{
+					for(int ky=0, yend=Yplaces-1;ky<yend;++ky)
+					{
+						int kx=Xplaces-1;
+					//	for(int kx=0, xend=Xplaces-1;kx<xend;++kx)
+						{
+							int idx=Xplaces*(Yplaces*kz+ky)+kx;
+							float
+								V_UNW=ndr[idx+XYplaces+Xplaces],
+								V_USW=ndr[idx+XYplaces],
+
+								V_DNW=ndr[idx+Xplaces],
+								V_DSW=ndr[idx];
+							float
+								V_mmW=(V_UNW+V_DNW+V_DSW+V_USW)*0.25f;
+							ndr[ndrSize+(idx<<2)+2]=V_mmW;
+						}
+					}
+				}
+				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.3: compute average (interpolated) values on north NDR face
+				{
+					int ky=Yplaces-1;
+				//	for(int ky=0, yend=Yplaces-1;ky<yend;++ky)
+					{
+						for(int kx=0, xend=Xplaces-1;kx<xend;++kx)
+						{
+							int idx=Xplaces*(Yplaces*kz+ky)+kx;
+							float
+								V_USW=ndr[idx+XYplaces],			V_USE=ndr[idx+XYplaces+1],
+
+								V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
+							float
+								V_mSm=(V_DSW+V_USW+V_USE+V_DSE)*0.25f;
+							ndr[ndrSize+(idx<<2)+1]=V_mSm;
+						}
+					}
+				}
+			//	for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.4: compute average (interpolated) values on up NDR face
+				{
+					int kz=Zplaces-1;
+					for(int ky=0, yend=Yplaces-1;ky<yend;++ky)
+					{
+						for(int kx=0, xend=Xplaces-1;kx<xend;++kx)
+						{
+							int idx=Xplaces*(Yplaces*kz+ky)+kx;
+							float
+								V_DNW=ndr[idx+Xplaces],				V_DNE=ndr[idx+Xplaces+1],
+								V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
+							float
+								V_Dmm=(V_DNW+V_DSW+V_DNE+V_DSE)*0.25f;
+							ndr[ndrSize+(idx<<2)  ]=V_Dmm;
+						}
+					}
+				}
+				auto edgeinfo=(ulong*)malloc(ndrSize*sizeof(ulong));
+				memset(edgeinfo, 0, ndrSize*sizeof(ulong));
+				auto nvert=(unsigned char*)malloc(ndrSize);//number of edges producing a vertex
+				memset(nvert, 0, ndrSize);
+				auto ntrgl=(unsigned char*)malloc(ndrSize);
+				memset(ntrgl, 0, ndrSize);
+				//kernel 2: fills edgeinfo, nvert, ntrgl
+				//arguments: __global const float *ndr, __global ulong *edgeinfo, __global char *nvert, __global char *ntrgl
+				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)
+				{
+					for(int ky=0, yend=Yplaces-1;ky<yend;++ky)
+					{
+						for(int kx=0, xend=Xplaces-1;kx<xend;++kx)//for each data cube
+						{
+							int idx=Xplaces*(Yplaces*kz+ky)+kx;
+							//if(kx==6&&ky==3&&kz==0||idx==95)
+							//	int LOL_1=0;
+							//all verteces relevant to current cube
+							float
+								V_UNW=ndr[idx+XYplaces+Xplaces],	V_UNE=ndr[idx+XYplaces+Xplaces+1],
+								V_USW=ndr[idx+XYplaces],			V_USE=ndr[idx+XYplaces+1],
+
+								V_DNW=ndr[idx+Xplaces],				V_DNE=ndr[idx+Xplaces+1],
+								V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
+							float
+								V_Dmm=ndr[ndrSize+( idx				<<2)  ],
+								V_mSm=ndr[ndrSize+( idx				<<2)+1],
+								V_mmW=ndr[ndrSize+( idx				<<2)+2],
+								V_mmm=ndr[ndrSize+( idx				<<2)+3],
+								V_mmE=ndr[ndrSize+((idx+1)			<<2)+2],
+								V_mNm=ndr[ndrSize+((idx+Xplaces)	<<2)+1],
+								V_Umm=ndr[ndrSize+((idx+XYplaces)	<<2)  ];
+							char
+								C_UNW=V_UNW>th, C_UNE=V_UNE>th,
+								C_USW=V_USW>th, C_USE=V_USE>th,
+								C_DNW=V_DNW>th, C_DNE=V_DNE>th,
+								C_DSW=V_DSW>th, C_DSE=V_DSE>th,
+
+								C_Umm=V_Umm>th, C_mNm=V_mNm>th,
+								C_mmW=V_mmW>th, C_mmE=V_mmE>th,
+								C_mSm=V_mSm>th, C_Dmm=V_Dmm>th,
+								C_mmm=V_mmm>th;
+							char ec[54]=//edge conditions
+							{
+								C_DSW!=C_DSE, C_DSW!=C_DNW, C_DSW!=C_USW,
+
+								C_mmW!=C_DSW, C_mmW!=C_USW, C_mmW!=C_UNW, C_mmW!=C_DNW,
+								C_mSm!=C_DSW, C_mSm!=C_USW, C_mSm!=C_USE, C_mSm!=C_DSE,
+								C_Dmm!=C_DSW, C_Dmm!=C_DSE, C_Dmm!=C_DNE, C_Dmm!=C_DNW,
+
+								C_mmW!=C_Dmm, C_mmW!=C_mSm, C_mmW!=C_Umm, C_mmW!=C_mNm,
+								C_Umm!=C_mNm, C_mNm!=C_Dmm, C_Dmm!=C_mSm, C_mSm!=C_Umm,
+								C_mmE!=C_Dmm, C_mmE!=C_mSm, C_mmE!=C_Umm, C_mmE!=C_mNm,
+
+								C_mmm!=C_Dmm, C_mmm!=C_mSm, C_mmm!=C_mmW, C_mmm!=C_Umm, C_mmm!=C_mNm, C_mmm!=C_mmE,
+
+								C_DSE!=C_DNE, C_DNE!=C_DNW, C_DSE!=C_USE, C_DNE!=C_UNE, C_DNW!=C_UNW, C_USW!=C_USE, C_USE!=C_UNE, C_UNE!=C_UNW, C_UNW!=C_USW,
+								C_mmE!=C_DSE, C_mmE!=C_USE, C_mmE!=C_UNE, C_mmE!=C_DNE, 
+								C_mNm!=C_DNW, C_mNm!=C_UNW, C_mNm!=C_UNE, C_mNm!=C_DNE, 
+								C_Umm!=C_USW, C_Umm!=C_USE, C_Umm!=C_UNE, C_Umm!=C_UNW,
+							};
+#define						EC(number)	((ulong)ec[number]<<number)
+							edgeinfo[idx]=
+								EC( 0)|EC( 1)|EC( 2)|EC( 3)|EC( 4)|EC( 5)|EC( 6)|EC( 7)|EC( 8)|
+								EC( 9)|EC(10)|EC(11)|EC(12)|EC(13)|EC(14)|EC(15)|EC(16)|EC(17)|
+								EC(18)|EC(19)|EC(20)|EC(21)|EC(22)|EC(23)|EC(24)|EC(25)|EC(26)|
+								EC(27)|EC(28)|EC(29)|EC(30)|EC(31)|EC(32)|EC(33)|EC(34)|EC(35)|
+								EC(36)|EC(37)|EC(38)|EC(39)|EC(40)|EC(41)|EC(42)|EC(43)|EC(44)|
+								EC(45)|EC(46)|EC(47)|EC(48)|EC(49)|EC(50)|EC(51)|EC(52)|EC(53);
+#undef						EC
+							auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
+							//int bmask=-(kx==Xplaces-2||ky==Yplaces-2||kz==Zplaces-2);
+							//long long mask=(1ULL<<(33+(21&bmask)))-1;
+							nvert[idx]=hammingweight(edgeinfo[idx]&mask);
+#define						NT(V0, V1, V2, V3)		nt[V3<<3|V2<<2|V1<<1|V0]
+							ntrgl[idx]=
+								NT(C_USW, C_DSW, C_mmW, C_mSm)+
+								NT(C_UNW, C_USW, C_mmW, C_Umm)+
+								NT(C_DNW, C_UNW, C_mmW, C_mNm)+
+								NT(C_DSW, C_DNW, C_mmW, C_Dmm)+
+
+								NT(C_USE, C_DSE, C_mmE, C_mSm)+
+								NT(C_UNE, C_USE, C_mmE, C_Umm)+
+								NT(C_DNE, C_UNE, C_mmE, C_mNm)+
+								NT(C_DSE, C_DNE, C_mmE, C_Dmm)+
+
+								NT(C_DNE, C_DNW, C_mNm, C_Dmm)+
+								NT(C_DSE, C_DSW, C_Dmm, C_mSm)+
+								NT(C_USE, C_USW, C_mSm, C_Umm)+
+								NT(C_UNE, C_UNW, C_Umm, C_mNm)+
+
+								NT(C_UNW, C_mmW, C_Umm, C_mNm)+
+								NT(C_USW, C_Umm, C_mmW, C_mSm)+
+								NT(C_USE, C_mSm, C_mmE, C_Umm)+
+								NT(C_UNE, C_mmE, C_Umm, C_mNm)+
+
+								NT(C_DNW, C_mmW, C_Dmm, C_mNm)+
+								NT(C_DSW, C_Dmm, C_mmW, C_mSm)+
+								NT(C_DSE, C_mSm, C_mmE, C_Dmm)+
+								NT(C_DNE, C_mmE, C_Dmm, C_mNm)+
+
+								NT(C_mmm, C_mmW, C_Umm, C_mNm)+
+								NT(C_mmm, C_Umm, C_mmW, C_mSm)+
+								NT(C_mmm, C_mSm, C_mmE, C_Umm)+
+								NT(C_mmm, C_mmE, C_Umm, C_mNm)+
+
+								NT(C_mmm, C_mmW, C_Dmm, C_mNm)+
+								NT(C_mmm, C_Dmm, C_mmW, C_mSm)+
+								NT(C_mmm, C_mSm, C_mmE, C_Dmm)+
+								NT(C_mmm, C_mmE, C_Dmm, C_mNm);
+#undef						NT
+						}
+					}
+				}
+				//blocking read: edgeinfo, nvert, ntrgl
+#if 0
+				std::stringstream LOL_1;
+				LOL_1<<"edgeinfo,\t\tkw(kx, ky, kz),\tnvert,\tntrgl\r\n";
+				for(int kw=0;kw<ndrSize;++kw)
+				{
+					if(edgeinfo[kw])
+					{
+						auto p=(unsigned short*)(edgeinfo+kw);
+						short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+						sprintf_s(g_buf, g_buf_size, "0x%04X %04X %04X %04X, %d(%d, %d, %d),\t%d,\t%d\r\n", (int)p[3], (int)p[2], (int)p[1], (int)p[0], kw, kx, ky, kz, (int)nvert[kw], (int)ntrgl[kw]);
+						LOL_1<<g_buf;
+					}
+				}
+				copy_to_clipboard(LOL_1.str());
+#endif
+
+				//CPU side code 1: determine work size and space indices for kernel 3 & reverse workidx 'bitindices' for CPU part 2
+				int nvert_total=0, ntrgl_total=0;
+				std::vector<WorkIdx> workidx;
+				std::map<WorkIdx, int> bitindices;
+			//	std::map<long long, int> bitindices;
+			//	std::vector<int> bitindices(ndrSize*33);
+				for(unsigned kw=0;kw<ndrSize;++kw)
+				{
+					nvert_total+=nvert[kw], ntrgl_total+=ntrgl[kw];
+					//fill 'workidx'
+					if(nvert[kw])
+					{
+						short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+						auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
+					//	int bmask=-(kx==Xplaces-2||ky==Yplaces-2||kz==Zplaces-2);//boundary mask: all bits are original at boundary
+						auto work=edgeinfo[kw]&mask;
+					//	auto uwork=edgeinfo[kw]&((1ULL<<33)-1);//unique work
+						for(int ke=0;ke<54;++ke)//for each original bit
+					//	for(int ke=0, ne=33+(21&bmask);ke<ne;++ke)
+						{
+							if(work>>ke&1)
+							{
+								WorkIdx idx(kx, ky, kz, ke);
+								bitindices[idx]=workidx.size();
+								workidx.push_back(idx);
+							//	bitindices[kw<<6|ke]=workidx.size();
+							//	//bitindices[kw*33+ke]=workidx.size();
+							//	workidx.push_back(WorkIdx(kx, ky, kz, ke));
+							}
+						}
+					}
+				}
+
+				auto vertices=(float*)malloc(nvert_total*6*sizeof(float));
+				memset(vertices, 0, nvert_total*6*sizeof(float));
+				float
+					Xstart=(float)mp.cx, Xsample=(float)mp.mx,
+					Ystart=(float)mp.cy, Ysample=(float)mp.my,
+					Zstart=(float)mp.cz, Zsample=(float)mp.mz;
+				//kernel 3: per-edge trilinear interpolation
+				//arguments: __constant int *size, __global const float *ndr, __constant ulong *workidx, __global float *vertices
+				//int breakpoint=7;//nvert_total>>4;
+				for(int id=0;id<nvert_total;++id)
+				{
+					//if(id==breakpoint)
+					//	int LOL_1=0;
+					auto &wi=workidx[id];
+					int kx=wi.kx, ky=wi.ky, kz=wi.kz, ke=wi.ke;
+				//	int id=get_global_id(0);
+				//	ulong winfo=workidx[id];
+				//	int kx=(unsigned short)winfo, ky=(unsigned short)(winfo>>16), kz=(unsigned short)(winfo>>32), ke=(unsigned short)(winfo>>48);
+					int idx=Xplaces*(Yplaces*kz+ky)+kx;
+					float
+						X_W=Xstart+kx*Xsample, X_m=X_W+Xsample*0.5f, X_E=X_W+Xsample,//space coordinates
+						Y_S=Ystart+ky*Ysample, Y_m=Y_S+Ysample*0.5f, Y_N=Y_S+Ysample,
+						Z_D=Zstart+kz*Zsample, Z_m=Z_D+Zsample*0.5f, Z_U=Z_D+Zsample;
+					float
+						V_UNW=ndr[idx+XYplaces+Xplaces],	V_UNE=ndr[idx+XYplaces+Xplaces+1],
+						V_USW=ndr[idx+XYplaces],			V_USE=ndr[idx+XYplaces+1],
+
+						V_DNW=ndr[idx+Xplaces],				V_DNE=ndr[idx+Xplaces+1],
+						V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
+					float
+						V_Dmm=ndr[ndrSize+( idx				<<2)  ],
+						V_mSm=ndr[ndrSize+( idx				<<2)+1],
+						V_mmW=ndr[ndrSize+( idx				<<2)+2],
+						V_mmm=ndr[ndrSize+( idx				<<2)+3],
+						V_mmE=ndr[ndrSize+((idx+1)			<<2)+2],//x+y+z, id=7 (6, 4, 0, 26), x+ face 0xCDCDCDCD
+						V_mNm=ndr[ndrSize+((idx+Xplaces)	<<2)+1],
+						V_Umm=ndr[ndrSize+((idx+XYplaces)	<<2)  ];
+					float4 dp[15]=//data points
+					{
+						{X_W, Y_N, Z_U, V_UNW},							{X_E, Y_N, Z_U, V_UNE},	//	0 P_UNW			1 P_UNE
+												{X_m, Y_m, Z_U, V_Umm},							//			2 P_Umm
+						{X_W, Y_S, Z_U, V_USW},							{X_E, Y_S, Z_U, V_USE},	//	3 P_USW			4 P_USE
+
+												{X_m, Y_N, Z_m, V_mNm},							//			5 P_mNm
+						{X_W, Y_m, Z_m, V_mmW}, {X_m, Y_m, Z_m, V_mmm}, {X_E, Y_m, Z_m, V_mmE},	//	6 P_mmW	7 P_mmm	8 P_mmE
+												{X_m, Y_S, Z_m, V_mSm},							//			9 P_mSm
+
+						{X_W, Y_N, Z_D, V_DNW},							{X_E, Y_N, Z_D, V_DNE},	//	10 P_DNW		11 P_DNE
+												{X_m, Y_m, Z_D, V_Dmm},							//			12 P_Dmm
+						{X_W, Y_S, Z_D, V_DSW},							{X_E, Y_S, Z_D, V_DSE},	//	13 P_DSW		14 P_DSE
+					};
+					float4 A=dp[e2v1[ke]], B=dp[e2v2[ke]];
+					float
+						Xd=B.x-A.x, X_aE=X_E-A.x, X_Wa=A.x-X_W,//see trilinear interpolation
+						Yd=B.y-A.y, Y_aN=Y_N-A.y, Y_Sa=A.y-Y_S,
+						Zd=B.z-A.z, Z_aU=Z_U-A.z, Z_Da=A.z-Z_D,
+		
+						A_DS=(V_DSE-V_DSW)*Xd, B_DS=X_aE*V_DSW+X_Wa*V_DSE,
+						A_DN=(V_DNE-V_DNW)*Xd, B_DN=X_aE*V_DNW+X_Wa*V_DNE,
+						A_US=(V_USE-V_USW)*Xd, B_US=X_aE*V_USW+X_Wa*V_USE,
+						A_UN=(V_UNE-V_UNW)*Xd, B_UN=X_aE*V_UNW+X_Wa*V_UNE,
+		
+						C_D=(A_DN-A_DS)*Yd, D_D=(B_DN-B_DS)*Yd+Y_aN*A_DS+Y_Sa*A_DN, E_D=Y_aN*B_DS+Y_Sa*B_DN,
+						C_U=(A_UN-A_US)*Yd, D_U=(B_UN-B_US)*Yd+Y_aN*A_US+Y_Sa*A_UN, E_U=Y_aN*B_US+Y_Sa*B_UN,
+		
+						a=(C_U-C_D)*Zd, b=(D_U-D_D)*Zd+Z_aU*C_D+Z_Da*C_U, c=(E_U-E_D)*Zd+Z_aU*D_D+Z_Da*D_U, d=Z_aU*E_D+Z_Da*E_U-(X_E-X_W)*(Y_N-Y_S)*(Z_U-Z_D)*th;
+					float2 ret;
+					//float LOL_1=-431602080.;//0xCDCDCDCD
+					//int LOL_2=(int&)LOL_1;
+					if(a==0&&b==0&&c==0)
+						ret.set((th-A.w)/(B.w-A.w), 1);
+					else
+						ret=solvecubic(a, b, c, d);
+					if(ret.y)
+					{
+						float3 pa={A.x, A.y, A.z}, pb={B.x, B.y, B.z};
+						float3 coords=mix(pa, pb, ret.x);
+						vstore3(coords, id*6, vertices);
+					}
+					else
+						LOGERROR("solvecubic(%f, %f, %f, %f) failed.", a, b, c, d);//
+				}
+
+				//CPU-side code 2: fill 'indices'
+				std::vector<int> indices(ntrgl_total*3, 0);
+			//	WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant bits, access: [(ke-33)<<2]={Xoffset, Yoffset, Zoffset, ke2}
+			//	//int we_offsets[(54-33)<<2]=
+			//	{//	(x, y,		z)offset		normal,		x-,			y-,			xy-,		z-,			xz-,		yz-,		xyz-
+			//		{1, 0,			0,			{DSW_DNW,	}},//DSE_DNE
+			//		{0, Xplaces,	0,			{DSW_DSE}},//DNE_DNW
+			//		{1, 0,			0,			{DSW_USW}},//DSE_USE
+			//		{1, Xplaces,	0,			{DSW_USW}},//DNE_UNE
+			//		{0, Xplaces,	0,			{DSW_USW}},//DNW_UNW
+			//		{0, 0,			XYplaces,	{DSW_DSE}},//USW_USE
+			//		{1, 0,			XYplaces,	{DSW_DNW}},//USE_UNE//<-
+			//		{0, Xplaces,	XYplaces,	{DSW_DSE}},//UNE_UNW
+			//		{0, 0,			XYplaces,	{DSW_DNW}},//UNW_USW
+			//
+			//		{1, 0,			0,			{mmW_DSW}},//mmE_DSE
+			//		{1, 0,			0,			{mmW_USW}},//mmE_USE
+			//		{1, 0,			0,			{mmW_UNW}},//mmE_UNE
+			//		{1, 0,			0,			{mmW_DNW}},//mmE_DNE
+			//
+			//		{0, Xplaces,	0,			{mSm_DSW}},//mNm_DNW
+			//		{0, Xplaces,	0,			{mSm_USW}},//mNm_UNW
+			//		{0, Xplaces,	0,			{mSm_USE}},//mNm_UNE
+			//		{0, Xplaces,	0,			{mSm_DSE}},//mNm_DNE
+			//
+			//		{0, 0,			XYplaces,	{Dmm_DSW}},//Umm_USW
+			//		{0, 0,			XYplaces,	{Dmm_DSE}},//Umm_USE
+			//		{0, 0,			XYplaces,	{Dmm_DNE}},//Umm_UNE
+			//		{0, 0,			XYplaces,	{Dmm_DNW}},//Umm_UNW
+			//	};
+				for(unsigned kw=0, kv=0, i=0, ktr=0;kw<ndrSize;++kw)//why work ndrSize times if there is workidx?
+				{
+					auto work=edgeinfo[kw];
+					if(work)
+					{
+						short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+						auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
+						//if(kx==Xplaces-2||ky==Yplaces-2||kz==Zplaces-2)//
+						//	int LOL_1=0;//
+					//	int offset=i;
+						int bi[54]={};
+						for(int kb=0;kb<33;++kb)//fill array of bit indices bi[54]
+					//	for(int kb=0;kb<54;++kb)
+							bi[kb]=kv+=work>>kb&1;
+						for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra
+						{
+							if(kx==6&&ky==4&&kz==0&&kth==1)//
+								int LOL_1=0;//
+							int kt6=kth*6;
+							char e[]=//edge states
+							{
+								getbit(work, ti[kt6]),
+								getbit(work, ti[kt6+1]),
+								getbit(work, ti[kt6+2]),
+								getbit(work, ti[kt6+3]),
+								getbit(work, ti[kt6+4]),
+								getbit(work, ti[kt6+5]),
+							},
+								esum=0;
+							int ei[6]={};//edge indices
+							char kb2=0;
+							for(int kb=0;kb<6;++kb)//for each tetrahedron edge
+							{
+								if(e[kb])
+								{
+									++esum;
+									char ke=ti[kth*6+kb];//relative edge index
+									WorkIdx idx;
+								//	int idx=0;
+									char original=getbit(mask, ke);
+									if(original)//original bit, in this data point		note: all bits are original at boundary
+								//	if(kx==Xplaces-2||ky==Yplaces-2||kz==Zplaces-2||ke<33)
+								//	if(ke<33)
+										idx.set(kx, ky, kz, ke);
+									//	idx=kw<<6|ke;
+									//	idx=33*kw+ke;
+									else//redundant bit, look up in another data point
+									{
+										auto &weo=we_offsets[ke-33];
+										short
+											xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
+											kx2=kx+(weo.dx&-xbc),
+											ky2=ky+(weo.dy&-ybc),
+											kz2=kz+(weo.dz&-zbc),
+											ke2=weo.ke2[zbc<<2|ybc<<1|xbc];
+										//int kw2=kw+(weo.dx&-(kx<Xplaces-2))+(Xplaces&weo.dy_mask&-(ky<Yplaces-2))+(XYplaces&weo.dz_mask&-(kz<Zplaces-2));
+										//short kx2=kw2%Xplaces, ky2=kw2/Xplaces%Yplaces, kz2=kw2/XYplaces;
+										//if(kx2==Xplaces-1||ky2==Yplaces-1||kz2==Zplaces-1)//redundant
+										//	idx.set(kx, ky, kz, ke);
+										//	//idx=kw<<6|ke;
+										//else
+										//{
+											//ke2=we_offsets[ke2+3];
+											//ke2=we_offsets[ke2+1];
+											idx.set(kx2, ky2, kz2, ke2);
+										//	idx=kw2<<6|ke2;
+										//	idx=33*kw2+ke2;
+										//}
+									}
+									auto it=bitindices.find(idx);
+									if(it!=bitindices.end())
+										ei[kb2]=it->second;
+									else
+										LOGERROR("(%d, %d, %d, %d) not found.", idx.kx, idx.ky, idx.kz, idx.ke);
+								//	ei[kb2]=bitindices[idx];
+									++kb2;
+								}
+								//	ei[kb2]=bi[ti[kth*6+kb]], ++kb2;
+								//	ei[kb2]=offset+bi[ti[kth*6+kb]], ++kb2;
+							}
+							if(esum==4)//there are edges producing verteces
+							{
+								if(i+5>=indices.size())
+								{
+									LOGERROR("indices size=%d, i=%d, want to add 6 indices.", indices.size(), i);
+									break;
+								}
+								//if(ktr==8||ktr==9)//
+								//	int LOL_1=0;//
+								++ktr;//
+								indices[i]=ei[0], ++i;
+								indices[i]=ei[1], ++i;
+								indices[i]=ei[2], ++i;
+
+								//if(ktr==8||ktr==9)//
+								//	int LOL_1=0;//
+								++ktr;//
+								indices[i]=ei[1], ++i;
+								indices[i]=ei[2], ++i;
+								indices[i]=ei[3], ++i;
+								//indices[i]=ei[2], ++i;
+								//indices[i]=ei[3], ++i;
+								//indices[i]=ei[0], ++i;
+							}
+							else if(esum==3)
+							{
+								if(i+2>=indices.size())
+								{
+									LOGERROR("indices size=%d, i=%d, want to add 3 indices.", indices.size(), i);
+								//	LOGERROR("indices[%d+2] is OOB", i);
+									break;
+								}
+								//if(ktr==8||ktr==9)//
+								//	int LOL_1=0;//
+								++ktr;//
+								indices[i]=ei[0], ++i;
+								indices[i]=ei[1], ++i;
+								indices[i]=ei[2], ++i;
+							}
+							else if(esum)
+								LOGERROR("Tetrahedron produced %d vertices", esum);
+							//	messageboxa(ghWnd, "Error", "Tetrahedron produced %d vertices", esum);
+							//char emask=getbit(work, ti[kt6+5])<<5|getbit(work, ti[kt6+4])<<4|getbit(work, ti[kt6+3])<<3|getbit(work, ti[kt6+2])<<2|getbit(work, ti[kt6+1])<<1|getbit(work, ti[kt6]);//6 edge codition bits from the tetrahedron
+							//if(emask)//there are edges producing verteces
+							//	for(int kb=0;kb<6;++kb)			//X no triangle fans, just GL_TRIANGLES
+							//		if(emask>>kb&1)
+							//			indices[i]=offset+bi[ti[kth*6+kb]], ++i;//original bit indices
+						}
+					}
+				}
+#if 0//DEBUG
+				std::stringstream LOL_1;
+				LOL_1<<
+					"vertices:\r\n"
+					"vertex#\tfloat#:\tx\ty\tz\tnx\tny\tnz\r\n";
+					//"kv\tidx:\tx\ty\tz\tnx\tny\tnz\r\n";
+				for(int kv=0, nf=nvert_total*6;kv+5<nf;kv+=6)
+					LOL_1<<kv/6<<'\t'<<kv<<":\t\t"<<vertices[kv]<<",\t"<<vertices[kv+1]<<",\t"<<vertices[kv+2]<<",\t"<<vertices[kv+3]<<",\t"<<vertices[kv+4]<<",\t"<<vertices[kv+5]<<"\r\n";
+				LOL_1<<
+					"\r\n"
+					"indices (triangles):\r\n"
+					"kt\tidx:\tv0\tv1\tv2\t\r\n";
+				for(int ki=0;ki+2<(int)indices.size();ki+=3)
+					LOL_1<<ki/3<<'\t'<<ki<<":\t"<<indices[ki]<<'\t'<<indices[ki+1]<<'\t'<<indices[ki+2]<<"\r\n";
+				copy_to_clipboard(LOL_1.str());
+				messageboxa(ghWnd, "Information", "Vertices & indices copied to clipboard.");
+#endif
+#if 0//DEBUG
+				//indices.resize(nvert_total-nvert_total%3);//just show vertices
+				//for(unsigned k=0;k<indices.size();++k)
+				//	indices[k]=k;
+
+				static int triangle_counter=0;
+				++triangle_counter;
+
+				//int idx_idx=triangle_counter*3;				//one at a time
+				//if(idx_idx+3>(int)indices.size())
+				//	idx_idx=indices.size()-3;
+				//std::vector<int> indices2(indices.begin()+idx_idx, indices.begin()+idx_idx+3);
+				//indices=std::move(indices2);
+
+				int ntriangles=triangle_counter,//2 3 100		//first n triangles
+					nvertices=3*ntriangles;
+				if((int)indices.size()>nvertices)
+					indices.resize(nvertices);
+				debug_vertices.assign(vertices, vertices+nvert_total*6);
+				debug_indices=indices;
+
+
+				//float vert2[]=//DEBUG
+				//{
+				//	0, 0, 0,	0, 0, 1,
+				//	1, 0, 0,	0, 0, 1,
+				//	0, 1, 0,	0, 0, 1,
+				//};
+				//nvert_total=3;
+				//vertices=(float*)realloc(vertices, nvert_total*6*sizeof(float));
+				//memcpy(vertices, vert2, nvert_total*6*sizeof(float));
+				//indices.clear();
+				//indices.push_back(0);
+				//indices.push_back(1);
+				//indices.push_back(2);
+#endif
+				gl_buf->create_VN_I(vertices, nvert_total*6, indices.data(), indices.size());
+			//	glBindBuffer(GL_ARRAY_BUFFER, gl_buf->VBO);		GL_CHECK();
+			//	glBufferData(GL_ARRAY_BUFFER, nvert_total*6*sizeof(float), vertices, GL_STATIC_DRAW);	GL_CHECK();
+			//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl_buf->EBO);	GL_CHECK();
+			//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, ntrgl_total*3*sizeof(int), indices.data(), GL_STATIC_DRAW);	GL_CHECK();
+
+				free(edgeinfo), free(nvert), free(ntrgl), free(vertices);
+				free(ndr);
+#endif
 			}
 			break;
 		}

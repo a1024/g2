@@ -23,9 +23,11 @@ const G2Version		g2_version(250, 1);//hi: g2 version, lo: cl component version
 
 //ProfInfo			longest;
 std::vector<ProfInfo> prof;
+int					prof_array_start_idx=0;
 long long			prof_t1=0;
 void				prof_start()
 {
+#ifdef PROFILER
 	if(showBenchmark)
 	{
 		LARGE_INTEGER li;
@@ -34,9 +36,11 @@ void				prof_start()
 
 	//	prof_t1=__rdtsc();
 	}
+#endif
 }
 void				prof_add(const char *label, int divisor)
 {
+#ifdef PROFILER
 	if(showBenchmark)
 	{
 		LARGE_INTEGER li;
@@ -51,9 +55,37 @@ void				prof_add(const char *label, int divisor)
 		//prof.push_back(ProfInfo(std::string(label), double(t2-prof_t1)/divisor));
 		//prof_t1=__rdtsc();
 	}
+#endif
+}
+void				prof_loop_start(const char **labels, int n)
+{
+#ifdef PROFILER
+	if(showBenchmark)
+	{
+		prof_array_start_idx=prof.size();
+		for(int k=0;k<n;++k)
+			prof.push_back(ProfInfo(labels[k], 0));
+	}
+#endif
+}
+void				prof_add_loop(int idx)
+{
+#ifdef PROFILER
+	if(showBenchmark&&prof_array_start_idx+idx<(int)prof.size())
+	{
+		LARGE_INTEGER li;
+		QueryPerformanceCounter(&li);
+		long long t2=li.QuadPart;
+		QueryPerformanceFrequency(&li);
+		prof[prof_array_start_idx+idx].second+=1000.*double(t2-prof_t1)/(li.QuadPart);
+		QueryPerformanceCounter(&li);
+		prof_t1=li.QuadPart;
+	}
+#endif
 }
 void				prof_print()
 {
+#ifdef PROFILER
 	if(showBenchmark)
 	{
 		int xpos=w-400, xpos2=w-200;
@@ -75,6 +107,7 @@ void				prof_print()
 		prof.clear();
 		prof_start();
 	}
+#endif
 }
 
 char 				returnMathSet_from_signature(int signature, char op1_ms, char op2_ms, char op3_ms)

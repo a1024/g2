@@ -35,12 +35,12 @@ union				G2Version
 };
 extern const G2Version g2_version;//hi: g2 version, lo: cl component version
 
-#ifdef PROFILER
 typedef std::pair<std::string, double> ProfInfo;
 void				prof_start();
 void				prof_add(const char *label, int divisor=1);
+void				prof_loop_start(const char **labels, int n);
+void				prof_add_loop(int idx);
 void				prof_print();
-#endif
 
 namespace			G2
 {
@@ -117,27 +117,51 @@ namespace			G2
 		M_USER_FUNCTION
 	};
 }
-enum 				G2ModeIdx
+enum 				ResultMode
 {
+	MODE_NO_EXPR,
 	MODE_N0D,
-	MODE_I1D, MODE_N1D,
-	MODE_T1D, MODE_T1D_C, MODE_T1D_H,
-	MODE_I2D,
+	MODE_T1D,
+	MODE_T1D_C,
+	MODE_T1D_H,
 	MODE_T2D,
 	MODE_C2D,
 	MODE_L2D,
 	MODE_T2D_H,
-	MODE_I3D,
 	MODE_C3D,
+	MODE_I1D,
+	MODE_I2D,
+
+	MODE_I3D,
+//	MODE_N1D,
+	
+	//MODE_NO_EXPR,
+	//MODE_N0D,
+	//MODE_I1D, MODE_N1D,
+	//MODE_T1D, MODE_T1D_C, MODE_T1D_H,
+	//MODE_I2D,
+	//MODE_T2D,
+	//MODE_C2D,
+	//MODE_L2D,
+	//MODE_T2D_H,
+	//MODE_I3D,
+	//MODE_C3D,
 };
 struct 				ModeParameters
 {
 	int mode_idx,
 		nExpr;//number of expressions of this type (for color condition)
+
+	unsigned Xplaces, Yplaces, Zplaces;//product = ndrSize
+
 	double cx, mx, cy, my, cz, mz;//example: ndr[kx]=cx+mx*kx
 //	double VX, DX, VY, DY, VZ, DZ;
 
-	unsigned Xplaces, Yplaces, Zplaces;//product = ndrSize
+	//output: mode-specific
+	//MODE_I2D, MODE_C2D: {gl_texture}
+	//MODE_C3D: {gl_vertexbuffer, gl_indexbuffer}
+	//void *output;
+
 	int *shift_args;//Xoffset, Yoffset, Zoffset
 	int *range_args;//x1, x2, y1, y2, z1, z2
 };

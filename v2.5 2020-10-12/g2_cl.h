@@ -255,11 +255,20 @@ extern int		OCL_state;
 extern bool		cl_gl_interop;
 extern const bool loadbinary;
 extern int		*rgb;
+extern std::vector<float> debug_vertices;
+extern std::vector<int> debug_indices;
+extern size_t 	g_maxlocalsize;
 
 double			cl_progress(std::string &ret);
-void 			cl_reset();
-void 			cl_initiate();
+void 			cl_reset();//TODO: delete, recompile & save cl programs when user types reset
+void 			cl_initiate();//TODO: compile in a separate thread		TODO: progress bar
+void			cl_terminate();
 
-void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, unsigned gl_texture);
+void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces);
+//cl_solve: arguments after time depend on mode_idx provided in ModeParameters struct.
+//MODE_I2D, MODE_C2D:	cl_solve(..., double time, unsigned gl_texture);
+//MODE_C3D:				cl_solve(..., double time, GPUBuffer *gl_buf);
+void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ...);
+//void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, unsigned gl_texture);
 void			cl_finish();
 #endif

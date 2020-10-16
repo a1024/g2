@@ -11621,6 +11621,19 @@ namespace	modes
 			//	rgb[w*int(Y0)+int(X0)]=0;
 		}
 	};
+	struct Text
+	{
+		int x, y;
+		int bkMode;
+		bool enable_color;	int color;
+		std::string str;
+		Text(int x, int y, int bkMode, std::string &str)			:x(x), y(y), bkMode(bkMode), enable_color(false), str(str){}
+		Text(int x, int y, int bkMode, const char *a)				:x(x), y(y), bkMode(bkMode), enable_color(false), str(a){}
+		Text(int x, int y, int bkMode, int color, std::string &str)	:x(x), y(y), bkMode(bkMode), enable_color(true), color(color), str(str){}
+		Text(int x, int y, int bkMode, int color, const char *a)	:x(x), y(y), bkMode(bkMode), enable_color(true), color(color), str(a){}
+	};
+	typedef std::pair<double, Text> ZT;
+	bool operator<(ZT const &a, ZT const &b){return a.first<b.first;}
 	class		_3D//trash code here
 	{
 	public:
@@ -12146,7 +12159,7 @@ namespace	modes
 	//	void moveTo(double x, double y, double z){x0=x, y0=y, z0=z;}
 		void lineTo(double x, double y, double z){line(p0, dvec3(x, y, z));}
 	//	void lineTo(double x, double y, double z){line(x0, y0, z0, x, y, z);}
-		void line(dvec3 &p1, dvec3 &p2)
+		void line(dvec3 &p1, dvec3 &p2)//alpha is ignored
 	//	void line(double x1, double y1, double z1, double x2, double y2, double z2)
 		{
 			if(usingOpenGL)
@@ -12481,6 +12494,7 @@ namespace	modes
 		{
 			dvec3 cp;
 			cam.world2cam(dvec3(x, y, z), cp);
+		//	prof_add_loop(0);
 			//double Xcp, Ycp, Zcp;
 			//point_world_camera(x-camx, y-camy, z-camz, Xcp, Ycp, Zcp);
 			if(cp.z>0)
@@ -12488,6 +12502,7 @@ namespace	modes
 			{
 				dvec2 s;
 				cam.cam2screen(cp, s);
+			//	prof_add_loop(1);
 				//double Xs, Ys;
 				//point_camera_screen(Xcp, Ycp, Zcp, Xs, Ys);
 				//auto LOL_0=&format;
@@ -12497,7 +12512,10 @@ namespace	modes
 				//auto LOL_1=(char*)(&reinterpret_cast<const char&>(format))+((sizeof(format)+3)&~3);
 				//auto LOL_2=(char*)(&format+1);
 				if(abs(s.x)<1e6&&abs(s.y)<1e6&&vsprintf_s(g_buf, g_buf_size, format, (char*)(&format+1))>0)
+				{
 					insert_label(cp.z, Text(int(s.x)-(s.x<0), int(s.y)-(s.y<0), TRANSPARENT, g_buf));
+				//	prof_add_loop(2);
+				}
 				//{
 				//	double k=1/cp.z;
 				//	Text v(int(s.x)-(s.x<0), int(s.y)-(s.y<0), TRANSPARENT, g_buf);
@@ -13082,30 +13100,19 @@ namespace	modes
 		//	return 0;
 		//}
 
-//	private:
-		struct Text
-		{
-			int x, y;
-			int bkMode;
-			bool enable_color;	int color;
-			std::string str;
-			Text(int x, int y, int bkMode, std::string &str)			:x(x), y(y), bkMode(bkMode), enable_color(false), str(str){}
-			Text(int x, int y, int bkMode, const char *a)				:x(x), y(y), bkMode(bkMode), enable_color(false), str(a){}
-			Text(int x, int y, int bkMode, int color, std::string &str)	:x(x), y(y), bkMode(bkMode), enable_color(true), color(color), str(str){}
-			Text(int x, int y, int bkMode, int color, const char *a)	:x(x), y(y), bkMode(bkMode), enable_color(true), color(color), str(a){}
-		};
-		typedef std::pair<double, Text> ZT;
+	private:
 		std::vector<ZT> LOL_text;//closest to farthest
 		void insert_label(double z, Text const &t)
 		{
-			int k=0;
-			for(int size=LOL_text.size();k<size;++k)
-			{
-				auto &vk=LOL_text[k];
-				if(z>vk.first)
-					break;
-			}
-			LOL_text.insert(LOL_text.begin()+k, std::make_pair(z, t));
+			LOL_text.push_back(std::make_pair(z, t));
+			//int k=0;
+			//for(int size=LOL_text.size();k<size;++k)
+			//{
+			//	auto &vk=LOL_text[k];
+			//	if(z>vk.first)
+			//		break;
+			//}
+			//LOL_text.insert(LOL_text.begin()+k, std::make_pair(z, t));
 		}
 	//	std::map<double, std::list<Text>> LOL_text;//closest to farthest
 
@@ -13220,18 +13227,35 @@ namespace	modes
 		//show the text that was printed in 3d space
 		void text_show()
 		{
-		//	for(auto &LOL:LOL_text)
+			std::sort(LOL_text.begin(), LOL_text.end());
+			prof_add("sort text");
+			//const char *labels[]=
+			//{
+			//	"show txt: references",
+			//	"show txt: set color",
+			//	"show txt: prep",
+			//	"show txt: loop",
+			//	"show txt: bufferdata",
+			//	"show txt: vertexattribpointer",
+			//	"show txt: drawarrays",
+			//	"show txt: set color",
+			//};
+			//prof_loop_start(labels, sizeof(labels)/sizeof(char*));
 			int bkMode=getBkMode();
+		//	for(auto &LOL:LOL_text)
 			for(int k=0, size=LOL_text.size();k<size;++k)
 			{
 				auto &vk=LOL_text[k];
 				auto &text=vk.second;
+			//	prof_add_loop(0);
 				setBkMode(text.bkMode);
 				if(text.enable_color)
 					setTextColor(text.color);
+			//	prof_add_loop(1);
 				print(text.x, text.y, text.str.c_str(), text.str.size());
 				if(text.enable_color)
 					setTextColor(0);
+			//	prof_add_loop(7);
 			}
 			setBkMode(bkMode);
 			//for(auto it=LOL_text.begin();it!=LOL_text.end();++it)
@@ -13269,7 +13293,10 @@ namespace	modes
 		double mag=255/G2::_pi*atan(std::abs(r)), cosx=r>0?1:-1, sinx=0;
 	//	return unsigned char(mag*1.866025403784439)<<16|unsigned char(mag*0.133974596215561);
 		const double cos_pi_6=0.866025403784439, sin_pi_6=0.5;
-		return 0x7F<<24|unsigned char(mag*(1+cosx*cos_pi_6))<<16|unsigned char(mag)<<8|unsigned char(mag*(1+cosx*-cos_pi_6));
+		double red=mag*(1+cosx*cos_pi_6), green=mag, blue=mag*(1+cosx*-cos_pi_6);
+		if(usingOpenGL)
+			return 0x7F000000|unsigned char(blue)<<16|unsigned char(green)<<8|unsigned char(red);//OpenGL 0xAABBGGRR
+		return 0x7F000000|unsigned char(red)<<16|unsigned char(green)<<8|unsigned char(blue);//Win32 bitmap 0xXXRRGGBB
 	//	return unsigned char(mag*(1+cosx*cos_pi_6-sinx*sin_pi_6))<<16|unsigned char(mag*(1+sinx))<<8|unsigned char(mag*(1+cosx*-cos_pi_6-sinx*sin_pi_6));//*/
 
 	/*	if(r!=r)
@@ -13378,7 +13405,7 @@ namespace	modes
 		mag=255/G2::_pi*atan(sqrt(x.r*x.r+x.i*x.i)); double arg=atan2(x.i, x.r);//600ms
 		int v1=unsigned char(mag*(1+cos(arg+G2::_pi/6)))<<16|unsigned char(mag*(1+cos(arg-G2::_pi/2)))<<8|unsigned char(mag*(1+cos(arg+G2::_pi*5/6)));//*/
 	}
-	void colorFunction_q(Value &x, int &r, int &i, int &j, int &k)
+	void colorFunction_q(Value &x, int &r, int &i, int &j, int &k)//TODO: swap red & blue with OpenGL
 	{
 		const double f=255*2/G2::_pi;
 		((unsigned char*)&r)[x.r<0]=unsigned char(atan(abs(x.r))*f);
@@ -13413,7 +13440,10 @@ namespace	modes
 			else
 				red=255-mag*(2-red), green=255-mag*(2-green), blue=255-mag*(2-blue);
 			auto p=(unsigned char*)rgb;
-			p[0]=unsigned char(blue), p[1]=unsigned char(green), p[2]=unsigned char(red), p[3]=0;//argb
+			if(usingOpenGL)
+				p[0]=unsigned char(red), p[1]=unsigned char(green), p[2]=unsigned char(blue), p[3]=0;//0xabgr
+			else
+				p[0]=unsigned char(blue), p[1]=unsigned char(green), p[2]=unsigned char(red), p[3]=0;//0xargb
 		}
 	}
 	void colorFunction_bc_l(CompP const &v, int *rgb)
@@ -16846,6 +16876,15 @@ namespace	modes
 		double &VX=xs.VX, &VY=ys.VX, &VZ=zs.VX;
 	//	double VX=xs.fn(xs.getVX()), VY=ys.fn(ys.getVX()), VZ=zs.fn(zs.getVX());
 	//	for(double X=xs.snap2grid_ceil(xs.Xstart);X<=xs.Xend;)
+		//const char *labels[]=
+		//{
+		//	//"number x",
+		//	"num. x: world2cam",
+		//	"num. x: cam2screen",
+		//	"num. x: insert text",
+		//	"next x",
+		//};
+		//prof_loop_start(labels, sizeof(labels)/sizeof(char*));
 		for(double X=xs.snap2grid_AR_ceil(xs.Xstart, 1);X<=xs.Xend;)
 		{
 			if(xs.is_not_origin(X))
@@ -16853,7 +16892,9 @@ namespace	modes
 		//	if(xs.next(X))
 			if(xs.next_AR(X))
 				break;
+		//	prof_add_loop(3);
 		}
+	//	prof_add("number x-axis");
 	//	for(double Y=ys.snap2grid_ceil(ys_Ystart);Y<=ys.Xend;)
 		for(double Y=ys.snap2grid_AR_ceil(ys_Ystart, AR_Y);Y<=ys.Xend;)
 		{
@@ -16864,6 +16905,7 @@ namespace	modes
 			if(ys.next_AR(Y))
 				break;
 		}
+		prof_add("number y-axis");
 	//	for(double Z=zs.snap2grid_ceil(zs_Zstart);Z<=zs.Xend;)
 		for(double Z=zs.snap2grid_AR_ceil(zs_Zstart, AR_Z);Z<=zs.Xend;)
 		{
@@ -16874,6 +16916,7 @@ namespace	modes
 			if(zs.next_AR(Z))
 				break;
 		}
+		prof_add("number z-axis");
 	}
 	void _2dMode_NumberAxes(int &H, int &V, int &VT, Scale &xs, Scale &ys)
 	{
@@ -18098,7 +18141,8 @@ namespace	modes
 	}
 	void			Numeric_0D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -18781,7 +18825,8 @@ namespace	modes
 	}
 	void			Implicit_1D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -18941,7 +18986,8 @@ namespace	modes
 	}
 	void			Numeric_1D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -19655,7 +19701,8 @@ namespace	modes
 	}
 	void			Transverse_1D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -20959,7 +21006,8 @@ namespace	modes
 	}
 	void			Transverse_1D_C::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -21717,7 +21765,8 @@ namespace	modes
 	}
 	void			Transverse_1D_H::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -21767,6 +21816,8 @@ namespace	modes
 		PenBrush penBrush;
 		//HPEN hPen;
 		//HBRUSH hBrush;
+		typedef std::pair<unsigned, unsigned> ExTx;
+		std::vector<ExTx> gl_textures;
 
 		Implicit_2D():
 			solver(xs, ys), _2D_Mode(solver),
@@ -21887,6 +21938,12 @@ namespace	modes
 				a_draw();
 			return 0;
 		}
+		void cl_draw()
+		{
+			newframe();
+			for(int ktx=0, ntx=gl_textures.size();ktx<ntx;++ktx)//draw the solutions
+				display_gl_texture(gl_textures[ktx].second);
+		}
 		void draw()
 		{
 			if(usingOpenGL)
@@ -21896,7 +21953,50 @@ namespace	modes
 				ys.DX=1;
 			if(toSolve)
 			{
-				if(shiftOnly==1&&abs(Xoffset)<Xplaces&&abs(Yoffset)<Yplaces)
+				if(usingOpenGL==MODE_CL_GL_INTEROP)
+				{
+					if(!paused)
+						solver.synchronize();
+					Xplaces=w, Yplaces=h;
+					xs.set_Xplaces(w), ys.set_Xplaces(h);
+					ModeParameters mp=
+					{
+						MODE_I2D, nExpr[11],
+						(unsigned)Xplaces, (unsigned)Yplaces, 1,//ndr dimensions
+						xs.Xstart, xs.Xsample,//Xstart, Xsample
+						ys.Xend, -ys.Xsample,//Yend, -Ysample
+						0, 0,
+						nullptr, nullptr,
+					};
+					unsigned prevsize=gl_textures.size(), newsize=nExpr[11];
+					if(prevsize<newsize)
+					{
+						gl_textures.resize(newsize);
+						for(unsigned k=prevsize;k<newsize;++k)
+							glGenTextures(1, &gl_textures[k].second);
+					}
+					else if(prevsize>newsize)
+					{
+						for(unsigned k=newsize;k<prevsize;++k)
+							glDeleteTextures(1, &gl_textures[k].second);
+						gl_textures.resize(newsize);
+					}
+					for(int ke=0, ktx=0, ne=expr.size();ke<ne;++ke)
+					{
+						auto ex=expr[ke];
+						if(ex.rmode[0]==11)
+						{
+							auto &gl_tx=gl_textures[ktx];
+							gl_tx.first=ke;
+							generate_glcl_texture(gl_tx.second, Xplaces, Yplaces);
+							cl_solve(ex, mp, solver.T, gl_tx.second);
+							cl_finish();
+							++ktx;
+						}
+					}
+					cl_draw();
+				}
+				else if(shiftOnly==1&&abs(Xoffset)<Xplaces&&abs(Yoffset)<Yplaces)
 				{
 					if(Xoffset||Yoffset)
 					{
@@ -22036,7 +22136,12 @@ namespace	modes
 				}
 			}
 			else
-				std::copy(solver.bitmap.rgb, solver.bitmap.rgb+w*h, gBitmap.rgb);
+			{
+				if(usingOpenGL==MODE_CL_GL_INTEROP)
+					cl_draw();
+				else
+					std::copy(solver.bitmap.rgb, solver.bitmap.rgb+w*h, gBitmap.rgb);
+			}
 			int colorCondition=nExpr[11]>1;
 			if(!clearScreen)
 			{
@@ -22182,6 +22287,7 @@ namespace	modes
 	}
 	void			Implicit_2D::a_draw()
 	{
+		newframe();
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -23673,7 +23779,8 @@ namespace	modes
 	}
 	void			Transverse_2D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -24480,14 +24587,15 @@ namespace	modes
 						if(!paused)
 							solver.synchronize();
 						Xplaces=w, Yplaces=h;
+						xs.set_Xplaces(w), ys.set_Xplaces(h);
 						generate_glcl_texture(gl_texture, Xplaces, Yplaces);
 						ModeParameters mp=
 						{
 							MODE_C2D, 1,
-							VX-DX*0.5, DX/Xplaces,//Xstart, Xsample
-							VY+DY*0.5, -DY/Yplaces,//Yend, -Ysample
-							0, 0,
 							(unsigned)Xplaces, (unsigned)Yplaces, 1,//ndr dimensions
+							xs.Xstart, xs.Xsample,//Xstart, Xsample
+							ys.Xend, -ys.Xsample,//Yend, -Ysample
+							0, 0,
 							nullptr, nullptr,
 						};
 						cl_solve(ex, mp, solver.T, gl_texture);
@@ -24605,10 +24713,10 @@ namespace	modes
 		//	if(!contourOnly)
 			if(usingOpenGL==MODE_CL_GL_INTEROP)//draw the mona lisa
 			{
-				//cl_finish();
-				//if(cl_gl_interop)
-				//	display_gl_texture(gl_texture);//draw the solution
-				//else
+				cl_finish();
+				if(cl_gl_interop)
+					display_gl_texture(gl_texture);//draw the solution
+				else
 				{
 				//	debug_printrgb(rgb, w, h, 512);
 					display_texture(0, w, 0, h, rgb, w, h);
@@ -24767,7 +24875,8 @@ namespace	modes
 	}
 	void			Color_2D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 		
 		draw();
@@ -25266,7 +25375,8 @@ namespace	modes
 	}
 	void			Longitudinal_2D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 		
 		draw();
@@ -26192,7 +26302,8 @@ namespace	modes
 	}
 	void			Transverse_2D_H::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -29212,6 +29323,38 @@ namespace	modes
 			clearScreen(false), kb_VK_F6_msg(false)
 		{}
 		
+		void draw_contour_debuggrid(int color)
+		{
+			_3d.lineColor=color;//draw 3D grid
+			double
+				Xstart=xs.VX-xs.DX*0.5, Xend=xs.VX+xs.DX*0.5, Xsample=xs.DX/xs.Xplaces,
+				Ystart=ys.VX-ys.DX*0.5, Yend=ys.VX+ys.DX*0.5, Ysample=ys.DX/ys.Xplaces,
+				Zstart=zs.VX-zs.DX*0.5, Zend=zs.VX+zs.DX*0.5, Zsample=zs.DX/zs.Xplaces;
+			for(int ky=0;ky<=Yplaces;++ky)
+			{
+				for(int kx=0;kx<=Xplaces;++kx)//draw vertical lines
+				{
+					double x=Xstart+kx*Xsample, y=Ystart+ky*Ysample;
+					_3d.line(dvec3(x, y, Zstart), dvec3(x, y, Zend));
+				}
+			}
+			for(int kz=0;kz<=Zplaces;++kz)
+			{
+				for(int kx=0;kx<=Xplaces;++kx)//draw N-S lines
+				{
+					double x=Xstart+kx*Xsample, z=Zstart+kz*Zsample;
+					_3d.line(dvec3(x, Ystart, z), dvec3(x, Yend, z));
+				}
+			}
+			for(int kz=0;kz<=Zplaces;++kz)
+			{
+				for(int ky=0;ky<=Yplaces;++ky)//draw E-W lines
+				{
+					double y=Ystart+ky*Ysample, z=Zstart+kz*Zsample;
+					_3d.line(dvec3(Xstart, y, z), dvec3(Xend, y, z));
+				}
+			}
+		}
 		void draw_contour(std::map<unsigned, std::unordered_map<int, Surface>> &contours, std::map<unsigned, std::unordered_map<int, std::list<_3D::Stick>>> &lines, unsigned lineColor)
 	//	void draw_contour(std::map<unsigned, std::unordered_map<int, std::list<_3D::Triangle>>> &contours, std::map<unsigned, std::unordered_map<int, std::list<_3D::Stick>>> &lines, unsigned lineColor)
 		{
@@ -29319,35 +29462,7 @@ namespace	modes
 					//	//_3d.line(p->X3, p->Y3, p->Z3, p->X1, p->Y1, p->Z1);
 					//}
 				}
-				_3d.lineColor=0xFFFF00FF;//draw 3D grid
-				double
-					Xstart=xs.VX-xs.DX*0.5, Xend=xs.VX+xs.DX*0.5, Xsample=xs.DX/xs.Xplaces,
-					Ystart=ys.VX-ys.DX*0.5, Yend=ys.VX+ys.DX*0.5, Ysample=ys.DX/ys.Xplaces,
-					Zstart=zs.VX-zs.DX*0.5, Zend=zs.VX+zs.DX*0.5, Zsample=zs.DX/zs.Xplaces;
-				for(int ky=0;ky<=Yplaces;++ky)
-				{
-					for(int kx=0;kx<=Xplaces;++kx)//draw vertical lines
-					{
-						double x=Xstart+kx*Xsample, y=Ystart+ky*Ysample;
-						_3d.line(dvec3(x, y, Zstart), dvec3(x, y, Zend));
-					}
-				}
-				for(int kz=0;kz<=Zplaces;++kz)
-				{
-					for(int kx=0;kx<=Xplaces;++kx)//draw N-S lines
-					{
-						double x=Xstart+kx*Xsample, z=Zstart+kz*Zsample;
-						_3d.line(dvec3(x, Ystart, z), dvec3(x, Yend, z));
-					}
-				}
-				for(int kz=0;kz<=Zplaces;++kz)
-				{
-					for(int ky=0;ky<=Yplaces;++ky)//draw E-W lines
-					{
-						double y=Ystart+ky*Ysample, z=Zstart+kz*Zsample;
-						_3d.line(dvec3(Xstart, y, z), dvec3(Xend, y, z));
-					}
-				}
+				draw_contour_debuggrid(0xFFFF00FF);
 				//test
 #if 0
 				double x=xs.VX, y=ys.VX, z=zs.VX+zs.DX;
@@ -31325,6 +31440,8 @@ namespace	modes
 		}
 		void draw()
 		{
+			static GPUBuffer gl_buf;
+		//	static unsigned gl_vertex_buf=0, gl_idx_buf=0;
 			prof_add("entry");
 			if(usingOpenGL)
 				gl_enabledepthtest();
@@ -31335,7 +31452,31 @@ namespace	modes
 				bool changed=false;
 				if(toSolve)
 				{
-					if(!operations.size()&&shiftOnly==1&&abs(Xoffset)<Xplaces&&abs(Yoffset)<Yplaces&&abs(Zoffset)<Zplaces)
+					if(usingOpenGL==MODE_CL_GL_INTEROP)
+					{
+						if(!paused)
+							solver.synchronize();
+
+						generate_glcl_buffer(gl_buf.VBO);
+						generate_glcl_buffer(gl_buf.EBO);
+
+						cl_setsizes(MODE_C3D, &Xplaces, &Yplaces, &Zplaces);
+						xs.set_Xplaces(Xplaces), ys.set_Xplaces(Yplaces), zs.set_Xplaces(Zplaces);
+						XsamplePos=std::floor(XshiftPoint/solver.Xsample);
+						YsamplePos=std::floor(YshiftPoint/solver.Ysample);
+						ZsamplePos=std::floor(ZshiftPoint/solver.Zsample);
+						ModeParameters mp=
+						{
+							MODE_C3D, 1,
+							(unsigned)Xplaces, (unsigned)Yplaces, (unsigned)Zplaces,//ndr dimensions
+							xs.Xstart, xs.Xsample,
+							ys.Xstart, ys.Xsample,
+							zs.Xstart, zs.Xsample,
+							nullptr, nullptr,
+						};
+						cl_solve(ex, mp, solver.T, &gl_buf);
+					}
+					else if(!operations.size()&&shiftOnly==1&&abs(Xoffset)<Xplaces&&abs(Yoffset)<Yplaces&&abs(Zoffset)<Zplaces)
 					{
 						solver.partial_bounds(VX, DX, VY/AR_Y, DY, VZ/AR_Z, DZ, Xoffset, Yoffset, Zoffset);
 						solver.synchronize();
@@ -31383,7 +31524,7 @@ namespace	modes
 					doOperations(ex.n[ex.resultTerm]);
 					changed=true;
 				}
-				if(changed)
+				if(changed&&usingOpenGL!=MODE_CL_GL_INTEROP)
 				{
 					solver.updateRGB(ex);
 					if(contourOn)
@@ -31403,217 +31544,249 @@ namespace	modes
 			if(!clearScreen)
 				_3dMode_DrawGridNAxes(_3d, xs, ys, zs, AR_Y, AR_Z);
 			prof_add("grid");
-			if(!contourOnly)//draw the points
+			if(usingOpenGL==MODE_CL_GL_INTEROP)
 			{
-				unsigned v=0;
-				switch(ex.resultMathSet)
+				vec3 lightpos=_3d.cam.p;
+			//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				GL2_L3D::draw_buffer(_3d.cam, gl_buf, vec3(), lightpos);
+			//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				draw_contour_debuggrid(0x40FF00FF);
+#if 0//DEBUG
+				if(contourOn)//show vertices
 				{
-				case 'R':case 'c':
-					for(int k=0;k<Zplaces;++k)
-						for(int k2=0;k2<Yplaces;++k2)
-							for(int k3=0;k3<Xplaces;++k3, ++v)
-								point_3D_2x2(_3d.cam, dvec3(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k)), solver.ndr_rgb[v]);
-							//	_3d.point(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k), solver.ndr_rgb[v]);
-					break;
-				case 'h':
-					for(int k=0;k<Zplaces;++k)
-						for(int k2=0;k2<Yplaces;++k2)
-							for(int k3=0;k3<Xplaces;++k3, ++v)
-								point_3D_2x2(_3d.cam, dvec3(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k)), solver.ndr_rgb[v], solver.ndr_rgb_i[v], solver.ndr_rgb_j[v], solver.ndr_rgb_k[v]);
-							//	_3d.point(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k), solver.ndr_rgb[v], solver.ndr_rgb_i[v], solver.ndr_rgb_j[v], solver.ndr_rgb_k[v]);
-					break;
+					for(int k=0;k+5<(int)debug_vertices.size();k+=6)
+						_3d.label(debug_vertices[k], debug_vertices[k+1], debug_vertices[k+2], "V%d", k/6);
 				}
-				prof_add("points");
-				if(!contourOn)//draw the cross-sections
+				else
 				{
-					int txsize=Xplaces*Yplaces;
-					double
-						X1=xs.ifn_x(-0.5), X2=xs.ifn_x(Xplaces-0.5),
-						Y1=ys.ifn_x(-0.5), Y2=ys.ifn_x(Yplaces-0.5);
-					if(usingOpenGL)
+					for(int k=0;k<(int)debug_indices.size();k+=3)
 					{
-						for(int kz=0;kz<Zplaces;++kz)
-						{
-							float z=(float)zs.ifn_x(kz);
-							GL2_3D::push_square((float)X1, (float)X2, (float)Y1, (float)Y2, z, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces);
-						}
+						int ki=debug_indices[k]*6;
+						vec3 p1(debug_vertices[ki], debug_vertices[ki+1], debug_vertices[ki+2]);
+						ki=debug_indices[k+1]*6;
+						vec3 p2(debug_vertices[ki], debug_vertices[ki+1], debug_vertices[ki+2]);
+						ki=debug_indices[k+2]*6;
+						vec3 p3(debug_vertices[ki], debug_vertices[ki+1], debug_vertices[ki+2]);
+						vec3 av=(p1+p2+p3)*(1.f/3);
+						_3d.label(av.x, av.y, av.z, "T%d", k/3);
 					}
-					else
-					{
-						dvec3 p1(X1, Y1, 0), p2(X2, Y1, 0), p3(X2, Y2, 0), p4(X1, Y2, 0);
-						vec2 t1(0, 0), t2((float)Xplaces, 0), t3((float)Xplaces, (float)Yplaces), t4(0, (float)Yplaces);
-					//	vec2 t1(0, 0), t2((float)Xplaces-1, 0), t3((float)Xplaces-1, (float)Yplaces-1), t4(0, (float)Yplaces-1);
-						mat2 m1, m2;
-						_3d.transform(p1, p2, p3, t1, t2, t3, m1);
-						_3d.transform(p3, p4, p1, t3, t4, t1, m2);
-						for(int kz=0;kz<Zplaces;++kz)
-						{
-							p1.z=p2.z=p3.z=p4.z=zs.ifn_x(kz);
-							render_textured_transparent(_3d.cam, p1, p2, p3, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t1, m1);
-							render_textured_transparent(_3d.cam, p3, p4, p1, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t3, m2);
-						}
-					}
-
-				//	float
-				//		X1=(float)xs.ifn_x(-0.5), X2=(float)xs.ifn_x(Xplaces-0.5),
-				//		Y1=(float)ys.ifn_x(-0.5), Y2=(float)ys.ifn_x(Yplaces-0.5);
-				//		//X1=(float)xs.ifn_x(0), X2=(float)xs.ifn_x(Xplaces-1),
-				//		//Y1=(float)ys.ifn_x(0), Y2=(float)ys.ifn_x(Yplaces-1);
-				//	vec3 p1(X1, Y1, 0), p2(X2, Y1, 0), p3(X2, Y2, 0), p4(X1, Y2, 0);
-				//	vec2 t1(0, 0), t2((float)Xplaces, 0), t3((float)Xplaces, (float)Yplaces), t4(0, (float)Yplaces);
-				////	vec2 t1(0, 0), t2((float)Xplaces-1, 0), t3((float)Xplaces-1, (float)Yplaces-1), t4(0, (float)Yplaces-1);
-				//	mat2 m1, m2;
-				//	_3d.transform(p1, p2, p3, t1, t2, t3, m1);
-				//	_3d.transform(p3, p4, p1, t3, t4, t1, m2);
-				//	int txsize=Xplaces*Yplaces;
-				//	for(int kz=0;kz<Zplaces;++kz)
-				//	{
-				//		p1.z=p2.z=p3.z=p4.z=(float)zs.ifn_x(kz);
-				//		_3d.render_textured_transparent(p1, p2, p3, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t1, m1);
-				//		_3d.render_textured_transparent(p3, p4, p1, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t3, m2);
-				//	}
-
-					//mat2 txm(1, 0, 0, 1);
-					//vec2 tx1(0, 0);
-					//int txsize=Xplaces*Yplaces;
-					//for(int kz=0;kz<Zplaces;kz+=2)
-					//{
-					//	float Z=(float)zs.ifn_x(kz),
-					//		X1=(float)xs.ifn_x(0), X2=(float)xs.ifn_x(Xplaces-1),
-					//		Y1=(float)ys.ifn_x(0), Y2=(float)ys.ifn_x(Yplaces-1);
-					//	_3d.render_textured_transparent(vec3(X1, Y1, Z), vec3(X2, Y1, Z), vec3(X2, Y2, Z), solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, tx1, txm);
-					//	_3d.render_textured_transparent(vec3(X2, Y2, Z), vec3(X1, Y2, Z), vec3(X1, Y1, Z), solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, tx1, txm);
-					//}
-
-					//mat2 txm(1, 0, 0, 1);
-					//vec2 tx1(0, 0);
-					//_3d.render_textured_transparent(vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), solver.ndr_rgb, Xplaces, Yplaces, tx1, txm);
-					prof_add("planes");
 				}
+#endif
 			}
-			if(contourOn)//draw the contour
+			else
 			{
-			/*	int lineColor=_3d.lineColor;//DEBUG lines
-				_3d.lineColor=0xFF00FF;
-				for(int kz=0;kz<Zplaces-1;++kz)
+				if(!contourOnly)//draw the points
 				{
-					for(int ky=0;ky<Yplaces-1;++ky)
+					unsigned v=0;
+					switch(ex.resultMathSet)
 					{
-						for(int kx=0;kx<Xplaces-1;++kx)
+					case 'R':case 'c':
+						for(int k=0;k<Zplaces;++k)
+							for(int k2=0;k2<Yplaces;++k2)
+								for(int k3=0;k3<Xplaces;++k3, ++v)
+									point_3D_2x2(_3d.cam, dvec3(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k)), solver.ndr_rgb[v]);
+								//	_3d.point(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k), solver.ndr_rgb[v]);
+						break;
+					case 'h':
+						for(int k=0;k<Zplaces;++k)
+							for(int k2=0;k2<Yplaces;++k2)
+								for(int k3=0;k3<Xplaces;++k3, ++v)
+									point_3D_2x2(_3d.cam, dvec3(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k)), solver.ndr_rgb[v], solver.ndr_rgb_i[v], solver.ndr_rgb_j[v], solver.ndr_rgb_k[v]);
+								//	_3d.point(xs.ifn_x(k3), ys.ifn_x(k2), zs.ifn_x(k), solver.ndr_rgb[v], solver.ndr_rgb_i[v], solver.ndr_rgb_j[v], solver.ndr_rgb_k[v]);
+						break;
+					}
+					prof_add("points");
+					if(!contourOn)//draw the cross-sections
+					{
+						int txsize=Xplaces*Yplaces;
+						double
+							X1=xs.ifn_x(-0.5), X2=xs.ifn_x(Xplaces-0.5),
+							Y1=ys.ifn_x(-0.5), Y2=ys.ifn_x(Yplaces-0.5);
+						if(usingOpenGL)
 						{
-							double
-								X_W=xs.ifn_x(kx), X_m=xs.ifn_x(kx+.5), X_E=xs.ifn_x(kx+1),
-								Y_S=ys.ifn_x(ky), Y_m=ys.ifn_x(ky+.5), Y_N=ys.ifn_x(ky+1),
-								Z_D=zs.ifn_x(kz), Z_m=zs.ifn_x(kz+.5), Z_U=zs.ifn_x(kz+1);
-							_3d.line(X_W, Y_S, Z_D, X_E, Y_S, Z_D);//edges
-							_3d.line(X_E, Y_S, Z_D, X_E, Y_N, Z_D);
-							_3d.line(X_E, Y_N, Z_D, X_W, Y_N, Z_D);
-							_3d.line(X_W, Y_N, Z_D, X_W, Y_S, Z_D);
+							for(int kz=0;kz<Zplaces;++kz)
+							{
+								float z=(float)zs.ifn_x(kz);
+								GL2_3D::push_square((float)X1, (float)X2, (float)Y1, (float)Y2, z, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces);//red & blue should be swapped
+							}
+						}
+						else
+						{
+							dvec3 p1(X1, Y1, 0), p2(X2, Y1, 0), p3(X2, Y2, 0), p4(X1, Y2, 0);
+							vec2 t1(0, 0), t2((float)Xplaces, 0), t3((float)Xplaces, (float)Yplaces), t4(0, (float)Yplaces);
+						//	vec2 t1(0, 0), t2((float)Xplaces-1, 0), t3((float)Xplaces-1, (float)Yplaces-1), t4(0, (float)Yplaces-1);
+							mat2 m1, m2;
+							_3d.transform(p1, p2, p3, t1, t2, t3, m1);
+							_3d.transform(p3, p4, p1, t3, t4, t1, m2);
+							for(int kz=0;kz<Zplaces;++kz)
+							{
+								p1.z=p2.z=p3.z=p4.z=zs.ifn_x(kz);
+								render_textured_transparent(_3d.cam, p1, p2, p3, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t1, m1);
+								render_textured_transparent(_3d.cam, p3, p4, p1, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t3, m2);
+							}
+						}
 
-							_3d.line(X_E, Y_S, Z_U, X_W, Y_S, Z_U);
-							_3d.line(X_W, Y_S, Z_U, X_W, Y_N, Z_U);
-							_3d.line(X_W, Y_N, Z_U, X_E, Y_N, Z_U);
-							_3d.line(X_E, Y_N, Z_U, X_E, Y_S, Z_U);
+					//	float
+					//		X1=(float)xs.ifn_x(-0.5), X2=(float)xs.ifn_x(Xplaces-0.5),
+					//		Y1=(float)ys.ifn_x(-0.5), Y2=(float)ys.ifn_x(Yplaces-0.5);
+					//		//X1=(float)xs.ifn_x(0), X2=(float)xs.ifn_x(Xplaces-1),
+					//		//Y1=(float)ys.ifn_x(0), Y2=(float)ys.ifn_x(Yplaces-1);
+					//	vec3 p1(X1, Y1, 0), p2(X2, Y1, 0), p3(X2, Y2, 0), p4(X1, Y2, 0);
+					//	vec2 t1(0, 0), t2((float)Xplaces, 0), t3((float)Xplaces, (float)Yplaces), t4(0, (float)Yplaces);
+					////	vec2 t1(0, 0), t2((float)Xplaces-1, 0), t3((float)Xplaces-1, (float)Yplaces-1), t4(0, (float)Yplaces-1);
+					//	mat2 m1, m2;
+					//	_3d.transform(p1, p2, p3, t1, t2, t3, m1);
+					//	_3d.transform(p3, p4, p1, t3, t4, t1, m2);
+					//	int txsize=Xplaces*Yplaces;
+					//	for(int kz=0;kz<Zplaces;++kz)
+					//	{
+					//		p1.z=p2.z=p3.z=p4.z=(float)zs.ifn_x(kz);
+					//		_3d.render_textured_transparent(p1, p2, p3, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t1, m1);
+					//		_3d.render_textured_transparent(p3, p4, p1, solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, t3, m2);
+					//	}
 
-							_3d.line(X_W, Y_S, Z_D, X_W, Y_S, Z_U);
-							_3d.line(X_W, Y_N, Z_D, X_W, Y_N, Z_U);
-							_3d.line(X_E, Y_N, Z_D, X_E, Y_N, Z_U);
-							_3d.line(X_E, Y_S, Z_D, X_E, Y_S, Z_U);
+						//mat2 txm(1, 0, 0, 1);
+						//vec2 tx1(0, 0);
+						//int txsize=Xplaces*Yplaces;
+						//for(int kz=0;kz<Zplaces;kz+=2)
+						//{
+						//	float Z=(float)zs.ifn_x(kz),
+						//		X1=(float)xs.ifn_x(0), X2=(float)xs.ifn_x(Xplaces-1),
+						//		Y1=(float)ys.ifn_x(0), Y2=(float)ys.ifn_x(Yplaces-1);
+						//	_3d.render_textured_transparent(vec3(X1, Y1, Z), vec3(X2, Y1, Z), vec3(X2, Y2, Z), solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, tx1, txm);
+						//	_3d.render_textured_transparent(vec3(X2, Y2, Z), vec3(X1, Y2, Z), vec3(X1, Y1, Z), solver.ndr_rgb+txsize*kz, Xplaces, Yplaces, tx1, txm);
+						//}
 
-							_3d.line(X_E, Y_S, Z_U, X_W, Y_N, Z_U);//face crosses
-							_3d.line(X_W, Y_S, Z_U, X_E, Y_N, Z_U);//U
+						//mat2 txm(1, 0, 0, 1);
+						//vec2 tx1(0, 0);
+						//_3d.render_textured_transparent(vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), solver.ndr_rgb, Xplaces, Yplaces, tx1, txm);
+						prof_add("planes");
+					}
+				}
+				if(contourOn)//draw the contour
+				{
+				/*	int lineColor=_3d.lineColor;//DEBUG lines
+					_3d.lineColor=0xFF00FF;
+					for(int kz=0;kz<Zplaces-1;++kz)
+					{
+						for(int ky=0;ky<Yplaces-1;++ky)
+						{
+							for(int kx=0;kx<Xplaces-1;++kx)
+							{
+								double
+									X_W=xs.ifn_x(kx), X_m=xs.ifn_x(kx+.5), X_E=xs.ifn_x(kx+1),
+									Y_S=ys.ifn_x(ky), Y_m=ys.ifn_x(ky+.5), Y_N=ys.ifn_x(ky+1),
+									Z_D=zs.ifn_x(kz), Z_m=zs.ifn_x(kz+.5), Z_U=zs.ifn_x(kz+1);
+								_3d.line(X_W, Y_S, Z_D, X_E, Y_S, Z_D);//edges
+								_3d.line(X_E, Y_S, Z_D, X_E, Y_N, Z_D);
+								_3d.line(X_E, Y_N, Z_D, X_W, Y_N, Z_D);
+								_3d.line(X_W, Y_N, Z_D, X_W, Y_S, Z_D);
 
-							_3d.line(X_E, Y_S, Z_U, X_W, Y_S, Z_D);//S
-							_3d.line(X_W, Y_S, Z_U, X_E, Y_S, Z_D);
+								_3d.line(X_E, Y_S, Z_U, X_W, Y_S, Z_U);
+								_3d.line(X_W, Y_S, Z_U, X_W, Y_N, Z_U);
+								_3d.line(X_W, Y_N, Z_U, X_E, Y_N, Z_U);
+								_3d.line(X_E, Y_N, Z_U, X_E, Y_S, Z_U);
 
-							_3d.line(X_E, Y_S, Z_U, X_E, Y_N, Z_D);//E
-							_3d.line(X_E, Y_N, Z_U, X_E, Y_S, Z_D);
+								_3d.line(X_W, Y_S, Z_D, X_W, Y_S, Z_U);
+								_3d.line(X_W, Y_N, Z_D, X_W, Y_N, Z_U);
+								_3d.line(X_E, Y_N, Z_D, X_E, Y_N, Z_U);
+								_3d.line(X_E, Y_S, Z_D, X_E, Y_S, Z_U);
 
-							_3d.line(X_E, Y_N, Z_U, X_W, Y_N, Z_D);//N
-							_3d.line(X_W, Y_N, Z_U, X_E, Y_N, Z_D);
+								_3d.line(X_E, Y_S, Z_U, X_W, Y_N, Z_U);//face crosses
+								_3d.line(X_W, Y_S, Z_U, X_E, Y_N, Z_U);//U
 
-							_3d.line(X_W, Y_S, Z_U, X_W, Y_N, Z_D);//W
-							_3d.line(X_W, Y_N, Z_U, X_W, Y_S, Z_D);
+								_3d.line(X_E, Y_S, Z_U, X_W, Y_S, Z_D);//S
+								_3d.line(X_W, Y_S, Z_U, X_E, Y_S, Z_D);
+
+								_3d.line(X_E, Y_S, Z_U, X_E, Y_N, Z_D);//E
+								_3d.line(X_E, Y_N, Z_U, X_E, Y_S, Z_D);
+
+								_3d.line(X_E, Y_N, Z_U, X_W, Y_N, Z_D);//N
+								_3d.line(X_W, Y_N, Z_U, X_E, Y_N, Z_D);
+
+								_3d.line(X_W, Y_S, Z_U, X_W, Y_N, Z_D);//W
+								_3d.line(X_W, Y_N, Z_U, X_W, Y_S, Z_D);
 							
-							_3d.line(X_E, Y_S, Z_D, X_W, Y_N, Z_D);//D
-							_3d.line(X_W, Y_S, Z_D, X_E, Y_N, Z_D);
+								_3d.line(X_E, Y_S, Z_D, X_W, Y_N, Z_D);//D
+								_3d.line(X_W, Y_S, Z_D, X_E, Y_N, Z_D);
 
-							_3d.line(X_E, Y_S, Z_U, X_W, Y_N, Z_D);//opposite vertices
-							_3d.line(X_E, Y_N, Z_U, X_W, Y_S, Z_D);
-							_3d.line(X_W, Y_N, Z_U, X_E, Y_S, Z_D);
-							_3d.line(X_W, Y_S, Z_U, X_E, Y_N, Z_D);
+								_3d.line(X_E, Y_S, Z_U, X_W, Y_N, Z_D);//opposite vertices
+								_3d.line(X_E, Y_N, Z_U, X_W, Y_S, Z_D);
+								_3d.line(X_W, Y_N, Z_U, X_E, Y_S, Z_D);
+								_3d.line(X_W, Y_S, Z_U, X_E, Y_N, Z_D);
 
-							_3d.line(X_m, Y_m, Z_U, X_m, Y_m, Z_D);//internal
-							_3d.line(X_m, Y_S, Z_m, X_m, Y_N, Z_m);
-							_3d.line(X_W, Y_m, Z_m, X_E, Y_m, Z_m);
+								_3d.line(X_m, Y_m, Z_U, X_m, Y_m, Z_D);//internal
+								_3d.line(X_m, Y_S, Z_m, X_m, Y_N, Z_m);
+								_3d.line(X_W, Y_m, Z_m, X_E, Y_m, Z_m);
+							}
 						}
 					}
-				}
-				_3d.lineColor=lineColor;//end DEBUG lines//*/
+					_3d.lineColor=lineColor;//end DEBUG lines//*/
 
-				draw_contour(Rcontours, Rlines, rColor);
-				if(ex.resultMathSet>='c')
-				{
-					draw_contour(Icontours, Ilines, iColor);
-					if(ex.resultMathSet=='h')
+					draw_contour(Rcontours, Rlines, rColor);
+					if(ex.resultMathSet>='c')
 					{
-						draw_contour(Jcontours, Jlines, jColor);
-						draw_contour(Kcontours, Klines, kColor);
-					}
-				}
-				prof_add("contour");
-				//switch(ex.resultMathSet)
-				//{
-				//case 'R':
-				//	draw_contour(Rcontours, Rlines, rColor);
-				//	break;
-				//case 'c':
-				//	draw_contour(Rcontours, Rlines, rColor);
-				//	draw_contour(Icontours, Ilines, iColor);
-				//	break;
-				//case 'h':
-				//	draw_contour(Rcontours, Rlines, rColor);
-				//	draw_contour(Icontours, Ilines, iColor);
-				//	draw_contour(Icontours, Ilines, jColor);
-				//	draw_contour(Icontours, Ilines, kColor);
-				//	break;
-				//}
-			/*	auto &ndr=ex.n[ex.resultTerm].r;		//print values at verteces (DEBUG)
-				int XYplaces=Xplaces*Yplaces;
-				for(int kz=0;kz<Zplaces-1;++kz)
-				{
-					for(int ky=0;ky<Yplaces-1;++ky)
-					{
-						for(int kx=0;kx<Xplaces-1;++kx)
+						draw_contour(Icontours, Ilines, iColor);
+						if(ex.resultMathSet=='h')
 						{
-							double
-								X_W=xs.ifn_x(kx), X_m=xs.ifn_x(kx+.5), X_E=xs.ifn_x(kx+1),
-								Y_S=ys.ifn_x(ky), Y_m=ys.ifn_x(ky+.5), Y_N=ys.ifn_x(ky+1),
-								Z_D=zs.ifn_x(kz), Z_m=zs.ifn_x(kz+.5), Z_U=zs.ifn_x(kz+1);
-							int idx=Xplaces*(Yplaces*kz+ky)+kx;
-							double
-								V_UNW=ndr[idx+XYplaces+Xplaces],	V_UNE=ndr[idx+XYplaces+Xplaces+1],
-								V_USW=ndr[idx+XYplaces],			V_USE=ndr[idx+XYplaces+1],
-
-								V_DNW=ndr[idx+Xplaces],				V_DNE=ndr[idx+Xplaces+1],
-								V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
-							_3d.label(X_W, Y_m, Z_m, "W: %g", (V_UNW+V_USW+V_DNW+V_DSW)*0.25);
-							_3d.label(X_E, Y_m, Z_m, "E: %g", (V_UNE+V_USE+V_DNE+V_DSE)*0.25);
-
-							_3d.label(X_m, Y_S, Z_m, "S: %g", (V_USW+V_USE+V_DSW+V_DSE)*0.25);
-							_3d.label(X_m, Y_N, Z_m, "N: %g", (V_UNW+V_UNE+V_DNW+V_DNE)*0.25);
-							
-							_3d.label(X_m, Y_m, Z_D, "D: %g", (V_DNW+V_DSW+V_DNE+V_DSE)*0.25);
-							_3d.label(X_m, Y_m, Z_U, "U: %g", (V_UNW+V_USW+V_UNE+V_USE)*0.25);
-							
-							_3d.label(X_m, Y_m, Z_m, "m: %g", (V_UNW+V_USW+V_DNW+V_DSW+V_UNE+V_USE+V_DNE+V_DSE)*0.125);
+							draw_contour(Jcontours, Jlines, jColor);
+							draw_contour(Kcontours, Klines, kColor);
 						}
 					}
+					prof_add("contour");
+					//switch(ex.resultMathSet)
+					//{
+					//case 'R':
+					//	draw_contour(Rcontours, Rlines, rColor);
+					//	break;
+					//case 'c':
+					//	draw_contour(Rcontours, Rlines, rColor);
+					//	draw_contour(Icontours, Ilines, iColor);
+					//	break;
+					//case 'h':
+					//	draw_contour(Rcontours, Rlines, rColor);
+					//	draw_contour(Icontours, Ilines, iColor);
+					//	draw_contour(Icontours, Ilines, jColor);
+					//	draw_contour(Icontours, Ilines, kColor);
+					//	break;
+					//}
+				/*	auto &ndr=ex.n[ex.resultTerm].r;		//print values at verteces (DEBUG)
+					int XYplaces=Xplaces*Yplaces;
+					for(int kz=0;kz<Zplaces-1;++kz)
+					{
+						for(int ky=0;ky<Yplaces-1;++ky)
+						{
+							for(int kx=0;kx<Xplaces-1;++kx)
+							{
+								double
+									X_W=xs.ifn_x(kx), X_m=xs.ifn_x(kx+.5), X_E=xs.ifn_x(kx+1),
+									Y_S=ys.ifn_x(ky), Y_m=ys.ifn_x(ky+.5), Y_N=ys.ifn_x(ky+1),
+									Z_D=zs.ifn_x(kz), Z_m=zs.ifn_x(kz+.5), Z_U=zs.ifn_x(kz+1);
+								int idx=Xplaces*(Yplaces*kz+ky)+kx;
+								double
+									V_UNW=ndr[idx+XYplaces+Xplaces],	V_UNE=ndr[idx+XYplaces+Xplaces+1],
+									V_USW=ndr[idx+XYplaces],			V_USE=ndr[idx+XYplaces+1],
+
+									V_DNW=ndr[idx+Xplaces],				V_DNE=ndr[idx+Xplaces+1],
+									V_DSW=ndr[idx],						V_DSE=ndr[idx+1];
+								_3d.label(X_W, Y_m, Z_m, "W: %g", (V_UNW+V_USW+V_DNW+V_DSW)*0.25);
+								_3d.label(X_E, Y_m, Z_m, "E: %g", (V_UNE+V_USE+V_DNE+V_DSE)*0.25);
+
+								_3d.label(X_m, Y_S, Z_m, "S: %g", (V_USW+V_USE+V_DSW+V_DSE)*0.25);
+								_3d.label(X_m, Y_N, Z_m, "N: %g", (V_UNW+V_UNE+V_DNW+V_DNE)*0.25);
+							
+								_3d.label(X_m, Y_m, Z_D, "D: %g", (V_DNW+V_DSW+V_DNE+V_DSE)*0.25);
+								_3d.label(X_m, Y_m, Z_U, "U: %g", (V_UNW+V_USW+V_UNE+V_USE)*0.25);
+							
+								_3d.label(X_m, Y_m, Z_m, "m: %g", (V_UNW+V_USW+V_DNW+V_DSW+V_UNE+V_USE+V_DNE+V_DSE)*0.125);
+							}
+						}
+					}
+					for(int kz=0;kz<Zplaces;++kz)
+						for(int ky=0;ky<Yplaces;++ky)
+							for(int kx=0;kx<Xplaces;++kx)
+								_3d.label(xs.ifn_x(kx), ys.ifn_x(ky), zs.ifn_x(kz), "%c%c%c: %g", kz?'U':'D', ky?'N':'S', kx?'E':'W', ndr[Xplaces*(Yplaces*kz+ky)+kx]);//*/
 				}
-				for(int kz=0;kz<Zplaces;++kz)
-					for(int ky=0;ky<Yplaces;++ky)
-						for(int kx=0;kx<Xplaces;++kx)
-							_3d.label(xs.ifn_x(kx), ys.ifn_x(ky), zs.ifn_x(kz), "%c%c%c: %g", kz?'U':'D', ky?'N':'S', kx?'E':'W', ndr[Xplaces*(Yplaces*kz+ky)+kx]);//*/
 			}
 			if(usingOpenGL)
 			{
@@ -31640,6 +31813,8 @@ namespace	modes
 					//	TextOutA(ghMemDC, w-const_label_offset_X, Ys, g_buf, linelen), Ys+=16;
 					}
 				}
+				prof_add("label axes");
+				if(operations.size())
 				{
 					int k=0, Y=h-operations.size()*16;
 					for(auto it=operations.begin();it!=operations.end();++it)
@@ -31683,14 +31858,15 @@ namespace	modes
 						++k, Y+=16;
 					}
 				}
+				prof_add("operations");
 				setBkMode(bkMode);
 			//	SetBkMode(ghMemDC, bkMode);
 				//SetBkMode(ghMemDC, OPAQUE);//DEBUG
-				_3d.text_show();
+				//_3d.text_show();
 			}
-			else
-				_3d.text_show();
-			//	_3d.text_dump();
+			//else
+			_3d.text_show();
+		//	_3d.text_dump();
 			prof_add("3D text");
 		//	if(!clearScreen)
 			if(showBenchmark)
@@ -31764,7 +31940,8 @@ namespace	modes
 	}
 	void			Color_3D::a_draw()
 	{
-		rectangle(bpx-1, bpy-1, bw+1, bh+1);
+		newframe();
+	//	rectangle(bpx-1, bpy-1, bw+1, bh+1);
 	//	Rectangle(ghMemDC, bpx-1, bpy-1, bw+1, bh+1);
 
 		draw();
@@ -34026,11 +34203,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 			{
 				usingOpenGL=(usingOpenGL+1)%N_GRAPHICS_MODES;
 				if(usingOpenGL==MODE_CL_GL_INTEROP)
-				{
-					cl_initiate();
-					if(modes::mode)
-						modes::mode->toSolve=true;
-				}
+					cl_initiate();						//2nd time: INVALID CONTEXT
 				else if(usingOpenGL)//turn on OpenGL
 				{
 					gBitmap.finish();
@@ -34039,11 +34212,14 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 				}
 				else//turn off OpenGL
 				{
+					cl_terminate();
 					gl_finish();
 					initiate();
 					gBitmap.set(w, h);
 					gBitmap.use();
 				}
+				if(modes::mode)
+					modes::mode->toSolve=true;
 			}
 			break;
 		case VK_F1://toggle context help
@@ -35845,13 +36021,13 @@ void		render()
 			case 8://transverse 2d quaternion
 				modes::ready=true;
 				modes::mode=&modes::t2d_h, modes::paint=modes::paint_t2d_h;
-				if(cursorEx!=prevCursorEx||!ex.n[ex.resultTerm].r.size())
+				if(cursorEx!=prevCursorEx||usingOpenGL!=MODE_CL_GL_INTEROP&&!ex.n[ex.resultTerm].r.size())
 					modes::t2d_h.toSolve=true, modes::t2d_h.shiftOnly=0;
 				break;
 			case 9://color 3d
 				modes::ready=true;
 				modes::mode=&modes::c3d, modes::paint=modes::paint_c3d;
-				if(cursorEx!=prevCursorEx||!ex.n[ex.resultTerm].r.size())
+				if(cursorEx!=prevCursorEx||usingOpenGL!=MODE_CL_GL_INTEROP&&!ex.n[ex.resultTerm].r.size())
 					modes::c3d.toSolve=true, modes::c3d.shiftOnly=0;
 				break;
 			case 10://transverse implicit 1d

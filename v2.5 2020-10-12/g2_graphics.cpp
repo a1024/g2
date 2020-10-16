@@ -18,6 +18,7 @@
 #include		"g2_graphics.h"
 #include		"g2_common.h"
 #include		"g2_error.h"
+#include		"g2_expr.h"//profiler
 #include		<Windows.h>
 #include		<stdio.h>
 #pragma			comment(lib, "OpenGL32.lib")
@@ -1562,36 +1563,6 @@ namespace		resources
 }
 const float	_pi=acos(-1.f), _2pi=2*_pi, pi_2=_pi*0.5f, inv_2pi=1/_2pi, sqrt2=sqrt(2.f), torad=_pi/180, infinity=(float)_HUGE, inv255=1.f/255, inv256=1.f/256, inv128=1.f/128;
 bool			API_not_loaded=true, one_shot=true;
-#define			GL_MAJOR_VERSION		0x821B
-#define			GL_MINOR_VERSION		0x821C
-#define			GL_TEXTURE0				0x84C0
-#define			GL_TEXTURE1				0x84C1
-#define			GL_TEXTURE2				0x84C2
-#define			GL_TEXTURE3				0x84C3
-#define			GL_TEXTURE4				0x84C4
-#define			GL_TEXTURE5				0x84C5
-#define			GL_TEXTURE6				0x84C6
-#define			GL_TEXTURE7				0x84C7
-#define			GL_TEXTURE8				0x84C8
-#define			GL_TEXTURE9				0x84C9
-#define			GL_TEXTURE10			0x84CA
-#define			GL_TEXTURE11			0x84CB
-#define			GL_TEXTURE12			0x84CC
-#define			GL_TEXTURE13			0x84CD
-#define			GL_TEXTURE14			0x84CE
-#define			GL_TEXTURE15			0x84CF
-#define			GL_TEXTURE_RECTANGLE	0x84F5
-#define			GL_PROGRAM_POINT_SIZE	0x8642
-#define			GL_BUFFER_SIZE			0x8764
-#define			GL_ARRAY_BUFFER			0x8892
-#define			GL_ELEMENT_ARRAY_BUFFER	0x8893
-#define			GL_STATIC_DRAW			0x88E4
-#define			GL_FRAGMENT_SHADER		0x8B30
-#define			GL_VERTEX_SHADER		0x8B31
-#define			GL_COMPILE_STATUS		0x8B81
-#define			GL_LINK_STATUS			0x8B82
-#define			GL_INFO_LOG_LENGTH		0x8B84
-#define			GL_DEBUG_OUTPUT			0x92E0//OpenGL 4.3+
 //void			(__stdcall *glGenVertexArrays)(int n, unsigned *arrays)=nullptr;//OpenGL 3.0
 //void			(__stdcall *glDeleteVertexArrays)(int n, unsigned *arrays)=nullptr;//OpenGL 3.0
 void			(__stdcall *glBindVertexArray)(unsigned array)=nullptr;
@@ -1650,7 +1621,8 @@ unsigned		CompileShader(const char *src, unsigned type)
 		std::vector<char> errorMessage(infoLogLength+1);
 		glGetShaderInfoLog(shaderID, infoLogLength, 0, &errorMessage[0]);
 		copy_to_clipboard(&errorMessage[0], infoLogLength);
-		GL_ERROR();
+		LOGERROR("Shader compilation failed. Output copied to clipboard.");
+	//	GL_ERROR();
 		return 0;
 	}
 	return shaderID;
@@ -2076,13 +2048,13 @@ namespace		GL2_3D
 	};
 	unsigned	program=0;
 	int			a_vertices=-1, a_texcoord=-1, u_matrix=-1, u_pointSize=-1, u_texture=-1, u_isTextured=-1, u_color=-1;
-	unsigned	vertex_buffer=0, texcoord_buffer=0;
+	unsigned	vertex_buffer=0, texcoord_buffer=0;//TODO: interleave vertices & texcoords
 	int			transparent_start_idx=0;
 	std::vector<vec3> vertices;
 	std::vector<vec2> texcoord;
 	std::vector<VertexInfo> drawInfo;
-	void		begin(){vertices.clear(), texcoord.clear(), drawInfo.clear();}
-	void		begin_transparent(){transparent_start_idx=drawInfo.size();}
+	void		begin(){GL2_3D::vertices.clear(), GL2_3D::texcoord.clear(), GL2_3D::drawInfo.clear();}
+	void		begin_transparent(){transparent_start_idx=GL2_3D::drawInfo.size();}
 	void		push_square(float x1, float x2, float y1, float y2, float z, int *tx, int txw, int txh)
 	{
 		vertices.push_back(vec3(x1, y1, z)), texcoord.push_back(vec2(0, 0));
@@ -2157,10 +2129,13 @@ namespace		GL2_3D
 	}
 	void		end()
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, GL2_3D::vertex_buffer);													GL_CHECK();
-		glBufferData(GL_ARRAY_BUFFER, (int)vertices.size()*sizeof(vec3), &GL2_3D::vertices[0], GL_STATIC_DRAW);	GL_CHECK();
-		glBindBuffer(GL_ARRAY_BUFFER, GL2_3D::texcoord_buffer);													GL_CHECK();
-		glBufferData(GL_ARRAY_BUFFER, (int)texcoord.size()*sizeof(vec2), &GL2_3D::texcoord[0], GL_STATIC_DRAW);	GL_CHECK();
+		if(vertices.size()&&texcoord.size())
+		{
+			glBindBuffer(GL_ARRAY_BUFFER, GL2_3D::vertex_buffer);													GL_CHECK();
+			glBufferData(GL_ARRAY_BUFFER, (int)vertices.size()*sizeof(vec3), &GL2_3D::vertices[0], GL_STATIC_DRAW);	GL_CHECK();
+			glBindBuffer(GL_ARRAY_BUFFER, GL2_3D::texcoord_buffer);													GL_CHECK();
+			glBufferData(GL_ARRAY_BUFFER, (int)texcoord.size()*sizeof(vec2), &GL2_3D::texcoord[0], GL_STATIC_DRAW);	GL_CHECK();
+		}
 	}
 	void		draw(Camera const &cam)
 	{
@@ -2260,7 +2235,7 @@ int				gl_setTextSize(int size)//{0, ..., 9}
 	return size;
 }
 std::vector<float> vrtx;
-int				print_array(int x, int y, const char *msg, int msg_length, int tab_origin)
+int				print_array(int x, int y, const char *msg, int msg_length, int tab_origin)//glBufferData stutters on debug		TODO: send all text in one buffer per frame
 {
 	gl_setProgram(GL2_Text::program);				GL_CHECK();
 	glUniform2f(GL2_Text::u_isTexture, 0, 1);		GL_CHECK();
@@ -2272,6 +2247,7 @@ int				print_array(int x, int y, const char *msg, int msg_length, int tab_origin
 	float rect[4], *txc;
 	int width, idx;
 	int fontH_px=gl_fontH*pixel_y;
+//	prof_add_loop(2);
 	for(int k=0;k<msg_length;++k)
 	{
 		char c=msg[k];
@@ -2291,13 +2267,17 @@ int				print_array(int x, int y, const char *msg, int msg_length, int tab_origin
 
 		msg_width+=width;
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, GL2_Text::buffer);						GL_CHECK();
-	glBufferData(GL_ARRAY_BUFFER, msg_length<<6, &vrtx[0], GL_STATIC_DRAW);	GL_CHECK();//set vertices & texcoords
-	glVertexAttribPointer(GL2_Text::a_coord2d, 4, GL_FLOAT, GL_FALSE, 0, 0);GL_CHECK();
+//	prof_add_loop(3);
+	glBindBuffer(GL_ARRAY_BUFFER, GL2_Text::buffer);							GL_CHECK();
+	glBufferData(GL_ARRAY_BUFFER, msg_length<<6, vrtx.data(), GL_STATIC_DRAW);	GL_CHECK();//set vertices & texcoords
+//	prof_add_loop(4);
+	glVertexAttribPointer(GL2_Text::a_coord2d, 4, GL_FLOAT, GL_FALSE, 0, 0);	GL_CHECK();
+//	prof_add_loop(5);
 
 	glEnableVertexAttribArray(GL2_Text::a_coord2d);		GL_CHECK();
 	glDrawArrays(GL_QUADS, 0, msg_length<<2);			GL_CHECK();//draw the quads: 4 vertices per character quad
 	glDisableVertexAttribArray(GL2_Text::a_coord2d);	GL_CHECK();
+	prof_add_loop(7);
 	return msg_width;
 }
 int				gl_print(int x, int y, int tab_origin, const char *format, ...)
@@ -2669,6 +2649,8 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		"varying vec3 v_normal;\n"
 	//	"varying vec2 v_texcoord;\n"
 		"varying vec4 v_glposition;\n"
+	//	"varying vec4 v_noisecolor;"//CPU V5 DEBUG
+	//	"float rand(vec2 co){return fract(sin(dot(co.xy, vec2(12.9898,78.233)))*43758.5453);}\n"//CPU V5 DEBUG
 		"void main()\n"
 		"{\n"
 		"    vec4 fullpos=vec4(a_vertex, 1.);\n"
@@ -2677,6 +2659,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		"    gl_Position.z=0.;\n"
 		"    v_fragpos=vec3(u_modelmatrix*fullpos);\n"
 		"    v_normal=u_normalmatrix*a_normal;\n"
+	//	"    v_noisecolor=vec4(rand(v_fragpos.xy), rand(v_fragpos.yz), rand(v_fragpos.xz), 1);\n"//CPU V5 DEBUG
 	//	"    v_texcoord=a_texcoord;\n"
 	//	"    gl_PointSize=u_pointSize;\n"
 	//	"    gl_PointSize=2.;\n"
@@ -2685,6 +2668,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		"varying vec3 v_fragpos;\n"
 		"varying vec3 v_normal;\n"
 		"varying vec4 v_glposition;\n"
+	//	"varying vec4 v_noisecolor;"//CPU V5 DEBUG
 	//	"varying vec2 v_texcoord;\n"
 	//	"uniform bool u_isTextured;\n"
 		"uniform vec4 u_objectcolor;\n"
@@ -2703,6 +2687,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		"    vec3 diffuse=abs(dot(normal, lightdir))*u_lightcolor;\n"
 	//	"    vec3 diffuse=max(dot(normal, lightdir), 0.)*u_lightcolor;\n"
 		"    gl_FragColor=vec4((0.1*u_lightcolor+diffuse+specular)*u_objectcolor.rgb, u_objectcolor.a);\n"
+	//	"    gl_FragColor*=v_noisecolor;"//CPU V5 DEBUG
 
 		"    gl_FragDepth=(-(1000.+0.1)*(-v_glposition.w)-2.*1000.*0.1)/((1000.-0.1)*v_glposition.w);\n"
 		"}",
@@ -3633,4 +3618,20 @@ void			resize_2D()
 		gBitmap.resize(w, h);
 		gBitmap.use();
 	}
+}
+
+//CL-GL interop.
+void			GPUBuffer::create_VN_I(float *VVVNNN, int n_floats, int *indices, int n_ints)
+{
+	n_vertices=n_ints;
+	vertices_stride=6<<2, vertices_start=0;
+	normals_stride=6<<2, normals_start=3<<2;
+	if(!VBO)
+		glGenBuffers(1, &VBO);
+	if(!EBO)
+		glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);											GL_CHECK();
+	glBufferData(GL_ARRAY_BUFFER, n_floats<<2, VVVNNN, GL_STATIC_DRAW);			GL_CHECK();
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);									GL_CHECK();
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_ints<<2, indices, GL_STATIC_DRAW);	GL_CHECK();
 }
