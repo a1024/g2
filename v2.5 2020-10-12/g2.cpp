@@ -29326,7 +29326,8 @@ namespace	modes
 			vs(0, 20),
 			solver(xs, ys, zs), _3D_Mode(solver),
 		//	Xplaces(20), Yplaces(20), Zplaces(5),
-			Xplaces(4), Yplaces(4), Zplaces(4),
+			Xplaces(8), Yplaces(8), Zplaces(8),
+		//	Xplaces(4), Yplaces(4), Zplaces(4),
 			XshiftPoint(0), YshiftPoint(0), ZshiftPoint(0),
 			XsamplePos(0), YsamplePos(0), ZsamplePos(0),
 			_3d(20, 20, 20, 225*G2::_pi/180, 324.7356103172454*G2::_pi/180, 1),
@@ -31420,7 +31421,7 @@ namespace	modes
 			//	_3d.lsw_transparency_multiply=!_3d.lsw_transparency_multiply;//
 				_3d.cam.dcam=.04, _3d.cam.tanfov=1;
 				if(!kb[VK_CONTROL])
-					xs.reset_scale(), ys.reset_scale(), zs.reset_scale(), AR_Y=1, AR_Z=1, function1(), Xplaces=Yplaces=Zplaces=4;//12	//Xplaces multiple of 4
+					xs.reset_scale(), ys.reset_scale(), zs.reset_scale(), AR_Y=1, AR_Z=1, function1(), Xplaces=Yplaces=Zplaces=8;//4 12	//Xplaces multiple of 4
 				
 				XshiftPoint=YshiftPoint=ZshiftPoint=0;
 				shiftNDRupdate(XshiftPoint, DX/Xplaces, XsamplePos, VX);
@@ -31571,7 +31572,7 @@ namespace	modes
 				vec3 lightpos=_3d.cam.p;
 				if(contourWireframe)
 					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				GL2_L3D::draw_buffer(_3d.cam, gl_buf, vec3(), lightpos);
+				GL2_L3D::draw_buffer(_3d.cam, gl_buf, vec3(), lightpos, ex.getColor());
 				if(contourWireframe)
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 				//if(!debug_info.size())
@@ -35807,7 +35808,8 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 										it->rmode.push_back(0);
 										modes::c3d.toSolve=true, modes::c3d.shiftOnly=0, modes::c3d.solver.reset();
 										modes::c3d.ready=false;
-										it->setColor_black();
+										it->setColor_random();//
+									//	it->setColor_black();
 									}
 									break;
 								}

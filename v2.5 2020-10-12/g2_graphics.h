@@ -671,7 +671,7 @@ namespace		GL2_L3D
 	void		push_surface(vec3 const *vn, int vcount_x2, int *idx, int icount, int color);
 	void		end();
 	void		draw(Camera const &cam, vec3 const &lightpos);
-	void		draw_buffer(Camera const &cam, GPUBuffer const &buffer, vec3 const &modelpos, vec3 const &lightpos);
+	void		draw_buffer(Camera const &cam, GPUBuffer const &buffer, vec3 const &modelpos, vec3 const &lightpos, int objcolor);
 }
 namespace		GL2_3D
 {

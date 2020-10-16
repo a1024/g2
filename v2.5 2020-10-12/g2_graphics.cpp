@@ -2003,7 +2003,7 @@ namespace		GL2_L3D//light 3D
 		glDisableVertexAttribArray(GL2_L3D::a_vertices);							GL_CHECK();
 		glDisableVertexAttribArray(GL2_L3D::a_normals);								GL_CHECK();
 	}
-	void		draw_buffer(Camera const &cam, GPUBuffer const &buffer, vec3 const &modelpos, vec3 const &lightpos)
+	void		draw_buffer(Camera const &cam, GPUBuffer const &buffer, vec3 const &modelpos, vec3 const &lightpos, int objcolor)
 	{
 		gl_setProgram(GL2_L3D::program);
 		mat4
@@ -2017,7 +2017,8 @@ namespace		GL2_L3D//light 3D
 		glUniformMatrix4fv(GL2_L3D::u_vpmatrix, 1, GL_FALSE, mvp.data());			GL_CHECK();
 		glUniformMatrix4fv(GL2_L3D::u_modelmatrix, 1, GL_FALSE, model.data());		GL_CHECK();
 		glUniformMatrix3fv(GL2_L3D::u_normalmatrix, 1, GL_FALSE, m_normal.data());	GL_CHECK();
-		send_color(GL2_L3D::u_objectcolor, 0xFF0000FF);								GL_CHECK();
+		send_color(GL2_L3D::u_objectcolor, 0x7F000000|objcolor);					GL_CHECK();
+	//	send_color(GL2_L3D::u_objectcolor, 0xFF0000FF);								GL_CHECK();
 		send_color_rgb(GL2_L3D::u_lightcolor, 0xFFFFFF);							GL_CHECK();
 		glUniform3fv(GL2_L3D::u_lightpos, 1, &lightpos.x);							GL_CHECK();
 		vec3 cam_p=cam.p;
