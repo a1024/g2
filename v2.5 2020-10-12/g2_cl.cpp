@@ -34,8 +34,62 @@ bool			cl_gl_interop=false;
 //	const bool	loadbinary=false;//
 
 int				*rgb=nullptr;
+std::vector<DebugInfo> debug_info;
 std::vector<float> debug_vertices;
 std::vector<int> debug_indices;
+#if 1
+#define			UNW		0, 2, 2
+#define			UNE		2, 2, 2
+#define			USW		0, 0, 2
+#define			USE		2, 0, 2
+#define			DNW		0, 2, 0
+#define			DNE		2, 2, 0
+#define			DSW		0, 0, 0
+#define			DSE		2, 0, 0
+#define			Dmm		1, 1, 0
+#define			mSm		1, 0, 1
+#define			mmW		0, 1, 1
+#define			mmm		1, 1, 1
+#define			mmE		2, 1, 1
+#define			mNm		1, 2, 1
+#define			Umm		1, 1, 2
+const char		debug_edges[54*7]=//x1, y1, z1, x2, y2, z2, color_idx		0: no addition, 1: half sample, 2: full sample
+{
+	//main (new) edge indices
+	DSW, DSE, 0,	DSW, DNW, 0,	DSW, USW, 0,
+
+	DSW, mmW, 1,	USW, mmW, 1,	UNW, mmW, 1,	DNW, mmW, 1,
+	DSW, mSm, 1,	USW, mSm, 1,	USE, mSm, 1,	DSE, mSm, 1,
+	DSW, Dmm, 1,	DSE, Dmm, 1,	DNE, Dmm, 1,	DNW, Dmm, 1,
+
+	mmW, Dmm, 2,	mmW, mSm, 2,	mmW, Umm, 2,	mmW, mNm, 2,
+	Umm, mNm, 2,	mNm, Dmm, 2,	Dmm, mSm, 2,	mSm, Umm, 2,
+	mmE, Dmm, 2,	mmE, mSm, 2,	mmE, Umm, 2,	mmE, mNm, 2,
+
+	mmm, Dmm, 3,	mmm, mSm, 3,	mmm, mmW, 3,	mmm, Umm, 3,	mmm, mNm, 3,	mmm, mmE, 3,
+
+	//extended (redundant) edge indices
+	DSE, DNE, 0,	DNE, DNW, 0,	DSE, USE, 0,	DNE, UNE, 0,	DNW, UNW, 0,	USW, USE, 0,	USE, UNE, 0,	UNE, UNW, 0,	UNW, USW, 0,
+	mmE, DSE, 1,	mmE, USE, 1,	mmE, UNE, 1,	mmE, DNE, 1,
+	mNm, DNW, 1,	mNm, UNW, 1,	mNm, UNE, 1,	mNm, DNE, 1,
+	Umm, USW, 1,	Umm, USE, 1,	Umm, UNE, 1,	Umm, UNW, 1,
+};
+#undef			UNW
+#undef			UNE
+#undef			USW
+#undef			USE
+#undef			DNW
+#undef			DNE
+#undef			DSW
+#undef			DSE
+#undef			Dmm
+#undef			mSm
+#undef			mmW
+#undef			mmm
+#undef			mmE
+#undef			mNm
+#undef			Umm
+#endif
 
 //OpenCL API
 #define 		DECL_CL_FUNC(clFunc)	decltype(clFunc) *p_##clFunc=nullptr
@@ -4841,10 +4895,21 @@ void			colorFunction_bcw(Comp1d const &v, int *color)
 	}
 }
 #endif
-unsigned		dimension_work_size(unsigned places, size_t maxlocaldim)
+inline unsigned	dimension_work_size(unsigned places, size_t maxlocaldim)
 {
-	return places-places%maxlocaldim;//when maxlocaldim isn't a power of 2
+	places-=places%maxlocaldim;//when maxlocaldim isn't a power of 2
+	return places>0?places:maxlocaldim;
+
+//	return places-places%maxlocaldim;
 //	return places&~(g_maxlocaldim-1);
+}
+inline unsigned	dimension_work_size(unsigned places, size_t maxlocaldim, char reschange, unsigned maxdim)
+{
+	places+=maxlocaldim*reschange;
+	if(places>maxdim)
+		places=maxdim;
+	places-=places%maxlocaldim;//when maxlocaldim isn't a power of 2
+	return places>0?places:maxlocaldim;
 }
 inline void		read_buffer(cl_mem buffer, float *&data, unsigned nfloats)
 {
@@ -4894,9 +4959,9 @@ namespace		SW
 	inline void out(float *rr, float *ri){*rr=(float)dprr, *ri=(float)dpri;}
 	inline void out(float *rr, float *ri, float *rj, float *rk){*rr=(float)dprr, *ri=(float)dpri, *rj=(float)dprj, *rk=(float)dprk;}
 }
-void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces)
+void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces, char reschange)
 {
-	int nd=0;
+	int nd=0, maxX=0, maxY=0, maxZ=0;
 	switch(mode_idx)
 	{
 	case MODE_I1D:
@@ -4906,6 +4971,7 @@ void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces)
 		{
 			int log_mld=floor_log2(g_maxlocalsize);
 			g_maxlocalX=1<<(log_mld>>1), g_maxlocalY=1, g_maxlocalZ=1;
+			maxX=(1<<30)-1, maxY=1, maxZ=1;
 			nd=1;
 		}
 		break;
@@ -4916,6 +4982,7 @@ void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces)
 		{
 			int log_mld=floor_log2(g_maxlocalsize);
 			g_maxlocalY=g_maxlocalX=1<<(log_mld>>1), g_maxlocalZ=1;
+			maxX=65536, maxY=65536, maxZ=1;
 			nd=2;
 		}
 		break;
@@ -4923,25 +4990,21 @@ void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces)
 	case MODE_C3D:
 		{
 			int log_mld=floor_log2(g_maxlocalsize);
-			int log_xy=log_mld/3+(log_mld%3!=0), log_z=log_mld-(log_xy<<1);
-			g_maxlocalY=g_maxlocalX=1<<log_xy, g_maxlocalZ=1<<log_z;
+			int log_xy=log_mld/3+(log_mld%3!=0), log_z=log_mld-(log_xy<<1);//log_xy >= log_z
+			g_maxlocalY=g_maxlocalX=1<<log_xy, g_maxlocalZ=1<<log_z;//g_maxlocalX & g_maxlocalY are multiples of g_maxlocalZ
+			maxX=512, maxY=512, maxZ=512;
 			nd=3;
 		}
 		break;
 	}
 	if(nd)
 	{
-		if(*Xplaces<(int)g_maxlocalX)
-			*Xplaces=g_maxlocalX;
+		*Xplaces=dimension_work_size(*Xplaces, g_maxlocalX, reschange, maxX);
 		if(nd>=2)
 		{
-			if(*Yplaces<(int)g_maxlocalY)
-				*Yplaces=g_maxlocalY;
+			*Yplaces=dimension_work_size(*Yplaces, g_maxlocalY, reschange, maxY);
 			if(nd>=3)
-			{
-				if(*Zplaces<(int)g_maxlocalZ)
-					*Zplaces=g_maxlocalZ;
-			}
+				*Zplaces=dimension_work_size(*Zplaces, g_maxlocalZ, reschange, maxZ);
 		}
 	}
 }
@@ -4972,7 +5035,7 @@ union			WorkIdx
 bool operator<(WorkIdx const &a, WorkIdx const &b){return a.idx<b.idx;}
 enum ExEdgeBitIdx//54edges
 {
-//	main (new) edge indices
+	//main (new) edge indices
 	DSW_DSE, DSW_DNW, DSW_USW,
 
 	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
@@ -4993,7 +5056,7 @@ enum ExEdgeBitIdx//54edges
 };
 enum ExEdgeBitIdxRev//54edges
 {
-//	main (new) edge indices
+	//main (new) edge indices
 	DSE_DSW, DNW_DSW, USW_DSW,
 
 	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
@@ -5224,6 +5287,7 @@ static const unsigned char e2v2[54]=//edge index to second vertex (data point) i
 };
 #define			_pi		3.14159265358979f
 #define			_sqrt3	1.73205080756888f
+float			clamp01(float x){return x<0?0:x>1?1:x;}
 float4			solvequadratic(float a, float b, float c)//returns (r1, i1, r2, i2)
 {
 	const float lim=1e10f;
@@ -5236,15 +5300,28 @@ float4			solvequadratic(float a, float b, float c)//returns (r1, i1, r2, i2)
 	//	ret=(float4)(-c/b, 0, -b/a, 0);
 	else
 	{
-		b/=a, c/=a;
-		float first=-0.5f*b, disc2=b*b-4*c;
-		float disc=0.5f*sqrt(abs(disc2));
+		float first=-b, disc2=b*b-4*a*c;
+		float disc=sqrt(abs(disc2));
+		float inv_den=0.5f/a;
 		if(disc2<0)
+		{
+			first*=inv_den, disc*=inv_den;
 			ret.set(first, disc, first, -disc);
-		//	ret=(float4)(first, disc, first, -disc);
+			//ret=(float4)(first, disc, first, -disc);
+		}
 		else
-			ret.set(first+disc, 0, first-disc, 0);
-		//	ret=(float4)(first+disc, 0, first-disc, 0);
+			ret.set((first+disc)*inv_den, 0, (first-disc)*inv_den, 0);
+			//ret=(float4)(first+disc, 0, first-disc, 0);
+
+		//b/=a, c/=a;
+		//float first=-0.5f*b, disc2=b*b-4*c;
+		//float disc=0.5f*sqrt(abs(disc2));
+		//if(disc2<0)
+		//	ret.set(first, disc, first, -disc);
+		//	//ret=(float4)(first, disc, first, -disc);
+		//else
+		//	ret.set(first+disc, 0, first-disc, 0);
+		//	//ret=(float4)(first+disc, 0, first-disc, 0);
 	}
 	return ret;
 }
@@ -5325,7 +5402,17 @@ float2			solvecubic(float a, float b, float c, float d)
 	else if(r1 >=-tol	&&r1 <=1+tol)	ret.x=r1, ret.y=1;
 	else if(r2r>=-tol	&&r2r<=1+tol)	ret.x=r2r, ret.y=1;//what
 	else if(r3r>=-tol	&&r3r<=1+tol)	ret.x=r3r, ret.y=1;
-	else								ret.x=-1, ret.y=0;
+	else
+	{
+		float results[3]={r1, r2r, r3r};
+		int nresults=1+(r2i==0)+(r3i==0);
+		int smallest=0;
+		for(int k=1;k<nresults;++k)
+			if(abs(results[smallest])>abs(results[k]))
+				smallest=k;
+		ret.set(clamp01(results[smallest]), 0);
+	}
+//	else								ret.x=-1, ret.y=0;
 	return ret;
 }
 float3			mix(float3 const &a, float3 const &b, float alpha)
@@ -6070,6 +6157,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				messageboxa(ghWnd, "Information", "Result sent to clipboard");
 #endif
 				error=p_clEnqueueReadBuffer(commandqueue, result.r, CL_TRUE, 0, ndrSize*sizeof(float), ndr, 0, nullptr, nullptr);	CL_CHECK(error);
+				prof_add("read");
 				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.1: compute average (interpolated) values
 				{
 					for(int ky=0, yend=Yplaces-1;ky<yend;++ky)
@@ -6095,6 +6183,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						}
 					}
 				}
+				prof_add("k1 av1");
 				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.2: compute average (interpolated) values on east NDR face
 				{
 					for(int ky=0, yend=Yplaces-1;ky<yend;++ky)
@@ -6115,6 +6204,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						}
 					}
 				}
+				prof_add("k1 av2");
 				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.3: compute average (interpolated) values on north NDR face
 				{
 					int ky=Yplaces-1;
@@ -6133,6 +6223,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						}
 					}
 				}
+				prof_add("k1 av3");
 			//	for(int kz=0, zend=Zplaces-1;kz<zend;++kz)//kernel 1.4: compute average (interpolated) values on up NDR face
 				{
 					int kz=Zplaces-1;
@@ -6150,6 +6241,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						}
 					}
 				}
+				prof_add("k1 av4");
 				auto edgeinfo=(ulong*)malloc(ndrSize*sizeof(ulong));
 				memset(edgeinfo, 0, ndrSize*sizeof(ulong));
 				auto nvert=(unsigned char*)malloc(ndrSize);//number of edges producing a vertex
@@ -6264,6 +6356,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						}
 					}
 				}
+				prof_add("k2 condition");
 				//blocking read: edgeinfo, nvert, ntrgl
 #if 0
 				std::stringstream LOL_1;
@@ -6280,7 +6373,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				}
 				copy_to_clipboard(LOL_1.str());
 #endif
-
+			//	std::stringstream LOL_1;
 				//CPU side code 1: determine work size and space indices for kernel 3 & reverse workidx 'bitindices' for CPU part 2
 				int nvert_total=0, ntrgl_total=0;
 				std::vector<WorkIdx> workidx;
@@ -6313,7 +6406,9 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						}
 					}
 				}
+				prof_add("CPU1 workidx");
 
+				debug_info.clear();//
 				auto vertices=(float*)malloc(nvert_total*6*sizeof(float));
 				memset(vertices, 0, nvert_total*6*sizeof(float));
 				float
@@ -6383,7 +6478,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 					float2 ret;
 					//float LOL_1=-431602080.;//0xCDCDCDCD
 					//int LOL_2=(int&)LOL_1;
-					if(a==0&&b==0&&c==0)
+					if(a==0&&b==0&&c==0)//degenerate equation d=0
 						ret.set((th-A.w)/(B.w-A.w), 1);
 					else
 						ret=solvecubic(a, b, c, d);
@@ -6393,9 +6488,26 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						float3 coords=mix(pa, pb, ret.x);
 						vstore3(coords, id*6, vertices);
 					}
-					else
-						LOGERROR("solvecubic(%f, %f, %f, %f) failed.", a, b, c, d);//
+					else//solvecubic failed
+					{
+						ret.set((th-A.w)/(B.w-A.w), 1);
+						float3 pa={A.x, A.y, A.z}, pb={B.x, B.y, B.z};
+						float3 coords=mix(pa, pb, ret.x);
+						vstore3(coords, id*6, vertices);
+
+						debug_info.push_back(DebugInfo(kx, ky, kz, ke, id, ret.x, coords.x, coords.y, coords.z));
+					//	LOL_1<<'('<<kx<<", "<<ky<<", "<<kz<<", "<<ke<<") "<<a<<"xxx+"<<b<<"xx+"<<c<<"x+"<<d<<"\r\n";
+						LOGERROR("solvecubic(%f, %f, %f, %f) failed at (%d, %d, %d, %d).", a, b, c, d, kx, ky, kz, ke);//
+					//	LOGERROR("solvecubic(%f, %f, %f, %f) failed.", a, b, c, d);//
+					}
 				}
+				//auto &str=LOL_1.str();
+				//if(str.size())
+				//{
+				//	copy_to_clipboard(str);
+				//	messageboxa(ghWnd, "Information", "Coordinates & equations copied to clipboard.");
+				//}
+				prof_add("K3 TI");
 
 				//CPU-side code 2: fill 'indices'
 				std::vector<int> indices(ntrgl_total*3, 0);
@@ -6427,7 +6539,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 			//		{0, 0,			XYplaces,	{Dmm_DNE}},//Umm_UNE
 			//		{0, 0,			XYplaces,	{Dmm_DNW}},//Umm_UNW
 			//	};
-				for(unsigned kw=0, kv=0, i=0, ktr=0;kw<ndrSize;++kw)//why work ndrSize times if there is workidx?
+				for(unsigned kw=0, kv=0, ki=0, ktr=0;kw<ndrSize;++kw)//why work ndrSize times if there is workidx?
 				{
 					auto work=edgeinfo[kw];
 					if(work)
@@ -6436,15 +6548,15 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
 						//if(kx==Xplaces-2||ky==Yplaces-2||kz==Zplaces-2)//
 						//	int LOL_1=0;//
-					//	int offset=i;
+					//	int offset=ki;
 						int bi[54]={};
 						for(int kb=0;kb<33;++kb)//fill array of bit indices bi[54]
 					//	for(int kb=0;kb<54;++kb)
 							bi[kb]=kv+=work>>kb&1;
 						for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra
 						{
-							if(kx==6&&ky==4&&kz==0&&kth==1)//
-								int LOL_1=0;//
+							//if(kx==6&&ky==4&&kz==0&&kth==1)//
+							//	int LOL_1=0;//
 							int kt6=kth*6;
 							char e[]=//edge states
 							{
@@ -6509,42 +6621,42 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 							}
 							if(esum==4)//there are edges producing verteces
 							{
-								if(i+5>=indices.size())
+								if(ki+5>=indices.size())
 								{
-									LOGERROR("indices size=%d, i=%d, want to add 6 indices.", indices.size(), i);
+									LOGERROR("indices size=%d, ki=%d, want to add 6 indices.", indices.size(), ki);
 									break;
 								}
 								//if(ktr==8||ktr==9)//
 								//	int LOL_1=0;//
 								++ktr;//
-								indices[i]=ei[0], ++i;
-								indices[i]=ei[1], ++i;
-								indices[i]=ei[2], ++i;
+								indices[ki]=ei[0], ++ki;
+								indices[ki]=ei[1], ++ki;
+								indices[ki]=ei[2], ++ki;
 
 								//if(ktr==8||ktr==9)//
 								//	int LOL_1=0;//
 								++ktr;//
-								indices[i]=ei[1], ++i;
-								indices[i]=ei[2], ++i;
-								indices[i]=ei[3], ++i;
-								//indices[i]=ei[2], ++i;
-								//indices[i]=ei[3], ++i;
-								//indices[i]=ei[0], ++i;
+								indices[ki]=ei[1], ++ki;
+								indices[ki]=ei[2], ++ki;
+								indices[ki]=ei[3], ++ki;
+								//indices[ki]=ei[2], ++ki;
+								//indices[ki]=ei[3], ++ki;
+								//indices[ki]=ei[0], ++ki;
 							}
 							else if(esum==3)
 							{
-								if(i+2>=indices.size())
+								if(ki+2>=indices.size())
 								{
-									LOGERROR("indices size=%d, i=%d, want to add 3 indices.", indices.size(), i);
-								//	LOGERROR("indices[%d+2] is OOB", i);
+									LOGERROR("indices size=%d, ki=%d, want to add 3 indices.", indices.size(), ki);
+								//	LOGERROR("indices[%d+2] is OOB", ki);
 									break;
 								}
 								//if(ktr==8||ktr==9)//
 								//	int LOL_1=0;//
 								++ktr;//
-								indices[i]=ei[0], ++i;
-								indices[i]=ei[1], ++i;
-								indices[i]=ei[2], ++i;
+								indices[ki]=ei[0], ++ki;
+								indices[ki]=ei[1], ++ki;
+								indices[ki]=ei[2], ++ki;
 							}
 							else if(esum)
 								LOGERROR("Tetrahedron produced %d vertices", esum);
@@ -6553,10 +6665,11 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 							//if(emask)//there are edges producing verteces
 							//	for(int kb=0;kb<6;++kb)			//X no triangle fans, just GL_TRIANGLES
 							//		if(emask>>kb&1)
-							//			indices[i]=offset+bi[ti[kth*6+kb]], ++i;//original bit indices
+							//			indices[ki]=offset+bi[ti[kth*6+kb]], ++ki;//original bit indices
 						}
 					}
 				}
+				prof_add("CPU2 indices");
 #if 0//DEBUG
 				std::stringstream LOL_1;
 				LOL_1<<
@@ -6611,13 +6724,12 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				//indices.push_back(2);
 #endif
 				gl_buf->create_VN_I(vertices, nvert_total*6, indices.data(), indices.size());
-			//	glBindBuffer(GL_ARRAY_BUFFER, gl_buf->VBO);		GL_CHECK();
-			//	glBufferData(GL_ARRAY_BUFFER, nvert_total*6*sizeof(float), vertices, GL_STATIC_DRAW);	GL_CHECK();
-			//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl_buf->EBO);	GL_CHECK();
-			//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, ntrgl_total*3*sizeof(int), indices.data(), GL_STATIC_DRAW);	GL_CHECK();
+				prof_add("send");
 
 				free(edgeinfo), free(nvert), free(ntrgl), free(vertices);
 				free(ndr);
+				prof_add("free");
+				prof_sum("CPU V5", 11);
 #endif
 			}
 			break;

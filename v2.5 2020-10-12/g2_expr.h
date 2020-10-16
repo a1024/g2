@@ -17,10 +17,19 @@
 #ifndef				G2_EXPR_H
 #define				G2_EXPR_H
 #include			"g2_common.h"
+#include			"g2_error.h"
 #include			"g2_mp.h"
 #include			"g2_graphics.h"//usingOpenGL
 
 	#define	PROFILER
+//	#define PROFILER_CYCLES
+
+	#define TIMING_USE_QueryPerformanceCounter
+//	#define	TIMING_USE_rdtsc
+//	#define TIMING_USE_GetProcessTimes	//~16ms resolution
+//	#define TIMING_USE_GetTickCount		//~16ms resolution
+//	#define TIMING_USE_timeGetTime		//~16ms resolution
+
 	#define	MULTIPRECISION
 
 extern bool			showBenchmark;
@@ -35,9 +44,77 @@ union				G2Version
 };
 extern const G2Version g2_version;//hi: g2 version, lo: cl component version
 
+//time-measuring functions
+inline double		time_ms()
+{
+#ifdef TIMING_USE_QueryPerformanceCounter
+	static long long t=0;
+	static LARGE_INTEGER li={};
+	QueryPerformanceFrequency(&li);
+	t=li.QuadPart;
+	QueryPerformanceCounter(&li);
+	return (double)li.QuadPart*1000./t;
+#elif defined TIMING_USE_rdtsc
+	static LARGE_INTEGER li={};
+	QueryPerformanceFrequency(&li);
+	return (double)__rdtsc()/li.QuadPart;//pre-multiplied by 1000
+#elif defined TIMING_USE_GetProcessTimes
+	FILETIME create, exit, kernel, user;
+	int success=GetProcessTimes(GetCurrentProcess(), &create, &exit, &kernel, &user);
+	if(success)
+//#ifdef PROFILER_CYCLES
+	{
+		const auto hns2ms=100e-9*1000.;
+		return hns2ms*(unsigned long long&)user;
+	//	return hns2ms*(unsigned long long&)kernel;
+	}
+//#else
+//	{
+//		SYSTEMTIME t;
+//		success=FileTimeToSystemTime(&user, &t);
+//		if(success)
+//			return t.wHour*3600000.+t.wMinute*60000.+t.wSecond*1000.+t.wMilliseconds;
+//		//	return t.wHour*3600.+t.wMinute*60.+t.wSecond+t.wMilliseconds*0.001;
+//	}
+//#endif
+	SYS_CHECK();
+	return -1;
+#elif defined TIMING_USE_GetTickCount
+	return (double)GetTickCount();//the number of milliseconds that have elapsed since the system was started
+#elif defined TIMING_USE_timeGetTime
+	return (double)timeGetTime();//system time, in milliseconds
+#endif
+}
+inline double		elapsed_ms()//since last call
+{
+	static double t1=0;
+	double t2=time_ms(), diff=t2-t1;
+	t1=t2;
+	return diff;
+}
+inline double		elapsed_cycles()//since last call
+{
+	static long long t1=0;
+	long long t2=__rdtsc();
+	double diff=double(t2-t1);
+	t1=t2;
+	return diff;
+}
+#ifdef TIMING_USE_QueryPerformanceCounter
+	#undef TIMING_USE_QueryPerformanceCounter
+#endif
+#ifdef TIMING_USE_GetTickCount
+	#undef TIMING_USE_GetTickCount
+#endif
+#ifdef TIMING_USE_timeGetTime
+	#undef TIMING_USE_timeGetTime
+#endif
+
+//profiler
 typedef std::pair<std::string, double> ProfInfo;
 void				prof_start();
 void				prof_add(const char *label, int divisor=1);
+void				prof_sum(const char *label, int count);
 void				prof_loop_start(const char **labels, int n);
 void				prof_add_loop(int idx);
 void				prof_print();

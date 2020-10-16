@@ -11297,8 +11297,10 @@ void report_error()
 {
 	if(first_error_msg[0])
 	{
-		emergencyPrint(w>>1, h>>1, first_error_msg);
-		emergencyPrint(w>>1, (h>>1)+16, latest_error_msg);
+		emergencyPrint(0, h>>1, first_error_msg);
+		emergencyPrint(0, (h>>1)+16, latest_error_msg);
+		//emergencyPrint(w>>1, h>>1, first_error_msg);
+		//emergencyPrint(w>>1, (h>>1)+16, latest_error_msg);
 	}
 //	if(broken)
 	//{
@@ -17779,7 +17781,7 @@ namespace	modes
 										for(int k5=k4-1;k5>=k3;--k5)
 											if(text[k5]!='.')
 												val2+=(text[k5]-'0')*p, p*=10;
-										val*=pow(MP::Real(10), MP::Real(val2));
+										val*=pow(MP::Real(10), MP::Real(sign*val2));
 									//	const double logBase=G2::_ln10;
 									//	val*=std::exp(sign*val2*logBase);
 										k2=k4;
@@ -29384,7 +29386,8 @@ namespace	modes
 				//	++k2;
 				//	if(k2<4)
 				//		continue;
-					GL2_L3D::push_surface(S.vertices.data(), S.vertices.size(), S.indices.data(), S.indices.size(), swap_rb(color));
+					GL2_L3D::push_surface(S.vertices.data(), S.vertices.size(), S.indices.data(), S.indices.size(), color);
+				//	GL2_L3D::push_surface(S.vertices.data(), S.vertices.size(), S.indices.data(), S.indices.size(), swap_rb(color));
 				//	break;
 				}
 				else// if(RL==-600)//
@@ -29990,6 +29993,7 @@ namespace	modes
 					}
 				}
 			}
+			prof_add("do cont.: main");
 			auto &result_contour=(&Rcontours)[c][e];
 			auto &lines=(&Rlines)[c][e];
 			g_contour=contour;
@@ -30200,6 +30204,7 @@ namespace	modes
 					}
 				}
 			}
+			prof_add("do cont.: lines");
 		}
 		void doContour(unsigned e)
 		{
@@ -31181,14 +31186,16 @@ namespace	modes
 				_3d.cam.p.z+=(VZ-VZ0)*_3d_stretch_move_cam;
 				toSolve=true, shiftOnly=0;
 			}
-			else if(kb[VK_CONTROL])//ctrl wheel
+			else if(kb[VK_CONTROL])//ctrl wheel: change speed
 			{
 					 if(mw_forward)	_3d.cam.faster();
 				else				_3d.cam.slower();
 			}
-			else if(kb[VK_SHIFT])//shift wheel
+			else if(kb[VK_SHIFT])//shift wheel: change resolution
 			{
-				if(mw_forward)
+				if(usingOpenGL==MODE_CL_GL_INTEROP)
+					cl_setsizes(MODE_C3D, &Xplaces, &Yplaces, &Zplaces, mw_forward-!mw_forward), toSolve=true, shiftOnly=0;
+				else if(mw_forward)
 				{
 					if(Xplaces<512)
 						Zplaces=Yplaces=Xplaces+=1<<max_simd_method, toSolve=true, shiftOnly=0;
@@ -31224,7 +31231,9 @@ namespace	modes
 					_3d.cam.faster();
 				else if(kb[VK_SHIFT])//increase resolution
 				{
-					if(Xplaces<512)
+					if(usingOpenGL==MODE_CL_GL_INTEROP)
+						cl_setsizes(MODE_C3D, &Xplaces, &Yplaces, &Zplaces, 1), toSolve=true, shiftOnly=0;
+					else if(Xplaces<512)
 						Zplaces=Yplaces=Xplaces+=1<<max_simd_method, toSolve=true, shiftOnly=0;
 					break;
 				}
@@ -31241,7 +31250,9 @@ namespace	modes
 					_3d.cam.slower();
 				else if(kb[VK_SHIFT])//decrease resolution
 				{
-					if(Xplaces>1<<max_simd_method)
+					if(usingOpenGL==MODE_CL_GL_INTEROP)
+						cl_setsizes(MODE_C3D, &Xplaces, &Yplaces, &Zplaces, -1), toSolve=true, shiftOnly=0;
+					else if(Xplaces>1<<max_simd_method)
 						Zplaces=Yplaces=Xplaces-=1<<max_simd_method, toSolve=true, shiftOnly=0;
 					break;
 				}
@@ -31532,7 +31543,7 @@ namespace	modes
 						Rcontours.clear(), Icontours.clear(), Jcontours.clear(), Kcontours.clear();
 						Rlines.clear(), Ilines.clear(), Jlines.clear(), Klines.clear();
 						doContour(cursorEx);
-						prof_add("gen contour");
+						prof_sum("gen contour", 2);
 					}
 				}
 			}
@@ -31547,17 +31558,60 @@ namespace	modes
 			if(usingOpenGL==MODE_CL_GL_INTEROP)
 			{
 				vec3 lightpos=_3d.cam.p;
-			//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				if(debug_info.size())
+					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 				GL2_L3D::draw_buffer(_3d.cam, gl_buf, vec3(), lightpos);
-			//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-				draw_contour_debuggrid(0x40FF00FF);
+				if(debug_info.size())
+					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				//if(!debug_info.size())
+				//	draw_contour_debuggrid(0x40FF00FF);
+#if 1
+				if(debug_info.size())
+				{
+					double
+						Xstart=xs.Xstart, Xsample=xs.Xsample,
+						Ystart=ys.Xstart, Ysample=ys.Xsample,
+						Zstart=zs.Xstart, Zsample=zs.Xsample;
+					const int edgecolors[]=
+					{
+						0x40FF0000,
+						0x4000FF00,
+						0x400000FF,
+						0x40FF00FF,
+					};
+					for(int k=0;k<(int)debug_info.size();++k)
+					{
+						auto &dik=debug_info[k];
+						double
+							x1=Xstart+dik.kx*Xsample, x2=x1+Xsample,
+							y1=Ystart+dik.ky*Ysample, y2=y1+Ysample,
+							z1=Zstart+dik.kz*Zsample, z2=z1+Zsample;
+						dvec3 p1(x1, y1, z1);
+						_3d.lineColor=0x40FFFF00;//cyan origin
+					//	_3d.lineColor=0x40FF00FF;
+						_3d.line(p1, dvec3(x2, y1, z1));
+						_3d.line(p1, dvec3(x1, y2, z1));
+						_3d.line(p1, dvec3(x1, y1, z2));
+						int ke7=dik.ke*7;
+						dvec3
+							a1(debug_edges[ke7  ]*Xsample*0.5, debug_edges[ke7+1]*Ysample*0.5, debug_edges[ke7+2]*Zsample*0.5),
+							a2(debug_edges[ke7+3]*Xsample*0.5, debug_edges[ke7+4]*Ysample*0.5, debug_edges[ke7+5]*Zsample*0.5);
+						_3d.lineColor=edgecolors[debug_edges[ke7+6]];
+					//	_3d.lineColor=0x40FF0000;//blue edges
+						_3d.line(p1+a1, p1+a2);
+						_3d.label(dik.x, dik.y, dik.z, "(%d,%d,%d,%d)", dik.kx, dik.ky, dik.kz, dik.ke);//
+					//	_3d.label(dik.x, dik.y, dik.z, "%d:%f", dik.kv, dik.r);//
+						break;//
+					}
+				}
+#endif
 #if 0//DEBUG
-				if(contourOn)//show vertices
+				if(contourOn)//label vertices
 				{
 					for(int k=0;k+5<(int)debug_vertices.size();k+=6)
 						_3d.label(debug_vertices[k], debug_vertices[k+1], debug_vertices[k+2], "V%d", k/6);
 				}
-				else
+				else//label triangles
 				{
 					for(int k=0;k<(int)debug_indices.size();k+=3)
 					{
@@ -31814,51 +31868,51 @@ namespace	modes
 					}
 				}
 				prof_add("label axes");
-				if(operations.size())
-				{
-					int k=0, Y=h-operations.size()*16;
-					for(auto it=operations.begin();it!=operations.end();++it)
-					{
-						auto &operation=*it;
-						char const *a=0;
-						switch(operation)
-						{
-						case  1:a="%d: Differentiate XYZ";	break;
-						case  2:a="%d: Differentiate X";	break;
-						case  3:a="%d: Differentiate Y";	break;
-						case  4:a="%d: Differentiate Z";	break;
-						case  5:a="%d: Differentiate XY";	break;
-						case  6:a="%d: Differentiate YZ";	break;
-						case  7:a="%d: Differentiate XZ";	break;
-						case  8:a="%d: Integrate XYZ";		break;
-						case  9:a="%d: Integrate X";		break;
-						case 10:a="%d: Integrate Y";		break;
-						case 11:a="%d: Integrate Z";		break;
-						case 12:a="%d: Integrate XY";		break;
-						case 13:a="%d: Integrate YZ";		break;
-						case 14:a="%d: Integrate XZ";		break;
-						case 15:a="%d: DFT";				break;
-						case 16:a="%d: IDFT";				break;
-						case 17:a="%d: LPF";				break;
-						case 18:a="%d: LPF X";				break;
-						case 19:a="%d: LPF Y";				break;
-						case 20:a="%d: LPF Z";				break;
-						case 21:a="%d: LPF XY";				break;
-						case 22:a="%d: LPF YZ";				break;
-						case 23:a="%d: LPF XZ";				break;
-						case 24:a="%d: HPF";				break;
-						case 25:a="%d: HPF X";				break;
-						case 26:a="%d: HPF Y";				break;
-						case 27:a="%d: HPF Z";				break;
-						case 28:a="%d: HPF XY";				break;
-						case 29:a="%d: HPF YZ";				break;
-						case 30:a="%d: HPF XZ";				break;
-						}
-						_3d.textIn2D(w-const_label_offset_X, Y, OPAQUE, a, k);
-						++k, Y+=16;
-					}
-				}
-				prof_add("operations");
+				//if(operations.size())
+				//{
+				//	int k=0, Y=h-operations.size()*16;
+				//	for(auto it=operations.begin();it!=operations.end();++it)
+				//	{
+				//		auto &operation=*it;
+				//		char const *a=0;
+				//		switch(operation)
+				//		{
+				//		case  1:a="%d: Differentiate XYZ";	break;
+				//		case  2:a="%d: Differentiate X";	break;
+				//		case  3:a="%d: Differentiate Y";	break;
+				//		case  4:a="%d: Differentiate Z";	break;
+				//		case  5:a="%d: Differentiate XY";	break;
+				//		case  6:a="%d: Differentiate YZ";	break;
+				//		case  7:a="%d: Differentiate XZ";	break;
+				//		case  8:a="%d: Integrate XYZ";		break;
+				//		case  9:a="%d: Integrate X";		break;
+				//		case 10:a="%d: Integrate Y";		break;
+				//		case 11:a="%d: Integrate Z";		break;
+				//		case 12:a="%d: Integrate XY";		break;
+				//		case 13:a="%d: Integrate YZ";		break;
+				//		case 14:a="%d: Integrate XZ";		break;
+				//		case 15:a="%d: DFT";				break;
+				//		case 16:a="%d: IDFT";				break;
+				//		case 17:a="%d: LPF";				break;
+				//		case 18:a="%d: LPF X";				break;
+				//		case 19:a="%d: LPF Y";				break;
+				//		case 20:a="%d: LPF Z";				break;
+				//		case 21:a="%d: LPF XY";				break;
+				//		case 22:a="%d: LPF YZ";				break;
+				//		case 23:a="%d: LPF XZ";				break;
+				//		case 24:a="%d: HPF";				break;
+				//		case 25:a="%d: HPF X";				break;
+				//		case 26:a="%d: HPF Y";				break;
+				//		case 27:a="%d: HPF Z";				break;
+				//		case 28:a="%d: HPF XY";				break;
+				//		case 29:a="%d: HPF YZ";				break;
+				//		case 30:a="%d: HPF XZ";				break;
+				//		}
+				//		_3d.textIn2D(w-const_label_offset_X, Y, OPAQUE, a, k);
+				//		++k, Y+=16;
+				//	}
+				//}
+				prof_add("operations");//spikes
 				setBkMode(bkMode);
 			//	SetBkMode(ghMemDC, bkMode);
 				//SetBkMode(ghMemDC, OPAQUE);//DEBUG
@@ -34809,7 +34863,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 																}
 															}
 														//	const double logBase=G2::_ln2;//power of 2		c99
-															val*=pow(MP::Real(2), MP::Real(val2));
+															val*=pow(MP::Real(2), MP::Real(sign*val2));
 														//	val*=std::exp(sign*val2*logBase);
 															k2=k4;
 														}
@@ -34901,7 +34955,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 																//	val2+=(text[k5]-'0')*p, p*=8;
 														//	const double logBase=G2::_ln2;
 														//	const double logBase=std::log(8.);
-															val*=pow(MP::Real(2), MP::Real(val2));
+															val*=pow(MP::Real(2), MP::Real(sign*val2));
 														//	val*=std::exp(sign*val2*logBase);
 															k2=k4;
 														}
@@ -34987,7 +35041,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 															for(int k5=k4-1;k5>=k3;--k5)
 																if(text[k5]!='.')
 																	val2+=(text[k5]-'0')*p, p*=10;
-															val*=pow(MP::Real(10), MP::Real(val2));
+															val*=pow(MP::Real(10), MP::Real(sign*val2));
 														//	const double logBase=G2::_ln10;
 														//	val*=std::exp(sign*val2*logBase);
 															k2=k4;
@@ -35214,7 +35268,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 																if(text[k5]!='.')
 																	val2+=(text[k5]-'0')*p, p*=10;
 																//	val2+=(text[k5]-'0')*p, p*=2;
-															val*=pow(MP::Real(2), MP::Real(val2));
+															val*=pow(MP::Real(2), MP::Real(sign*val2));
 															//const double logBase=G2::_ln2;
 															//val*=std::exp(sign*val2*logBase);
 															k2=k4;
@@ -35308,7 +35362,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 																if(text[k5]!='.')
 																	val2+=(text[k5]-'0')*p, p*=10;
 																//	val2+=(text[k5]-'0')*p, p*=2;
-															val*=pow(MP::Real(2), MP::Real(val2));
+															val*=pow(MP::Real(2), MP::Real(sign*val2));
 															//const double logBase=G2::_ln2;
 															//val*=std::exp(sign*val2*logBase);
 															k2=k4;

@@ -255,6 +255,17 @@ extern int		OCL_state;
 extern bool		cl_gl_interop;
 extern const bool loadbinary;
 extern int		*rgb;
+extern const char debug_edges[54*7];//z1, z2, y1, y2, x1, x2, color_idx		0: no addition, 1: half sample, 2: full sample
+struct			DebugInfo
+{
+	unsigned short ke, kx, ky, kz;
+	int kv;
+	float r, x, y, z;
+	DebugInfo():ke(0), kx(0), ky(0), kz(0), kv(0), r(0), x(0), y(0), z(0){}
+	DebugInfo(short kx, short ky, short kz, short ke, int kv, float r, float x, float y, float z):kx(kx), ky(ky), kz(kz), ke(ke), kv(kv), r(r), x(x), y(y), z(z){}
+	void set(short kx, short ky, short kz, short ke, int kv, float r, float x, float y, float z){this->kx=kx, this->ky=ky, this->kz=kz, this->ke=ke, this->kv=kv, this->r=r, this->x=x, this->y=y, this->z=z;}
+};
+extern std::vector<DebugInfo> debug_info;
 extern std::vector<float> debug_vertices;
 extern std::vector<int> debug_indices;
 extern size_t 	g_maxlocalsize;
@@ -264,7 +275,7 @@ void 			cl_reset();//TODO: delete, recompile & save cl programs when user types 
 void 			cl_initiate();//TODO: compile in a separate thread		TODO: progress bar
 void			cl_terminate();
 
-void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces);
+void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces, char resolution_change=0);
 //cl_solve: arguments after time depend on mode_idx provided in ModeParameters struct.
 //MODE_I2D, MODE_C2D:	cl_solve(..., double time, unsigned gl_texture);
 //MODE_C3D:				cl_solve(..., double time, GPUBuffer *gl_buf);

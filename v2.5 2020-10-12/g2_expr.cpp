@@ -17,45 +17,67 @@
 #include			"g2_expr.h"
 
 //cl component version 2:
-//state.txt:	version in hexadecimal \n saved user-typed expressions
+//state.txt:	<version in hexadecimal> \n saved user-typed expressions
 //cl_program[00~19].bin:	OpenCL programs compiled for GPU
 const G2Version		g2_version(250, 1);//hi: g2 version, lo: cl component version
 
+#ifdef PROFILER_CYCLES
+#define		ELAPSED_FN		elapsed_cycles
+#else
+#define		ELAPSED_FN		elapsed_ms
+#endif
 //ProfInfo			longest;
 std::vector<ProfInfo> prof;
 int					prof_array_start_idx=0;
 long long			prof_t1=0;
 void				prof_start()
 {
-#ifdef PROFILER
-	if(showBenchmark)
-	{
-		LARGE_INTEGER li;
-		QueryPerformanceCounter(&li);
-		prof_t1=li.QuadPart;
-
-	//	prof_t1=__rdtsc();
-	}
-#endif
+	double elapsed=ELAPSED_FN();
+//#ifdef PROFILER
+//	if(showBenchmark)
+//	{
+//#ifdef PROFILER_CYCLES
+//		prof_t1=__rdtsc();
+//#else
+//		LARGE_INTEGER li;
+//		QueryPerformanceCounter(&li);
+//		prof_t1=li.QuadPart;
+//#endif
+//	}
+//#endif
 }
 void				prof_add(const char *label, int divisor)
 {
 #ifdef PROFILER
 	if(showBenchmark)
 	{
-		LARGE_INTEGER li;
-		QueryPerformanceCounter(&li);
-		long long t2=li.QuadPart;
-		QueryPerformanceFrequency(&li);
-		prof.push_back(ProfInfo(std::string(label), 1000.*double(t2-prof_t1)/(li.QuadPart*divisor)));
-		QueryPerformanceCounter(&li);
-		prof_t1=li.QuadPart;
-
-		//long long t2=__rdtsc();
-		//prof.push_back(ProfInfo(std::string(label), double(t2-prof_t1)/divisor));
-		//prof_t1=__rdtsc();
+		double elapsed=ELAPSED_FN();
+		prof.push_back(ProfInfo(std::string(label), elapsed));
+//#ifdef PROFILER_CYCLES
+//		long long t2=__rdtsc();
+//		prof.push_back(ProfInfo(std::string(label), double(t2-prof_t1)/divisor));
+//		prof_t1=__rdtsc();
+//#else
+//		LARGE_INTEGER li;
+//		QueryPerformanceCounter(&li);
+//		long long t2=li.QuadPart;
+//		QueryPerformanceFrequency(&li);
+//		prof.push_back(ProfInfo(std::string(label), 1000.*double(t2-prof_t1)/(li.QuadPart*divisor)));
+//		QueryPerformanceCounter(&li);
+//		prof_t1=li.QuadPart;
+//#endif
 	}
 #endif
+}
+void				prof_sum(const char *label, int count)
+{
+	if(showBenchmark)
+	{
+		double sum=0;
+		for(int k=prof.size()-1, k2=0;k>=0&&k2<count;--k, ++k2)
+			sum+=prof[k].second;
+		prof.push_back(ProfInfo(label, sum));
+	}
 }
 void				prof_loop_start(const char **labels, int n)
 {
@@ -73,13 +95,21 @@ void				prof_add_loop(int idx)
 #ifdef PROFILER
 	if(showBenchmark&&prof_array_start_idx+idx<(int)prof.size())
 	{
-		LARGE_INTEGER li;
-		QueryPerformanceCounter(&li);
-		long long t2=li.QuadPart;
-		QueryPerformanceFrequency(&li);
-		prof[prof_array_start_idx+idx].second+=1000.*double(t2-prof_t1)/(li.QuadPart);
-		QueryPerformanceCounter(&li);
-		prof_t1=li.QuadPart;
+		double elapsed=ELAPSED_FN();
+		prof[prof_array_start_idx+idx].second+=elapsed;
+//#ifdef PROFILER_CYCLES
+//		long long t2=__rdtsc();
+//		prof[prof_array_start_idx+idx].second+=double(t2-prof_t1);
+//		prof_t1=__rdtsc();
+//#else
+//		LARGE_INTEGER li;
+//		QueryPerformanceCounter(&li);
+//		long long t2=li.QuadPart;
+//		QueryPerformanceFrequency(&li);
+//		prof[prof_array_start_idx+idx].second+=1000.*double(t2-prof_t1)/(li.QuadPart);
+//		QueryPerformanceCounter(&li);
+//		prof_t1=li.QuadPart;
+//#endif
 	}
 #endif
 }
