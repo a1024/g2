@@ -17,7 +17,7 @@ How to compile:
 
 	Option B: On a pre-AVX compiler:
 	4) Comment out '#include"avx.h"' in g2.cpp.
-	5) Compile everything excluding avx.cpp & avx.h.
+	5) Compile everything excluding avx.cpp & avx.h
 
 
 How to install:
@@ -57,8 +57,8 @@ Interaction mode:
 	X/Y/Z wheel/+/-:	scale x/y/z axis
 	Number keys:	apply operations on results (differentiate, FFT, LPF, ...)
 	0:		remove all operations
-	`:	show/hide contour
-	TAB:	switch between software and OpenGL (OpenGL mode is best used with 3D graphs)
+	`:		show/hide contour
+	TAB/shift TAB:	switch between {software, OpenGL, OpenCL-OpenGL interoperation} (OpenGL mode is best used with 3D graphs)
 
 Numeric result:
 	1:	binary

@@ -31577,11 +31577,14 @@ namespace	modes
 				//if(!debug_info.size())
 				//	draw_contour_debuggrid(0x40FF00FF);
 #if 1
-				_3d.lineColor=0x400080FF;//orange
-				for(int k=0;k<debug_vertices.size();k+=6)
+				if(contourOn)
 				{
-					dvec3 p1(debug_vertices[k], debug_vertices[k+1], debug_vertices[k+2]);
-					_3d.line(p1, p1+dvec3(debug_vertices[k+3], debug_vertices[k+4], debug_vertices[k+5]));
+					_3d.lineColor=0x400080FF;//orange normals
+					for(int k=0;k<(int)debug_vertices.size();k+=6)
+					{
+						dvec3 p1(debug_vertices[k], debug_vertices[k+1], debug_vertices[k+2]);
+						_3d.line(p1, p1+dvec3(debug_vertices[k+3], debug_vertices[k+4], debug_vertices[k+5]));
+					}
 				}
 				if(debug_info.size())
 				{
@@ -34272,26 +34275,59 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 				modes::active=true, modes::mode->enter();
 			}
 			break;
-		case VK_TAB://toggle OpenGL
+		case VK_TAB://switch between {software, OpenGL, OpenCL-OpenGL interoperation}
 			if(modes::active)
 			{
-				usingOpenGL=(usingOpenGL+1)%N_GRAPHICS_MODES;
-				if(usingOpenGL==MODE_CL_GL_INTEROP)
-					cl_initiate();						//2nd time: INVALID CONTEXT
-				else if(usingOpenGL)//turn on OpenGL
+				char decrement=kb[VK_SHIFT];
+				decrement-=!decrement;
+				char old_gmode=usingOpenGL;
+				usingOpenGL=(usingOpenGL+N_GRAPHICS_MODES-decrement)%N_GRAPHICS_MODES;
+				switch(old_gmode)//1) finish
 				{
+				case MODE_SOFTWARE:
 					gBitmap.finish();
 					finish();
-					gl_initiate(ghDC, w, h);
-				}
-				else//turn off OpenGL
-				{
+					break;
+				case MODE_CL_GL_INTEROP:
 					cl_terminate();
-					gl_finish();
+				case MODE_OPENGL:
+					if(usingOpenGL==MODE_SOFTWARE)
+						gl_finish();
+					break;
+				}
+				switch(usingOpenGL)//2) start
+				{
+				case MODE_SOFTWARE:
 					initiate();
 					gBitmap.set(w, h);
 					gBitmap.use();
+					break;
+				case MODE_OPENGL:
+					if(old_gmode!=MODE_CL_GL_INTEROP)
+						gl_initiate(ghDC, w, h);
+					break;
+				case MODE_CL_GL_INTEROP:
+					if(old_gmode!=MODE_OPENGL)
+						gl_initiate(ghDC, w, h);
+					cl_initiate();
+					break;
 				}
+				//if(usingOpenGL==MODE_CL_GL_INTEROP)
+				//	cl_initiate();						//2nd time: INVALID CONTEXT
+				//else if(usingOpenGL)//turn on OpenGL
+				//{
+				//	gBitmap.finish();
+				//	finish();
+				//	gl_initiate(ghDC, w, h);
+				//}
+				//else//turn off OpenGL
+				//{
+				//	cl_terminate();
+				//	gl_finish();
+				//	initiate();
+				//	gBitmap.set(w, h);
+				//	gBitmap.use();
+				//}
 				if(modes::mode)
 					modes::mode->toSolve=true;
 			}
