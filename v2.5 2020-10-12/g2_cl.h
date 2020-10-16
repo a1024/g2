@@ -268,6 +268,7 @@ struct			DebugInfo
 extern std::vector<DebugInfo> debug_info;
 extern std::vector<float> debug_vertices;
 extern std::vector<int> debug_indices;
+extern unsigned	g_nvert, g_ntrgl;
 extern size_t 	g_maxlocalsize;
 
 double			cl_progress(std::string &ret);

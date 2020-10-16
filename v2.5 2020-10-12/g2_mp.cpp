@@ -22,7 +22,7 @@
 namespace		MP
 {
 	const double inv_ln2=1/::log(2.), ln2_ln10=::log(2.)/::log(10.), ln2_ln8=::log(2.)/::log(8.), ln2_ln16=0.25;
-	int bin_prec=53, dec_prec=int(bin_prec*ln2_ln10);
+	int bin_prec=DEFAULT_PREC, dec_prec=int(bin_prec*ln2_ln10);
 	Real m_pi=::acos(-1.), m_e=::exp(1.),
 		m_qnan=std::numeric_limits<double>::quiet_NaN(),//use _HUGE & G2::_qnan
 		m_ln2=::log(2.), m_inv_ln10=1/::log(10.), m_sqrt_2pi=::sqrt(2*G2::_pi), m_ln_phi=::log(0.5*(1+::sqrt(5.))), m_inv_sqrt5=1/::sqrt(5.);

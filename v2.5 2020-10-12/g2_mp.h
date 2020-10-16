@@ -19,6 +19,7 @@
 #define			MP_H
 #include		<mpreal.h>
 
+	#define		DEFAULT_PREC	106//53
 	#define		MP_PURE_QUAT
 
 namespace		MP
@@ -27,9 +28,11 @@ namespace		MP
 	extern const double inv_ln2, ln2_ln10, ln2_ln8, ln2_ln16;
 	extern int bin_prec, dec_prec;
 	void	recalculate_constants();
-	inline void set_prec(int prec, int base=10)//supported bases: 2, 8, 10, 16
+	inline void set_prec(int prec, int base=10, int min_prec=24)//supported bases: 2, 8, 10, 16
 	{
 		bin_prec=base==2?prec:int(prec*::log((double)base)*inv_ln2);
+		if(bin_prec<min_prec)
+			bin_prec=min_prec;
 		dec_prec=base==10?prec:int(bin_prec*ln2_ln10);
 		mpfr_set_default_prec(bin_prec);
 		recalculate_constants();

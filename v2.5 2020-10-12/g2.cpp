@@ -17869,6 +17869,12 @@ namespace	modes
 					a_draw();
 				}
 				break;
+			case 'R':
+				MP::set_prec(DEFAULT_PREC, 2);
+				reassign_constants();
+				toSolve=true;
+				a_draw();
+				break;
 		/*	case 'D':
 				if(kb[VK_CONTROL])//copy with results
 				{
@@ -18087,16 +18093,17 @@ namespace	modes
 					setTextColor(textColor);
 				//	SetTextColor(ghMemDC, textColor);
 			}
+			GUIPrint(w-const_label_offset_X, h-16, "Precision: %d bit", mpfr::mpreal::get_default_prec());
 			switch(base)
 			{
 			case 2:
-				GUIPrint(w-const_label_offset_X, h-16, "binary");
+				GUIPrint(w-const_label_offset_X, h-32, "Binary");
 				break;
 			case 8:
-				GUIPrint(w-const_label_offset_X, h-16, "octal");
+				GUIPrint(w-const_label_offset_X, h-32, "Octal");
 				break;
 			case 16:
-				GUIPrint(w-const_label_offset_X, h-16, "hexadecimal");
+				GUIPrint(w-const_label_offset_X, h-32, "Hexadecimal");
 				break;
 			}
 		}
@@ -18158,7 +18165,8 @@ namespace	modes
 				"3/0: decimal",
 				"4: hexadecimal",
 				"Enter/Backspace: change precision",
-				"Esc: back to text editor"
+				"R: reset precision",
+				"Esc: back to text editor",
 			};
 			print_contextHelp(help, sizeof(help)>>2, 240);
 		}
@@ -21028,6 +21036,7 @@ namespace	modes
 				"E: reset scale",
 				"R: reset scale & view",
 				"C: toggle clear screen",
+				"F6: change camera settings",
 				"1: differentiate",
 				"2: integrate",
 				"3: DFT",
@@ -23801,6 +23810,7 @@ namespace	modes
 				"E: reset scale",
 				"R: reset scale & view",
 				"C: toggle clear screen",
+				"F6: change camera settings",
 				"1: differentiate x",
 				"2: differentiate y",
 				"3: integrate x",
@@ -26324,6 +26334,7 @@ namespace	modes
 				"E: reset scale",
 				"R: reset scale & view",
 				"C: toggle clear screen",
+				"F6: change camera settings",
 				"`: contour",
 				"Tab: toggle OpenGL",
 				"Esc: back to text editor"
@@ -31316,7 +31327,7 @@ namespace	modes
 				}
 				break;
 			case 'F':
-				if(contourOn)
+				//if(contourOn)
 					contourWireframe=!contourWireframe;
 				break;
 			case '0':case VK_NUMPAD0:
@@ -31426,7 +31437,7 @@ namespace	modes
 				else
 					_3d.teleport_degrees(20, 20, 20, 225, 324.7356103172454, 1);
 				break;
-			case VK_F6:
+			case VK_F6://change camera settings
 				if(!(lParam&1<<30))
 				{
 					kb_VK_F6_msg=true;
@@ -31558,10 +31569,10 @@ namespace	modes
 			if(usingOpenGL==MODE_CL_GL_INTEROP)
 			{
 				vec3 lightpos=_3d.cam.p;
-				if(debug_info.size())
+				if(contourWireframe)
 					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 				GL2_L3D::draw_buffer(_3d.cam, gl_buf, vec3(), lightpos);
-				if(debug_info.size())
+				if(contourWireframe)
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 				//if(!debug_info.size())
 				//	draw_contour_debuggrid(0x40FF00FF);
@@ -31928,7 +31939,9 @@ namespace	modes
 				int bkMode=setBkMode(OPAQUE);
 				int xpos=w-300, ypos=h>>1;
 				GUIPrint(xpos, ypos, "%dx%dx%d", Xplaces, Yplaces, Zplaces), ypos+=16;
-				if(contourOn)
+				if(usingOpenGL==MODE_CL_GL_INTEROP)
+					GUIPrint(xpos, ypos, "%d vertices, %d triangles", g_nvert, g_ntrgl);
+				else if(contourOn)
 				{
 					GUIPrint(xpos, ypos, "contour: %d tetrahedra", test_contourMethod==2?5:test_contourMethod?28:48), ypos+=16;
 					GUIPrint(xpos, ypos, "%d vertices, %d triangles", test_nvertices, test_ntriangles), ypos+=16;
@@ -32014,6 +32027,7 @@ namespace	modes
 				"E: reset scale",
 				"R: reset scale & view",
 				"C: toggle clear screen",
+				"F6: change camera settings",
 				"1: differentiate xyz",
 				"X/Y/Z 1: differentiate x/y/z",
 				"2: integrate xyz",
@@ -35826,6 +35840,9 @@ int			__stdcall WinMain(HINSTANCE hInstance, HINSTANCE, char*, int nCmdShow)
 	modes::t2d	._3d.set(4, 4, 4, 225*G2::_pi/180, 324.7356103172454*G2::_pi/180, 1);
 	modes::t2d_h._3d.set(4, 4, 4, 225*G2::_pi/180, 324.7356103172454*G2::_pi/180, 1);
 	modes::c3d	._3d.set(20, 20, 20, 225*G2::_pi/180, 324.7356103172454*G2::_pi/180, 1);
+#if DEFAULT_PREC!=53
+	MP::set_prec(MP::bin_prec, 2);
+#endif
 
 	tagWNDCLASSEXA wndClassEx={sizeof(tagWNDCLASSEXA), CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS, WndProc, 0, 0, hInstance, LoadIconA(0, (char*)0x00007F00), LoadCursorA(0, (char*)0x00007F00), (HBRUSH__*)(COLOR_WINDOW+1), 0, "New format", 0};
 	RegisterClassExA(&wndClassEx);

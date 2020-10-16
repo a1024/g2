@@ -37,6 +37,7 @@ int				*rgb=nullptr;
 std::vector<DebugInfo> debug_info;
 std::vector<float> debug_vertices;
 std::vector<int> debug_indices;
+unsigned		g_nvert=0, g_ntrgl=0;
 #if 1
 #define			UNW		0, 2, 2
 #define			UNE		2, 2, 2
@@ -5290,7 +5291,8 @@ static const unsigned char e2v2[54]=//edge index to second vertex (data point) i
 float			clamp01(float x){return x<0?0:x>1?1:x;}
 float4			solvequadratic(float a, float b, float c)//returns (r1, i1, r2, i2)
 {
-	const float lim=1e10f;
+	const float lim=1e6f;//float
+//	const float lim=1e10f;//double
 	float4 ret;
 	if(a==0)
 		ret.set(-c/b, 0, INFINITY, 0);
@@ -6478,6 +6480,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 					float2 ret;
 					//float LOL_1=-431602080.;//0xCDCDCDCD
 					//int LOL_2=(int&)LOL_1;
+					//a=-0, b=2.39067e-010, c=-0.000199733, d=0.000196106;
 					if(a==0&&b==0&&c==0)//degenerate equation d=0
 						ret.set((th-A.w)/(B.w-A.w), 1);
 					else
@@ -6497,7 +6500,12 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 
 						debug_info.push_back(DebugInfo(kx, ky, kz, ke, id, ret.x, coords.x, coords.y, coords.z));
 					//	LOL_1<<'('<<kx<<", "<<ky<<", "<<kz<<", "<<ke<<") "<<a<<"xxx+"<<b<<"xx+"<<c<<"x+"<<d<<"\r\n";
-						LOGERROR("solvecubic(%f, %f, %f, %f) failed at (%d, %d, %d, %d).", a, b, c, d, kx, ky, kz, ke);//
+						if(LOGERROR("solvecubic(%f, %f, %f, %f) failed at (%d, %d, %d, %d).", a, b, c, d, kx, ky, kz, ke))//
+						{
+							std::stringstream LOL_1;
+							LOL_1<<a<<"xxx+"<<b<<"xx+"<<c<<"x+"<<d;
+							copy_to_clipboard(LOL_1.str());
+						}
 					//	LOGERROR("solvecubic(%f, %f, %f, %f) failed.", a, b, c, d);//
 					}
 				}
@@ -6507,7 +6515,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				//	copy_to_clipboard(str);
 				//	messageboxa(ghWnd, "Information", "Coordinates & equations copied to clipboard.");
 				//}
-				prof_add("K3 TI");
+				prof_add("k3 vertices");
 
 				//CPU-side code 2: fill 'indices'
 				std::vector<int> indices(ntrgl_total*3, 0);
@@ -6670,7 +6678,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 					}
 				}
 				prof_add("CPU2 indices");
-#if 0//DEBUG
+#if 0//DEBUG - results to clipboard
 				std::stringstream LOL_1;
 				LOL_1<<
 					"vertices:\r\n"
@@ -6723,6 +6731,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				//indices.push_back(1);
 				//indices.push_back(2);
 #endif
+				g_nvert=nvert_total, g_ntrgl=indices.size()/3;
 				gl_buf->create_VN_I(vertices, nvert_total*6, indices.data(), indices.size());
 				prof_add("send");
 

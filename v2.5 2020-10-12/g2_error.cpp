@@ -41,7 +41,7 @@ void				messageboxa(HWND hWnd, const char *title, const char *format, ...)
 	vsprintf_s(g_buf, g_buf_size, format, (char*)(&format+1));
 	MessageBoxA(hWnd, g_buf, title, MB_OK);
 }
-void 				log_error(const char *file, int line, const char *format, ...)
+bool 				log_error(const char *file, int line, const char *format, ...)
 {
 	bool firsttime=first_error_msg[0]=='\0';
 	char *buf=first_error_msg[0]?latest_error_msg:first_error_msg;
@@ -63,6 +63,7 @@ void 				log_error(const char *file, int line, const char *format, ...)
 		messageboxa(ghWnd, "Error", latest_error_msg);//redundant, since report_error/emergencyPrint prints both
 	}
 //	LOGE("%s", latest_error_msg);
+	return firsttime;
 }
 
 void				my_assert(int condition, const char *file, int line, const char *msg)

@@ -130,6 +130,8 @@ void				prof_print()
 			GUIPrint(xpos, ypos, p.first.c_str());
 			GUIPrint(xpos2, ypos, "%lf", p.second);
 		//	GUIPrint(xpos2, ypos, "%g", p.second);
+			int xstart=xpos-10, ymiddle=ypos+8;
+			line(xstart, ymiddle, xstart-0.2*p.second, ymiddle);
 		}
 		//GUIPrint(xpos, k*18, longest.first.c_str());
 		//GUIPrint(xpos2, k*18, "%lf", longest.second);
