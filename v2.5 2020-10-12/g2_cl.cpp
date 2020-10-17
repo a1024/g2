@@ -37,7 +37,7 @@ int				*rgb=nullptr;
 std::vector<DebugInfo> debug_info;
 std::vector<float> debug_vertices;
 std::vector<int> debug_indices;
-unsigned		g_nvert=0, g_ntrgl=0;
+unsigned		g_nvert=0, g_ntrgl=0, g_max_trgl_cube=0;
 #if 1
 #define			UNW		0, 2, 2
 #define			UNE		2, 2, 2
@@ -6563,11 +6563,12 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 
 				//CPU-side code 2: fill 'indices'
 				std::vector<int> indices(ntrgl_total*3, 0);
-				for(unsigned kw=0, ki=0, ktr=0;kw<ndrSize;++kw)//for each data cube		//why work ndrSize times if there is workidx?
+				for(unsigned kw=0, ki=0;kw<ndrSize;++kw)//for each data cube		//why work ndrSize times if there is workidx?
 				{
 					auto work=edgeinfo[kw];
 					if(work)
 					{
+						unsigned ktr=0;//number of triangles in this tetrahedron
 						short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
 						auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
 						for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra in the data cube
@@ -6659,6 +6660,8 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 							//		if(emask>>kb&1)
 							//			indices[ki]=offset+bi[ti[kth*6+kb]], ++ki;//original bit indices
 						}//end tetrahedron loop
+						if(g_max_trgl_cube<ktr)
+							g_max_trgl_cube=ktr;
 					}
 				}//end work loop
 				prof_add("CPU2 indices");

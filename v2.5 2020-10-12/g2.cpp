@@ -31289,7 +31289,7 @@ namespace	modes
 					shift=1;
 				}
 				return 0;
-			case VK_OEM_3://'`'
+			case VK_OEM_3://'`' grave accent
 				if(contourOn)//was on
 				{
 					if(kb[VK_CONTROL])
@@ -31316,10 +31316,10 @@ namespace	modes
 					else
 						contourOn=false, contourOnly=false, contourFlat=false;
 				}
-				else//was off
+				else//contour was off
 				{
 					contourOn=true;
-					if(!toSolve)
+					if(!toSolve&&usingOpenGL!=MODE_CL_GL_INTEROP)
 					{
 						Rcontours.clear(), Icontours.clear(), Jcontours.clear(), Kcontours.clear();
 						Rlines.clear(), Ilines.clear(), Jlines.clear(), Klines.clear();
@@ -31950,7 +31950,10 @@ namespace	modes
 				int xpos=w-300, ypos=h>>1;
 				GUIPrint(xpos, ypos, "%dx%dx%d", Xplaces, Yplaces, Zplaces), ypos+=16;
 				if(usingOpenGL==MODE_CL_GL_INTEROP)
-					GUIPrint(xpos, ypos, "%d vertices, %d triangles", g_nvert, g_ntrgl);
+				{
+					GUIPrint(xpos, ypos, "%d vertices, %d triangles", g_nvert, g_ntrgl), ypos+=16;
+					GUIPrint(xpos, ypos, "Max trgl/cube = %d", g_max_trgl_cube), ypos+=16;
+				}
 				else if(contourOn)
 				{
 					GUIPrint(xpos, ypos, "contour: %d tetrahedra", test_contourMethod==2?5:test_contourMethod?28:48), ypos+=16;
@@ -34372,10 +34375,16 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 						break;
 					}
 				}
+				const char *a=
+#ifdef _DEBUG
+					"Debug";
+#else
+					"Release";
+#endif
 				if(m)
-					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s-%02d-%s %s", year, m, day, time);
+					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s-%02d-%s %s (%s)", year, m, day, time, a);
 				else
-					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s %s", date, time);
+					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s %s (%s)", date, time, a);
 				MessageBoxA(ghWnd, g_buf, "About", MB_OK);
 			}
 			break;
