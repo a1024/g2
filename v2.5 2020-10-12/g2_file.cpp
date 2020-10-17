@@ -116,7 +116,7 @@ int				loadFile(const char *addr, char *&data, size_t &size, bool binary)
 	struct stat info={};
 	if(!stat(addr, &info))
 	{
-		SYS_CHECK();
+	//	SYS_CHECK();
 		size=info.st_size;
 		data=(char*)malloc((size+1)*sizeof(unsigned char));
 		data[size]='\0';

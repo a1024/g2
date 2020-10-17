@@ -72,7 +72,7 @@ void				my_assert(int condition, const char *file, int line, const char *msg)
 		log_error(file, line, msg);
 }
 
-void				sys_check(int line)
+void				sys_check(const char *file, int line)
 {
 	int error=GetLastError();
 	if(error)
@@ -80,7 +80,7 @@ void				sys_check(int line)
 		char *messageBuffer=nullptr;
 		size_t size=FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
 	//	std::string message(messageBuffer, size);
-		LOGERROR_LINE(line, "System %d: %s", error, messageBuffer);
+		log_error(file, line, "System %d: %s", error, messageBuffer);
 		LocalFree(messageBuffer);
 	}
 }
@@ -106,17 +106,17 @@ const char*			glerr2str(int error)
 	return a;
 #undef				EC
 }
-void 				gl_check(int line)
+void 				gl_check(const char *file, int line)
 {
 	int err=glGetError();
 	if(err)
-		LOGERROR_LINE(line, "GL %d: %s", err, glerr2str(err));
+		log_error(file, line, "GL %d: %s", err, glerr2str(err));
 	//	LOGERROR_LINE(line, "GL Error %d: %s", err, glerr2str(err));
 }
-void				gl_error(int line)
+void				gl_error(const char *file, int line)
 {
 	int err=glGetError();
-	LOGERROR_LINE(line, "GL %d: %s", err, glerr2str(err));
+	log_error(file, line, "GL %d: %s", err, glerr2str(err));
 }
 
 #define 			EC(x)		case x:a=(const char*)#x;break;
@@ -293,17 +293,17 @@ const char*			cl_state2str(int state)
 }
 #undef				EC
 #undef				EC2
-void				cl_check(int err, int line)
+void				cl_check(const char *file, int line, int err)
 {
 	if(err)
-		LOGERROR_LINE(line, "CL %d: %s", err, clerr2str(err));
+		log_error(file, line, "CL %d: %s", err, clerr2str(err));
 	//	LOGERROR_LINE(line, "CL Error %d: %s", err, clerr2str(err));
 }
-void 				p_check(void *p, int line, const char *func_name)
+void 				p_check(void *p, const char *file, int line, const char *func_name)
 {
 	if(!p)
 	{
-		LOGERROR_LINE(line, "Error: %s is 0x%08llx", func_name, (long long)p);
+		log_error(file, line, "Error: %s is 0x%08llx", func_name, (long long)p);
 	//	LOGE("Line %d error: %s is %lld.", line, func_name, (long long)p);
 		OCL_state=CL_NOTHING;
 	}

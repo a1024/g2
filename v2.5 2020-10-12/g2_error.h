@@ -30,21 +30,21 @@ extern char			first_error_msg[e_msg_size], latest_error_msg[e_msg_size];
 void				messageboxa(HWND hWnd, const char *title, const char *format, ...);
 bool 				log_error(const char *file, int line, const char *format, ...);
 #define 			LOGERROR(...)				log_error(__FILE__, __LINE__, __VA_ARGS__)
-#define 			LOGERROR_LINE(LINE, ...)	log_error(__FILE__, LINE, __VA_ARGS__)
+//#define 			LOGERROR_LINE(LINE, ...)	log_error(__FILE__, LINE, __VA_ARGS__)
 void				my_assert(int condition, const char *file, int line, const char *msg);
 #define				MY_ASSERT(CONDITION, MESSAGE)		my_assert(CONDITION, __FILE__, __LINE__, MESSAGE)
 
-void				sys_check(int line);
-#define				SYS_CHECK()		sys_check(__LINE__)
+void				sys_check(const char *file, int line);
+#define				SYS_CHECK()		sys_check(__FILE__, __LINE__)
 
-void 				gl_check(int line);
-#define				GL_CHECK()		gl_check(__LINE__)
-void				gl_error(int line);
-#define				GL_ERROR()		gl_error(__LINE__)
+void 				gl_check(const char *file, int line);
+#define				GL_CHECK()		gl_check(__FILE__, __LINE__)
+void				gl_error(const char *file, int line);
+#define				GL_ERROR()		gl_error(__FILE__, __LINE__)
 
-void				cl_check(int err, int line);
-#define 			CL_CHECK(error)	cl_check(error, __LINE__)
+void				cl_check(const char *file, int line, int err);
+#define 			CL_CHECK(error)	cl_check(__FILE__, __LINE__, error)
 const char*			cl_state2str(int state);
-void 				p_check(void *p, int line, const char *func_name);
+void 				p_check(void *p, const char *file, int line, const char *func_name);
 //#define 			P_CHECK(pointer)	p_check(pointer, __LINE__, #pointer)
 #endif

@@ -1607,7 +1607,7 @@ struct			ShaderVar
 	const char *name;
 	int lineNo;//__LINE__
 };
-unsigned		CompileShader(const char *src, unsigned type)
+unsigned		CompileShader(const char *src, unsigned type, int line)
 {
 	unsigned shaderID=glCreateShader(type);
 	glShaderSource(shaderID, 1, &src, 0);
@@ -1621,17 +1621,17 @@ unsigned		CompileShader(const char *src, unsigned type)
 		std::vector<char> errorMessage(infoLogLength+1);
 		glGetShaderInfoLog(shaderID, infoLogLength, 0, &errorMessage[0]);
 		copy_to_clipboard(&errorMessage[0], infoLogLength);
-		LOGERROR("Shader compilation failed. Output copied to clipboard.");
+		log_error(__FILE__, line, "Shader compilation failed. Output copied to clipboard.");
 	//	GL_ERROR();
 		return 0;
 	}
 	return shaderID;
 }
-unsigned		LoadShaders(const char *vertSrc, const char *fragSrc, ShaderVar *attributes, int n_attrib, ShaderVar *uniforms, int n_unif)
+unsigned		LoadShaders(const char *vertSrc, const char *fragSrc, ShaderVar *attributes, int n_attrib, ShaderVar *uniforms, int n_unif, int line)
 {
 	unsigned
-		vertShaderID=CompileShader(vertSrc, GL_VERTEX_SHADER),
-		fragShaderID=CompileShader(fragSrc, GL_FRAGMENT_SHADER);
+		vertShaderID=CompileShader(vertSrc, GL_VERTEX_SHADER, line),
+		fragShaderID=CompileShader(fragSrc, GL_FRAGMENT_SHADER, line);
 //	prof_add("compile sh");
 	if(!vertShaderID||!fragShaderID)
 	{
@@ -1663,10 +1663,10 @@ unsigned		LoadShaders(const char *vertSrc, const char *fragSrc, ShaderVar *attri
 	GL_CHECK();
 	for(int ka=0;ka<n_attrib;++ka)
 		if((*attributes[ka].pvar=glGetAttribLocation(ProgramID, attributes[ka].name))==-1)
-			gl_error(attributes[ka].lineNo);
+			gl_error(__FILE__, attributes[ka].lineNo);
 	for(int ku=0;ku<n_unif;++ku)
 		if((*uniforms[ku].pvar=glGetUniformLocation(ProgramID, uniforms[ku].name))==-1)
-			gl_error(uniforms[ku].lineNo);
+			gl_error(__FILE__, uniforms[ku].lineNo);
 	//if(broken)//
 	//	return 0;//
 	return ProgramID;
@@ -2615,7 +2615,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		"    gl_FragColor=u_color;\n"
 	//	"    gl_FragColor=vec4(u_color.rgb, 0.5);\n"
 		"}",
-		_2d_attr, sizeof(_2d_attr)/sizeof(ShaderVar), _2d_unif, sizeof(_2d_unif)/sizeof(ShaderVar));
+		_2d_attr, sizeof(_2d_attr)/sizeof(ShaderVar), _2d_unif, sizeof(_2d_unif)/sizeof(ShaderVar), __LINE__);
 	if(!GL2_2D::program)
 		GL_ERROR();
 		
@@ -2692,7 +2692,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 
 		"    gl_FragDepth=(-(1000.+0.1)*(-v_glposition.w)-2.*1000.*0.1)/((1000.-0.1)*v_glposition.w);\n"
 		"}",
-		l3d_attr, sizeof(l3d_attr)/sizeof(ShaderVar), l3d_unif, sizeof(l3d_unif)/sizeof(ShaderVar));
+		l3d_attr, sizeof(l3d_attr)/sizeof(ShaderVar), l3d_unif, sizeof(l3d_unif)/sizeof(ShaderVar), __LINE__);
 		
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	ShaderVar _3d_attr[]=
@@ -2766,7 +2766,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 	//	"    gl_FragDepth=1.-2.*exp(-0.01*v_fragpos.w);\n"		//broken
 	//	"    gl_FragDepth=v_fragpos.z/v_fragpos.w;\n"			//broken
 		"}",
-		_3d_attr, sizeof(_3d_attr)/sizeof(ShaderVar), _3d_unif, sizeof(_3d_unif)/sizeof(ShaderVar));
+		_3d_attr, sizeof(_3d_attr)/sizeof(ShaderVar), _3d_unif, sizeof(_3d_unif)/sizeof(ShaderVar), __LINE__);
 	if(!GL2_3D::program)
 		GL_ERROR();
 #if 0
@@ -2842,7 +2842,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		"	}\n"
 		"	gl_FragColor=vec4(u_curvecolor.rgb, u_curvecolor.a*alpha);\n"
 		"}",
-		ti2d_attr, sizeof(ti2d_attr)/sizeof(ShaderVar), ti2d_unif, sizeof(ti2d_unif)/sizeof(ShaderVar));
+		ti2d_attr, sizeof(ti2d_attr)/sizeof(ShaderVar), ti2d_unif, sizeof(ti2d_unif)/sizeof(ShaderVar), __LINE__);
 	if(!GL2_TI2D::program)
 		GL_ERROR();
 #endif
@@ -2898,7 +2898,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		//"	else\n"
 		//"		gl_FragColor=vec4(region.rgb, bkColor.a);\n"
 		"}",
-		text_attr, sizeof(text_attr)/sizeof(ShaderVar), text_unif, sizeof(text_unif)/sizeof(ShaderVar));
+		text_attr, sizeof(text_attr)/sizeof(ShaderVar), text_unif, sizeof(text_unif)/sizeof(ShaderVar), __LINE__);
 	if(!GL2_Text::program)
 		GL_ERROR();
 	
@@ -2912,7 +2912,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		{&GL2_Texture::u_alpha, "alpha", __LINE__},
 	};
 	GL2_Texture::program=LoadShaders(
-		"#version 100\n"
+		"#version 120\n"
 		"attribute vec4 coords;"			//coords
 		"varying vec2 f_texcoord;\n"
 		"void main()\n"
@@ -2920,8 +2920,8 @@ void			gl_initiate(HDC ghDC, int w, int h)
 		"    gl_Position=vec4(coords.xy, 0., 1.);\n"
 		"    f_texcoord=coords.zw;\n"
 		"}",
-		"#version 100\n"
-		"precision lowp float;\n"
+		"#version 120\n"
+	//	"precision lowp float;\n"//not supported in GLSL 1.3
 		"varying vec2 f_texcoord;\n"
 		"uniform sampler2D mytexture;\n"	//mytexture, alpha
   		"uniform float alpha;\n"
@@ -2931,7 +2931,7 @@ void			gl_initiate(HDC ghDC, int w, int h)
   		"    color.a*=alpha;\n"
 		"    gl_FragColor=color;\n"
 		"}",
-		texture_attr, sizeof(texture_attr)/sizeof(ShaderVar), texture_unif, sizeof(texture_unif)/sizeof(ShaderVar));
+		texture_attr, sizeof(texture_attr)/sizeof(ShaderVar), texture_unif, sizeof(texture_unif)/sizeof(ShaderVar), __LINE__);
 	if(!GL2_Texture::program)
 		GL_ERROR();
 	//	LOGERROR("Texture program not compiled.");
