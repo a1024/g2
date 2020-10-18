@@ -34375,16 +34375,24 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 						break;
 					}
 				}
-				const char *a=
+				const char *build=
 #ifdef _DEBUG
 					"Debug";
 #else
 					"Release";
 #endif
+				int length=sprintf_s(g_buf, g_buf_size,
+					"Grapher 2\n"
+					"Version:\t%.2lf-CL %d\n", g2_version.g2*0.01, (int)g2_version.cl_comp);
 				if(m)
-					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s-%02d-%s %s (%s)", year, m, day, time, a);
+					length+=sprintf_s(g_buf+length, g_buf_size-length, "Build:\t%s-%02d-%s %s", year, m, day, time);
 				else
-					sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion %s %s (%s)", date, time, a);
+					length+=sprintf_s(g_buf+length, g_buf_size-length, "Build:\t%s %s", date, time);
+				length+=sprintf_s(g_buf+length, g_buf_size-length, " (%s)", build);
+			//	if(m)
+			//		sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion: G2 %.2lf, CL %d\nBuild %s-%02d-%s %s (%s)", g2_version.g2*0.01, (int)g2_version.cl_comp, year, m, day, time, a);
+			//	else
+			//		sprintf_s(g_buf, g_buf_size, "Grapher 2\nVersion: G2 %d, CL %d\nBuild %s %s (%s)", g2_version.g2*0.01, (int)g2_version.cl_comp, date, time, a);
 				MessageBoxA(ghWnd, g_buf, "About", MB_OK);
 			}
 			break;

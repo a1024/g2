@@ -655,7 +655,8 @@ struct			GPUBuffer
 	int			vertices_stride, vertices_start, normals_stride, normals_start, n_vertices;
 	GPUBuffer():VBO(0), EBO(0), n_vertices(0),
 		vertices_stride(0), vertices_start(0), normals_stride(0), normals_start(0){}
-	void create_VN_I(float *VVVNNN, int n_floats, int *indices, int n_ints);
+	void create_VN_I(float *VVVNNN, int n_floats, int *indices, int n_ints);//vertices & normals: immediate
+	void create_VN_CL(int n_floats, int n_ints);//vertices & normals for OpenCL
 };
 int				gl_print(int x, int y, int tab_origin, const char *format, ...);
 namespace		GL2_2D

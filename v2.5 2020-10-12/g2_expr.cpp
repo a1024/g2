@@ -19,7 +19,7 @@
 //cl component version 2:
 //state.txt:	<version in hexadecimal> \n saved user-typed expressions
 //cl_program[00~19].bin:	OpenCL programs compiled for GPU
-const G2Version		g2_version(250, 1);//hi: g2 version, lo: cl component version
+const G2Version		g2_version(250, 90);//hi: g2 version, lo: cl component version
 
 #ifdef PROFILER_CYCLES
 #define		ELAPSED_FN		elapsed_cycles

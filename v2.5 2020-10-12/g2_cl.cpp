@@ -27,8 +27,9 @@ bool			cl_gl_interop=false;
 //	#define		COPY_INITIALIZATION
 	#define		BLOCKING_INITIALIZATION
 //	#define		DEBUG3
-	#define		V6_CPU
-	#define		V5_CPU
+	#define		V6_GPU
+//	#define		V6_CPU
+//	#define		V5_CPU
 //	#define		DEBUG2//performance impact
 
 	const bool	loadbinary=true;
@@ -3240,8 +3241,8 @@ __kernel void c2d_rgb2(__global const int *size, __global const float *xr, __glo
 	static const char program20[]=R"CLSRC(
 __kernel void ti3d_av(__constant int *size, __constant float *result, __global float *ndr)
 {//size: {Xplaces, Yplaces, Zplaces, ndrSize}
-	int kx=get_global_id(0), ky=get_global_id(1), kz=get_global_id(2);
 	int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2];
+	int kx=get_global_id(0), ky=get_global_id(1), kz=get_global_id(2);
 	if(kx<Xplaces-1&&ky<Yplaces-1&&kz<Zplaces-1)
 	{
 		int ndrSize=size[3], XYplaces=Xplaces*Yplaces, idx=Xplaces*(Yplaces*kz+ky)+kx;
@@ -3265,8 +3266,8 @@ __kernel void ti3d_av(__constant int *size, __constant float *result, __global f
 }
 __kernel void ti3d_av_east(__constant int *size, __constant float *result, __global float *ndr)
 {//size: {Xplaces, Yplaces, Zplaces, ndrSize}
-	int kx=Xplaces-1, ky=get_global_id(1), kz=get_global_id(2);
 	int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2];
+	int kx=Xplaces-1, ky=get_global_id(1), kz=get_global_id(2);
 	if(ky<Yplaces-1&&kz<Zplaces-1)
 	{
 		int ndrSize=size[3], XYplaces=Xplaces*Yplaces, idx=Xplaces*(Yplaces*kz+ky)+kx;
@@ -3287,8 +3288,8 @@ __kernel void ti3d_av_east(__constant int *size, __constant float *result, __glo
 }
 __kernel void ti3d_av_north(__constant int *size, __constant float *result, __global float *ndr)
 {//size: {Xplaces, Yplaces, Zplaces, ndrSize}
-	int kx=get_global_id(0), ky=Yplaces-1, kz=get_global_id(2);
 	int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2];
+	int kx=get_global_id(0), ky=Yplaces-1, kz=get_global_id(2);
 	if(kx<Xplaces-1&&kz<Zplaces-1)
 	{
 		int ndrSize=size[3], XYplaces=Xplaces*Yplaces, idx=Xplaces*(Yplaces*kz+ky)+kx;
@@ -3305,8 +3306,8 @@ __kernel void ti3d_av_north(__constant int *size, __constant float *result, __gl
 }
 __kernel void ti3d_av_up(__constant int *size, __constant float *result, __global float *ndr)
 {//size: {Xplaces, Yplaces, Zplaces, ndrSize}
-	int kx=get_global_id(0), ky=get_global_id(1), kz=Zplaces-1;
 	int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2];
+	int kx=get_global_id(0), ky=get_global_id(1), kz=Zplaces-1;
 	if(kx<Xplaces-1&&ky<Yplaces-1)
 	{
 		int ndrSize=size[3], idx=Xplaces*(Yplaces*kz+ky)+kx;
@@ -3332,12 +3333,67 @@ char hammingweight(ulong x)//https://stackoverflow.com/questions/109023/how-to-c
 	x=(x&0x3333333333333333)+(x>>2&0x3333333333333333);
 	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;
 }
-__kernel void ti3d_classifyedges(__constant int *size, __constant float *ndr, __global ulong *edgeinfo, __global uchar *nvert, __global uchar *ntrgl)
-{//size: {Xplaces, Yplaces, Zplaces, ndrSize}
-	int kx=get_global_id(0), ky=get_global_id(1), kz=get_global_id(2);
+enum ExEdgeBitIdx//54edges
+{
+	//main (new) edge indices
+	DSW_DSE, DSW_DNW, DSW_USW,
+
+	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
+	DSW_mSm, USW_mSm, USE_mSm, DSE_mSm,
+	DSW_Dmm, DSE_Dmm, DNE_Dmm, DNW_Dmm,
+
+	mmW_Dmm, mmW_mSm, mmW_Umm, mmW_mNm,
+	Umm_mNm, mNm_Dmm, Dmm_mSm, mSm_Umm,
+	mmE_Dmm, mmE_mSm, mmE_Umm, mmE_mNm,
+
+	mmm_Dmm, mmm_mSm, mmm_mmW, mmm_Umm, mmm_mNm, mmm_mmE,
+
+	//extended (redundant) edge indices
+	DSE_DNE, DNE_DNW, DSE_USE, DNE_UNE, DNW_UNW, USW_USE, USE_UNE, UNE_UNW, UNW_USW,
+	mmE_DSE, mmE_USE, mmE_UNE, mmE_DNE,
+	mNm_DNW, mNm_UNW, mNm_UNE, mNm_DNE,
+	Umm_USW, Umm_USE, Umm_UNE, Umm_UNW,
+};
+enum ExEdgeBitIdxRev//54edges
+{
+	//main (new) edge indices
+	DSE_DSW, DNW_DSW, USW_DSW,
+
+	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
+	mSm_DSW, mSm_USW, mSm_USE, mSm_DSE,
+	Dmm_DSW, Dmm_DSE, Dmm_DNE, Dmm_DNW,
+
+	Dmm_mmW, mSm_mmW, Umm_mmW, mNm_mmW,
+	mNm_Umm, Dmm_mNm, mSm_Dmm, Umm_mSm,
+	Dmm_mmE, mSm_mmE, Umm_mmE, mNm_mmE,
+
+	Dmm_mmm, mSm_mmm, mmW_mmm, Umm_mmm, mNm_mmm, mmE_mmm,
+
+	//extended (redundant) edge indices
+	DNE_DSE, DNW_DNE, USE_DSE, UNE_DNE, UNW_DNW, USE_USW, UNE_USE, UNW_UNE, USW_UNW,
+	DSE_mmE, USE_mmE, UNE_mmE, DNE_mmE,
+	DNW_mNm, UNW_mNm, UNE_mNm, DNE_mNm,
+	USW_Umm, USE_Umm, UNE_Umm, UNW_Umm,
+};
+__constant ulong obsmask[8]=//original bit selection mask
+{
+	0x00000001FFFFFFFF,//all coords inside
+	(1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE)|0x00000001FFFFFFFF,//x at end: DSE's originals
+	(1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//y at end: DNW's originals
+	(1ULL<<DNE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//x&y at end: (DSE, DNW & DNE)'s originals
+
+	(1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//z at end: USW's originals
+	(1ULL<<USE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//x&z at end: (DSE, USW & USE)'s originals
+	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
+	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
+};
+__kernel void ti3d_classifyedges(__constant int *size, __constant float *coeffs, __constant float *ndr, __global ulong *edgeinfo, __global uchar *nvert, __global uchar *ntrgl)
+{//size: {Xplaces, Yplaces, Zplaces, ndrSize}, coeffs: {Xstart, Xsample, Ystart, Ysample, Zstart, Zsample, isovalue} (just for isovalue)
 	int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2];
+	int kx=get_global_id(0), ky=get_global_id(1), kz=get_global_id(2);
 	if(kx<Xplaces-1&&ky<Yplaces-1&&kz<Zplaces-1)
 	{
+		float th=coeffs[6];//isovalue
 		int ndrSize=size[3], XYplaces=Xplaces*Yplaces;
 		int idx=Xplaces*(Yplaces*kz+ky)+kx;
 		//all vertices relevant to current cube
@@ -3450,7 +3506,7 @@ enum DataPointIdx
 			P_Dmm,
 	P_DSW,			P_DSE,
 };
-static const unsigned char e2v1[54]=//edge index to first vertex (data point) index
+__constant unsigned char e2v1[54]=//edge index to first vertex (data point) index
 {
 	//main (new) edge indices
 	P_DSW, P_DSW, P_DSW,
@@ -3471,7 +3527,7 @@ static const unsigned char e2v1[54]=//edge index to first vertex (data point) in
 	P_mNm, P_mNm, P_mNm, P_mNm,
 	P_Umm, P_Umm, P_Umm, P_Umm,
 };
-static const unsigned char e2v2[54]=//edge index to second vertex (data point) index
+__constant unsigned char e2v2[54]=//edge index to second vertex (data point) index
 {
 	//main (new) edge indices
 	P_DSE, P_DNW, P_USW,
@@ -3501,35 +3557,21 @@ float4			solvequadratic(float a, float b, float c)//returns (r1, i1, r2, i2)
 //	const float lim=1e10f;//double
 	float4 ret;
 	if(a==0)
-		ret.set(-c/b, 0, INFINITY, 0);
-	//	ret=(float4)(-c/b, 0, INFINITY, 0);
-	else if(abs(b)/abs(a)>=lim&&abs(c)/abs(a)>=lim)
-		ret.set(-c/b, 0, -b/a, 0);
-	//	ret=(float4)(-c/b, 0, -b/a, 0);
+		ret=(float4)(-c/b, 0, INFINITY, 0);
+	else if(fabs(b)/fabs(a)>=lim&&fabs(c)/fabs(a)>=lim)
+		ret=(float4)(-c/b, 0, -b/a, 0);
 	else
 	{
 		float first=-b, disc2=b*b-4*a*c;
-		float disc=sqrt(abs(disc2));
+		float disc=sqrt(fabs(disc2));
 		float inv_den=0.5f/a;
 		if(disc2<0)
 		{
 			first*=inv_den, disc*=inv_den;
-			ret.set(first, disc, first, -disc);
-			//ret=(float4)(first, disc, first, -disc);
+			ret=(float4)(first, disc, first, -disc);
 		}
 		else
-			ret.set((first+disc)*inv_den, 0, (first-disc)*inv_den, 0);
-			//ret=(float4)(first+disc, 0, first-disc, 0);
-
-		//b/=a, c/=a;
-		//float first=-0.5f*b, disc2=b*b-4*c;
-		//float disc=0.5f*sqrt(abs(disc2));
-		//if(disc2<0)
-		//	ret.set(first, disc, first, -disc);
-		//	//ret=(float4)(first, disc, first, -disc);
-		//else
-		//	ret.set(first+disc, 0, first-disc, 0);
-		//	//ret=(float4)(first+disc, 0, first-disc, 0);
+			ret=(float4)((first+disc)*inv_den, 0, (first-disc)*inv_den, 0);
 	}
 	return ret;
 }
@@ -3603,18 +3645,18 @@ float2			solvecubic(float a, float b, float c, float d)
 	return ret;
 }
 __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __constant float *ndr, __constant ulong *workidx, __global float *vertices)
-{size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total}
+{//size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total}, coeffs: {Xstart, Xsample, Ystart, Ysample, Zstart, Zsample, isovalue}
 	int id=get_global_id(0), nvert_total=size[4];
 	if(id<nvert_total)
 	{
 		int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], ndrSize=size[3], XYplaces=Xplaces*Yplaces;
 		ulong wi=workidx[id];
-		int kx=unsigned short(wi>>16), ky=unsigned short(wi>>32), kz=unsigned short(wi>>48), ke=unsigned short(wi);
+		int kx=(ushort)(wi>>16), ky=(ushort)(wi>>32), kz=(ushort)(wi>>48), ke=(ushort)wi;
 		int idx=Xplaces*(Yplaces*kz+ky)+kx;
 		float
 			Xstart=coeffs[0], Xsample=coeffs[1],
 			Ystart=coeffs[2], Ysample=coeffs[3],
-			Zstart=coeffs[4], Zsample=coeffs[5];
+			Zstart=coeffs[4], Zsample=coeffs[5], th=coeffs[6];
 		float
 			X_W=Xstart+kx*Xsample, X_m=X_W+Xsample*0.5f, X_E=X_W+Xsample,//space coordinates
 			Y_S=Ystart+ky*Ysample, Y_m=Y_S+Ysample*0.5f, Y_N=Y_S+Ysample,
@@ -3664,19 +3706,18 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 			a=(C_U-C_D)*Zd, b=(D_U-D_D)*Zd+Z_aU*C_D+Z_Da*C_U, c=(E_U-E_D)*Zd+Z_aU*D_D+Z_Da*D_U, d=Z_aU*E_D+Z_Da*E_U-(X_E-X_W)*(Y_N-Y_S)*(Z_U-Z_D)*th;
 		float2 ret;
 		if(a==0&&b==0&&c==0)//degenerate equation d=0
-			ret.set((th-A.w)/(B.w-A.w), 1);
+			ret=(float2)((th-A.w)/(B.w-A.w), 1);
 		else
 			ret=solvecubic(a, b, c, d);
 		float3 coords;
 		float3 pa={A.x, A.y, A.z}, pb={B.x, B.y, B.z};
 		if(!ret.y)//solvecubic failed, use linear interpolation
-			ret.set((th-A.w)/(B.w-A.w), 1);
+			ret=(float2)((th-A.w)/(B.w-A.w), 1);
 		coords=mix(pa, pb, ret.x);
 		vstore3(coords, id*6, vertices);
 		float3 normal;
 		{
-			float3 a;
-			a.set((coords.x-X_W)/Xsample, (coords.y-Y_S)/Ysample, (coords.z-Z_D)/Zsample);
+			float3 a=(float3)((coords.x-X_W)/Xsample, (coords.y-Y_S)/Ysample, (coords.z-Z_D)/Zsample);
 			float
 				V_DSW_DSE=V_DSE-V_DSW,
 				V_DNW_DNE=V_DNE-V_DNW,
@@ -3688,7 +3729,7 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 				V_UN=V_UNW+V_UNW_UNE*a.x,
 				TY=V_DSW_DSE+(V_DNW_DNE-V_DSW_DSE)*a.y,
 				V_D_SN=V_DN-V_DS, V_U_SN=V_UN-V_US;
-			normal.set
+			normal=(float3)
 			(
 				TY+((V_USW_USE+(V_UNW_UNE-V_USW_USE)*a.y)-TY)*a.z,
 				V_D_SN+(V_U_SN-V_D_SN)*a.z,
@@ -3704,6 +3745,8 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 		vstore3(normal, id*6+3, vertices);
 	}
 }
+)CLSRC";
+	static const char program22[]=R"CLSRC(
 enum ExEdgeBitIdx//54edges
 {
 	//main (new) edge indices
@@ -3759,7 +3802,7 @@ __constant ulong obsmask[8]=//original bit selection mask
 	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
 };
 #define		TEHE(V0, V1, V2, V3)		V0##_##V1, V0##_##V2, V0##_##V3, V1##_##V2, V1##_##V3, V2##_##V3
-static const unsigned char ti[28*6]=//tetrahedron edge indices
+__constant unsigned char ti[28*6]=//tetrahedron edge indices
 {
 	TEHE(USW, DSW, mmW, mSm),
 	TEHE(UNW, USW, mmW, Umm),
@@ -3797,22 +3840,54 @@ static const unsigned char ti[28*6]=//tetrahedron edge indices
 	TEHE(mmm, mmE, Dmm, mNm),
 };
 #undef			TEHE
+struct WE_Offset//work-edge offset, used by CPU-side part 2
+{
+	short dx, dy, dz;
+	char ke2[8];//{normal jump, (xyz, yz, xz, z, xy, y, x)@end}
+};
+__constant struct WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant bits, access: [ke-33]={Xoffset, Yomask, Zomask, ke2[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)]}
+{//	(dx, dy, dz)	(xyz,		yz,			xz,			z,			xy,			y,			x)@end		normal jump,			
+	{1, 0, 0,		{DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW}},//DSE_DNE
+	{0, 1, 0,		{DNE_DNW,	DNE_DNW,	DSW_DSE,	DSW_DSE,	DNE_DNW,	DNE_DNW,	DSW_DSE,	DSW_DSE}},//DNE_DNW
+	{1, 0, 0,		{DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW,	DSE_USE,	DSW_USW}},//DSE_USE
+	{1, 1, 0,		{DNE_UNE,	DNW_UNW,	DSE_USE,	DSW_USW,	DNE_UNE,	DNW_UNW,	DSE_USE,	DSW_USW}},//DNE_UNE//2D jump
+	{0, 1, 0,		{DNW_UNW,	DNW_UNW,	DSW_USW,	DSW_USW,	DNW_UNW,	DNW_UNW,	DSW_USW,	DSW_USW}},//DNW_UNW
+	{0, 0, 1,		{USW_USE,	USW_USE,	USW_USE,	USW_USE,	DSW_DSE,	DSW_DSE,	DSW_DSE,	DSW_DSE}},//USW_USE
+	{1, 0, 1,		{USE_UNE,	USW_UNW,	USE_UNE,	USW_UNW,	DSE_DNE,	DSW_DNW,	DSE_DNE,	DSW_DNW}},//USE_UNE//2D jump
+	{0, 1, 1,		{UNE_UNW,	UNE_UNW,	USW_USE,	USW_USE,	DNE_DNW,	DNE_DNW,	DSW_DSE,	DSW_DSE}},//UNE_UNW//2D jump
+	{0, 0, 1,		{UNW_USW,	UNW_USW,	UNW_USW,	UNW_USW,	DSW_DNW,	DSW_DNW,	DSW_DNW,	DSW_DNW}},//UNW_USW
+
+	{1, 0, 0,		{mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW,	mmE_DSE,	mmW_DSW}},//mmE_DSE
+	{1, 0, 0,		{mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW,	mmE_USE,	mmW_USW}},//mmE_USE
+	{1, 0, 0,		{mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW,	mmE_UNE,	mmW_UNW}},//mmE_UNE
+	{1, 0, 0,		{mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW,	mmE_DNE,	mmW_DNW}},//mmE_DNE
+
+	{0, 1, 0,		{mNm_DNW,	mNm_DNW,	mSm_DSW,	mSm_DSW,	mNm_DNW,	mNm_DNW,	mSm_DSW,	mSm_DSW}},//mNm_DNW
+	{0, 1, 0,		{mNm_UNW,	mNm_UNW,	mSm_USW,	mSm_USW,	mNm_UNW,	mNm_UNW,	mSm_USW,	mSm_USW}},//mNm_UNW
+	{0, 1, 0,		{mNm_UNE,	mNm_UNE,	mSm_USE,	mSm_USE,	mNm_UNE,	mNm_UNE,	mSm_USE,	mSm_USE}},//mNm_UNE
+	{0, 1, 0,		{mNm_DNE,	mNm_DNE,	mSm_DSE,	mSm_DSE,	mNm_DNE,	mNm_DNE,	mSm_DSE,	mSm_DSE}},//mNm_DNE
+
+	{0, 0, 1,		{Umm_USW,	Umm_USW,	Umm_USW,	Umm_USW,	Dmm_DSW,	Dmm_DSW,	Dmm_DSW,	Dmm_DSW}},//Umm_USW
+	{0, 0, 1,		{Umm_USE,	Umm_USE,	Umm_USE,	Umm_USE,	Dmm_DSE,	Dmm_DSE,	Dmm_DSE,	Dmm_DSE}},//Umm_USE
+	{0, 0, 1,		{Umm_UNE,	Umm_UNE,	Umm_UNE,	Umm_UNE,	Dmm_DNE,	Dmm_DNE,	Dmm_DNE,	Dmm_DNE}},//Umm_UNE
+	{0, 0, 1,		{Umm_UNW,	Umm_UNW,	Umm_UNW,	Umm_UNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW}},//Umm_UNW
+};
 char getbit(long long x, char bit){return x>>bit&1;}
-__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *tworkidx, __constant ulong *edgeinfo, __constant int *bitindices)
-{//size: {Xplaces, Yplaces, Zplaces, ndrSize, <don't care>, active_ndrsize}, bitindices: {short ke, kx, ky, kz; int idx;}
+__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant int *workidx, __global int *indices)
+{//size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total, active_ndrsize, ntrgl_total}, workidx: {short ke, kx, ky, kz; (kz<<48|ky<<32|kx<<16|ke)}
 	int id=get_global_id(0), active_ndrsize=size[5];
 	if(id<active_ndrsize)
 	{
-		int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2];
-		ulong twi=tworkidx[ka];//triangle work index
-		unsigned kw=unsigned(twi>>32), ki=unsigned(twi)*3;
-		unsigned short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
-		auto work=edgeinfo[kw];
-		auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
+		const int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], nvert_total=size[4], nindices=size[6]*3, XYplaces=Xplaces*Yplaces;
+		ulong twi=ac_workidx[id];//active cube work index
+		unsigned kw=(uint)(twi>>32), ki=(uint)twi*3;
+		ushort kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+		ulong work=edgeinfo[kw];
+		ulong mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
 		for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra in the data cube
 		{
 			int kt6=kth*6;
-			char e[]=//edge states
+			int e[]=//edge states
 			{
 				getbit(work, ti[kt6  ]),
 				getbit(work, ti[kt6+1]),
@@ -3825,61 +3900,125 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *tworkidx
 			int tcvi[6]={};//tetrahedron cut vertex indices
 			for(char kb=0;kb<6;++kb)//for each tetrahedron edge
 			{
-				if(e[kb])
+			//	if(e[kb])				//DISABLE if(e[kb]): aborts		//DISABLE body: succeeds
 				{
-					char ke=ti[kth*6+kb];//relative edge index
-					WorkIdx idx;
-					char original=getbit(mask, ke);
-					if(original)//original bit, in this data point		note: all bits are original at boundary
-						idx.set(kx, ky, kz, ke);
-					else//redundant bit, look up in another data point
+					int ke=ti[kth*6+kb];//relative edge index
+					ulong idx=0;
+					int original=getbit(mask, ke);
+					int kv=0;
+
+					//__constant struct WE_Offset *weo=we_offsets+select(0, ke-33, original);	//ORIGINAL: aborts, NO CONDITION: aborts
+					//__constant struct WE_Offset *weo=we_offsets+(ke-33)*original;				//NO CONDITION: aborts, UNUSED: succeeds
+					//__constant struct WE_Offset *weo=we_offsets;								//aborts, NO CONDITION: succeeds
+					int
+					//	xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
+					//	kx2=kx+(weo->dx&-xbc),
+					//	ky2=ky+(weo->dy&-ybc),
+					//	kz2=kz+(weo->dz&-zbc),
+
+					//	kxF=0,//succeeds
+					//	kyF=0,
+					//	kzF=0,
+					//	keF=0;
+
+					//	kxF=kx,//succeeds
+					//	kyF=ky,
+					//	kzF=kz,
+					//	keF=0;
+
+						kxF=kx+we_offsets[0].dx,//crashes
+						kyF=ky+we_offsets[0].dy,
+						kzF=kz+we_offsets[0].dz,
+						keF=0;
+
+					//	kxF=kx+weo->dx,//succeeds, ORIGINAL SELECT (ABOVE): aborts
+					//	kyF=ky+weo->dy,
+					//	kzF=kz+weo->dz,
+					//	keF=0;
+
+					//	kxF=kx*original+weo->dx,//aborts
+					//	kyF=ky*original+weo->dy,
+					//	kzF=kz*original+weo->dz,
+					//	keF=0;
+
+					//	kxF=kx+weo->dx*original,//aborts
+					//	kyF=ky+weo->dy*original,
+					//	kzF=kz+weo->dz*original,
+					//	keF=0;
+
+					//	xbc=weo->dx*((kx<Xplaces-2)&&original), ybc=weo->dy*((ky<Yplaces-2)&&original), zbc=weo->dz*((kz<Zplaces-2)&&original),//boundary conditions: *places-2 is last cube (pre-last datapoint)
+					//	kxF=kx+xbc,		//aborts
+					//	kyF=ky+ybc,
+					//	kzF=kz+zbc,
+					//	keF=0;
+
+					//	xbc=(kx<Xplaces-2)&&original, ybc=(ky<Yplaces-2)&&original, zbc=(kz<Zplaces-2)&&original,//boundary conditions: *places-2 is last cube (pre-last datapoint)
+					//	kxF=kx+weo->dx*xbc,			//aborts
+					//	kyF=ky+weo->dy*ybc,
+					//	kzF=kz+weo->dz*zbc,
+					//	keF=0;
+
+					//	kxF=kx+(weo->dx&-xbc&-(short)original),//aborts
+					//	kyF=ky+(weo->dy&-ybc&-(short)original),
+					//	kzF=kz+(weo->dz&-zbc&-(short)original),
+					//	keF=0;
+
+					//	kxF=select(kx, (ushort)kx2, (ushort)original),//aborts
+					//	kyF=select(ky, (ushort)ky2, (ushort)original),
+					//	kzF=select(kz, (ushort)kz2, (ushort)original),
+					//	keF=0;
+
+					//	kxF=select(kx, (ushort)(kx+(weo->dx&-xbc)), (ushort)original),//aborts
+					//	kyF=select(ky, (ushort)(ky+(weo->dy&-ybc)), (ushort)original),
+					//	kzF=select(kz, (ushort)(kz+(weo->dz&-zbc)), (ushort)original),
+					//	keF=0;
+
+					//	kxF=select(kx, (ushort)(kx+(weo->dx&-xbc)), (ushort)original),//ORIGINAL: aborts
+					//	kyF=select(ky, (ushort)(ky+(weo->dy&-ybc)), (ushort)original),
+					//	kzF=select(kz, (ushort)(kz+(weo->dz&-zbc)), (ushort)original),
+					//	keF=select(ke, weo->ke2[zbc<<2|ybc<<1|xbc], original);
+
+					idx=(ulong)kzF<<48|(ulong)kyF<<32|(ulong)kxF<<16|keF;
+
+
+				//	if(original)//original bit, in this data point				//DISABLE [if(original), tcvi[esum]=kv[: aborts		//SAME w/o if(e[kb]): succeeds
+				//		idx=(ulong)kz<<48|(ulong)ky<<32|(ulong)kx<<16|ke;
+				//	else//redundant bit, look up in another data point
+				//	{
+				//		__constant struct WE_Offset *weo=we_offsets+ke-33;
+				//		short
+				//			xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
+				//			kx2=kx+(weo->dx&-xbc),
+				//			ky2=ky+(weo->dy&-ybc),
+				//			kz2=kz+(weo->dz&-zbc),
+				//			ke2=weo->ke2[zbc<<2|ybc<<1|xbc];
+				//		idx=(ulong)kz2<<48|(ulong)ky2<<32|(ulong)kx2<<16|ke2;
+				//	}
+
+					int lk=0, rk=nvert_total-1;
+					ulong v=0;
+					for(int lk=0, rk=nvert_total-1, ik=0;ik<31;++ik)		//ENABLE bin search w/o if(e[kb]): succeeds
 					{
-						auto &weo=we_offsets[ke-33];
-						short
-							xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
-							kx2=kx+(weo.dx&-xbc),
-							ky2=ky+(weo.dy&-ybc),
-							kz2=kz+(weo.dz&-zbc),
-							ke2=weo.ke2[zbc<<2|ybc<<1|xbc];
-						idx.set(kx2, ky2, kz2, ke2);
+						kv=(lk+rk)>>1;
+						v=workidx[kv];
+						lk=select(kv+1, lk, v<idx);
+						rk=select(kv-1, rk, v>idx);
 					}
-					auto it=bitindices.find(idx);
-					if(it!=bitindices.end())
-						tcvi[esum]=it->second;
-					else
-						LOGERROR("(%d, %d, %d, %d) not found.", idx.kx, idx.ky, idx.kz, idx.ke);
+					tcvi[esum]=kv;
 					++esum;
 				}
 			}
-			if(esum==4)//there are edges producing vertices
-			{
-				if(ki+5>=indices.size())
-				{
-					LOGERROR("indices size=%d, ki=%d, want to add 6 indices.", indices.size(), ki);
-					break;
-				}
-				indices[ki]=tcvi[0], ++ki;
-				indices[ki]=tcvi[1], ++ki;
-				indices[ki]=tcvi[2], ++ki;
+			char one_triangle=esum==3&&ki+2<nindices, two_triangles=esum==4&&ki+5<nindices;
 
-				indices[ki]=tcvi[1], ++ki;
-				indices[ki]=tcvi[2], ++ki;
-				indices[ki]=tcvi[3], ++ki;
-			}
-			else if(esum==3)
-			{
-				if(ki+2>=indices.size())
-				{
-					LOGERROR("indices size=%d, ki=%d, want to add 3 indices.", indices.size(), ki);
-				//	LOGERROR("indices[%d+2] is OOB", ki);
-					break;
-				}
-				indices[ki]=tcvi[0], ++ki;
-				indices[ki]=tcvi[1], ++ki;
-				indices[ki]=tcvi[2], ++ki;
-			}
-			else if(esum)
-				LOGERROR("Tetrahedron produced %d vertices", esum);
+			indices[ki]=tcvi[0];//
+
+		//	indices[select(ki+3, ki  , two_triangles)]=tcvi[1];
+		//	indices[select(ki+4, ki+1, two_triangles)]=tcvi[2];
+		//	indices[select(ki+5, ki+2, two_triangles)]=tcvi[3];
+		//	indices[ki  ]=tcvi[0];		//aborts, aborts
+		//	indices[ki+1]=tcvi[1];
+		//	indices[ki+2]=tcvi[2];
+			ki+=3+3*two_triangles;
 		}//end tetrahedron loop
 	}
 }
@@ -3907,11 +4046,14 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *tworkidx
 		CLSource::program17,
 		CLSource::program18,
 		CLSource::program19,
-	//	CLSource::program20,
+
+		CLSource::program20,//TI3D
+		CLSource::program21,
+		CLSource::program22,
 	};
 }//end CLSource
 //#undef		STRING_LITERAL
-const int		nprograms=sizeof(CLSource::programs)/sizeof(const char*);
+const int		nprograms=sizeof(CLSource::programs)/sizeof(const char*), n_g2programs=20;
 struct 			ProgramBinary
 {
 	unsigned char *bin;
@@ -4723,6 +4865,25 @@ namespace 		G2_CL
 		{V_C2D_RGB2, 0, 0, "c2d_rgb2", nullptr},
 		//{V_INITIALIZE_CONSTANTS, 0, 0, "initialize_constants", nullptr},
 	};
+	CLKernel kernels_p20[]=
+	{
+		//special kernels
+		{V_TI3D_AV, 0, 0, "ti3d_av", nullptr},
+		{V_TI3D_AV_EAST, 0, 0, "ti3d_av_east", nullptr},
+		{V_TI3D_AV_NORTH, 0, 0, "ti3d_av_north", nullptr},
+		{V_TI3D_AV_UP, 0, 0, "ti3d_av_up", nullptr},
+		{TI3D_CLASSIFYEDGES, 0, 0, "ti3d_classifyedges", nullptr},
+	};
+	CLKernel kernels_p21[]=
+	{
+		//special kernels
+		{TI3D_ZEROCROSS, 0, 0, "ti3d_zerocross", nullptr},
+	};
+	CLKernel kernels_p22[]=
+	{
+		//special kernels
+		{TI3D_TRGL_INDICES, 0, 0, "ti3d_trgl_indices", nullptr},
+	};
 	KernelDB kernel_db[]=
 	{
 		{kernels_p00, sizeof(kernels_p00)/sizeof(CLKernel)},
@@ -4745,6 +4906,10 @@ namespace 		G2_CL
 		{kernels_p17, sizeof(kernels_p17)/sizeof(CLKernel)},
 		{kernels_p18, sizeof(kernels_p18)/sizeof(CLKernel)},
 		{kernels_p19, sizeof(kernels_p19)/sizeof(CLKernel)},
+
+		{kernels_p20, sizeof(kernels_p20)/sizeof(CLKernel)},//TI3D
+		{kernels_p21, sizeof(kernels_p21)/sizeof(CLKernel)},
+		{kernels_p22, sizeof(kernels_p22)/sizeof(CLKernel)},
 	};
 //	const int CLKernel_size=sizeof(CLKernel), nkernels=sizeof(kernels)/CLKernel_size;
 }
@@ -4896,6 +5061,8 @@ void			checkforbuildfailure(int error, cl_program *programs, int prog_idx, cl_de
 		size_t length=0;
 		error=p_clGetProgramBuildInfo(programs[prog_idx], device, CL_PROGRAM_BUILD_LOG, g_buf_size, g_buf, &length);	CL_CHECK(error);
 		err_msg+="\n\n\tPROGRAM "+std::to_string(prog_idx)+"\n\n"+g_buf;
+		copy_to_clipboard(g_buf, length);
+		messageboxa(ghWnd, "Information", "OpenCL program compilation failed. Output copied to clipboard.");
 	//	LOGE("PROGRAM %d: %s", prog_idx, g_buf);
 	}
 }
@@ -4987,8 +5154,8 @@ void			cl_compile()
 		else//compile from source first
 #endif
 		{
-			std::string src_common=CLSource::program_common, src[nprograms];
-			for(int kp=0;kp<nprograms;++kp)
+		//	for(int kp=0;kp<nprograms;++kp)
+			for(int kp=22;kp<nprograms;++kp)//
 			{
 				OCL_state=CL_COMPILING_PROGRAM00+kp;
 				ProgramBinary bin={};
@@ -5005,17 +5172,30 @@ void			cl_compile()
 				}
 				else//compile from source
 				{
-					src[kp]=src_common+CLSource::programs[kp];
-					const char *sources[]=
-					{
-						src[kp].c_str(),
-					};
-					size_t srclen[]=
-					{
-						src[kp].size(),
-					};
-					G2_CL::programs[kp]=p_clCreateProgramWithSource(context, 1, sources, srclen, &error);	CL_CHECK(error);
-					error=p_clBuildProgram(programs[kp], 0, nullptr, "", nullptr, nullptr);					CL_CHECK(error);
+					const char *sources[2]={};
+					size_t srclen[2]={};
+					int nsources=0;
+					if(kp<n_g2programs)//add header for G2 main programs
+						sources[0]=CLSource::program_common,	srclen[0]=strlen(CLSource::program_common), ++nsources;
+					sources[nsources]=CLSource::programs[kp],	srclen[nsources]=strlen(CLSource::programs[kp]), ++nsources;
+					//if(kp<n_g2programs)
+					//{
+					//	sources[0]=CLSource::program_common,	srclen[0]=strlen(CLSource::program_common);
+					//	sources[1]=CLSource::programs[kp],		srclen[1]=strlen(CLSource::programs[kp]);
+					//	nsources=2;
+					//}
+					//else
+					//{
+					//	sources[1]=CLSource::programs[kp],		srclen[1]=strlen(CLSource::programs[kp]);
+					//	nsources=1;
+					//}
+					if(kp==22)
+						int LOL_1=0;
+					G2_CL::programs[kp]=p_clCreateProgramWithSource(context, nsources, sources, srclen, &error);	CL_CHECK(error);
+					//G2_CL::programs[kp]=p_clCreateProgramWithSource(context, 1, sources, srclen, &error);			CL_CHECK(error);
+					error=p_clBuildProgram(programs[kp], 0, nullptr, " -cl-opt-disable -Werror -cl-std=CL1.1 ", nullptr, nullptr);			CL_CHECK(error);//amdocl.dll: U.E. A.V. reading 0x14D3A98C, 0x147AF43C
+				//	error=p_clBuildProgram(programs[kp], 0, nullptr, "-cl-opt-disable", nullptr, nullptr);			CL_CHECK(error);//amdocl.dll: unhandled exception: access violation, unrelated to try/catch
+				//	error=p_clBuildProgram(programs[kp], 0, nullptr, "", nullptr, nullptr);							CL_CHECK(error);//calls abort(1)
 					checkforbuildfailure(error, programs, kp, device, err_msg);
 					if(!error)//save binary
 					{
@@ -5674,76 +5854,76 @@ char hammingweight(unsigned long long x)//https://stackoverflow.com/questions/10
 	x=(x&0x3333333333333333)+(x>>2&0x3333333333333333);
 	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;
 }
-union			WorkIdx
-{
-	struct{unsigned short ke, kx, ky, kz;};
-	struct{unsigned kw, kt;};
-	unsigned long long idx;
-	WorkIdx():idx(0){}
-	WorkIdx(short kx, short ky, short kz, short ke):kx(kx), ky(ky), kz(kz), ke(ke){}
-	WorkIdx(unsigned kw, unsigned kt):kw(kw), kt(kt){}
-	void set(short kx, short ky, short kz, short ke){this->kx=kx, this->ky=ky, this->kz=kz, this->ke=ke;}
-	void set(unsigned kw, unsigned kt){this->kw=kw, this->kt=kt;}
-};
-bool operator<(WorkIdx const &a, WorkIdx const &b){return a.idx<b.idx;}
-enum ExEdgeBitIdx//54edges
-{
-	//main (new) edge indices
-	DSW_DSE, DSW_DNW, DSW_USW,
-
-	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
-	DSW_mSm, USW_mSm, USE_mSm, DSE_mSm,
-	DSW_Dmm, DSE_Dmm, DNE_Dmm, DNW_Dmm,
-
-	mmW_Dmm, mmW_mSm, mmW_Umm, mmW_mNm,
-	Umm_mNm, mNm_Dmm, Dmm_mSm, mSm_Umm,
-	mmE_Dmm, mmE_mSm, mmE_Umm, mmE_mNm,
-
-	mmm_Dmm, mmm_mSm, mmm_mmW, mmm_Umm, mmm_mNm, mmm_mmE,
-
-	//extended (redundant) edge indices
-	DSE_DNE, DNE_DNW, DSE_USE, DNE_UNE, DNW_UNW, USW_USE, USE_UNE, UNE_UNW, UNW_USW,
-	mmE_DSE, mmE_USE, mmE_UNE, mmE_DNE,
-	mNm_DNW, mNm_UNW, mNm_UNE, mNm_DNE,
-	Umm_USW, Umm_USE, Umm_UNE, Umm_UNW,
-};
-enum ExEdgeBitIdxRev//54edges
-{
-	//main (new) edge indices
-	DSE_DSW, DNW_DSW, USW_DSW,
-
-	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
-	mSm_DSW, mSm_USW, mSm_USE, mSm_DSE,
-	Dmm_DSW, Dmm_DSE, Dmm_DNE, Dmm_DNW,
-
-	Dmm_mmW, mSm_mmW, Umm_mmW, mNm_mmW,
-	mNm_Umm, Dmm_mNm, mSm_Dmm, Umm_mSm,
-	Dmm_mmE, mSm_mmE, Umm_mmE, mNm_mmE,
-
-	Dmm_mmm, mSm_mmm, mmW_mmm, Umm_mmm, mNm_mmm, mmE_mmm,
-
-	//extended (redundant) edge indices
-	DNE_DSE, DNW_DNE, USE_DSE, UNE_DNE, UNW_DNW, USE_USW, UNE_USE, UNW_UNE, USW_UNW,
-	DSE_mmE, USE_mmE, UNE_mmE, DNE_mmE,
-	DNW_mNm, UNW_mNm, UNE_mNm, DNE_mNm,
-	USW_Umm, USE_Umm, UNE_Umm, UNW_Umm,
-};
-const ulong		obsmask[8]=//original bit selection mask
-{
-	0x00000001FFFFFFFF,//all coords inside
-	(1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE)|0x00000001FFFFFFFF,//x at end: DSE's originals
-	(1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//y at end: DNW's originals
-	(1ULL<<DNE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//x&y at end: (DSE, DNW & DNE)'s originals
-
-	(1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//z at end: USW's originals
-	(1ULL<<USE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//x&z at end: (DSE, USW & USE)'s originals
-	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
-	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
-};
+//union			WorkIdx
+//{
+//	struct{unsigned short ke, kx, ky, kz;};
+//	struct{unsigned kw, kt;};
+//	unsigned long long idx;
+//	WorkIdx():idx(0){}
+//	WorkIdx(short kx, short ky, short kz, short ke):kx(kx), ky(ky), kz(kz), ke(ke){}
+//	WorkIdx(unsigned kw, unsigned kt):kw(kw), kt(kt){}
+//	void set(short kx, short ky, short kz, short ke){this->kx=kx, this->ky=ky, this->kz=kz, this->ke=ke;}
+//	void set(unsigned kw, unsigned kt){this->kw=kw, this->kt=kt;}
+//};
+//bool operator<(WorkIdx const &a, WorkIdx const &b){return a.idx<b.idx;}
+//enum ExEdgeBitIdx//54edges
+//{
+//	//main (new) edge indices
+//	DSW_DSE, DSW_DNW, DSW_USW,
+//
+//	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
+//	DSW_mSm, USW_mSm, USE_mSm, DSE_mSm,
+//	DSW_Dmm, DSE_Dmm, DNE_Dmm, DNW_Dmm,
+//
+//	mmW_Dmm, mmW_mSm, mmW_Umm, mmW_mNm,
+//	Umm_mNm, mNm_Dmm, Dmm_mSm, mSm_Umm,
+//	mmE_Dmm, mmE_mSm, mmE_Umm, mmE_mNm,
+//
+//	mmm_Dmm, mmm_mSm, mmm_mmW, mmm_Umm, mmm_mNm, mmm_mmE,
+//
+//	//extended (redundant) edge indices
+//	DSE_DNE, DNE_DNW, DSE_USE, DNE_UNE, DNW_UNW, USW_USE, USE_UNE, UNE_UNW, UNW_USW,
+//	mmE_DSE, mmE_USE, mmE_UNE, mmE_DNE,
+//	mNm_DNW, mNm_UNW, mNm_UNE, mNm_DNE,
+//	Umm_USW, Umm_USE, Umm_UNE, Umm_UNW,
+//};
+//enum ExEdgeBitIdxRev//54edges
+//{
+//	//main (new) edge indices
+//	DSE_DSW, DNW_DSW, USW_DSW,
+//
+//	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
+//	mSm_DSW, mSm_USW, mSm_USE, mSm_DSE,
+//	Dmm_DSW, Dmm_DSE, Dmm_DNE, Dmm_DNW,
+//
+//	Dmm_mmW, mSm_mmW, Umm_mmW, mNm_mmW,
+//	mNm_Umm, Dmm_mNm, mSm_Dmm, Umm_mSm,
+//	Dmm_mmE, mSm_mmE, Umm_mmE, mNm_mmE,
+//
+//	Dmm_mmm, mSm_mmm, mmW_mmm, Umm_mmm, mNm_mmm, mmE_mmm,
+//
+//	//extended (redundant) edge indices
+//	DNE_DSE, DNW_DNE, USE_DSE, UNE_DNE, UNW_DNW, USE_USW, UNE_USE, UNW_UNE, USW_UNW,
+//	DSE_mmE, USE_mmE, UNE_mmE, DNE_mmE,
+//	DNW_mNm, UNW_mNm, UNE_mNm, DNE_mNm,
+//	USW_Umm, USE_Umm, UNE_Umm, UNW_Umm,
+//};
+//const ulong		obsmask[8]=//original bit selection mask
+//{
+//	0x00000001FFFFFFFF,//all coords inside
+//	(1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE)|0x00000001FFFFFFFF,//x at end: DSE's originals
+//	(1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//y at end: DNW's originals
+//	(1ULL<<DNE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//x&y at end: (DSE, DNW & DNE)'s originals
+//
+//	(1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//z at end: USW's originals
+//	(1ULL<<USE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//x&z at end: (DSE, USW & USE)'s originals
+//	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
+//	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
+//};
 struct WE_Offset//work-edge offset, used by CPU-side part 2
 {
 	short dx, dy, dz;
-	char ke2[8];//{normal jump, (x, y, xy, z, xz, yz, xyz)@end}
+	char ke2[8];//{normal jump, (xyz, yz, xz, z, xy, y, x)@end}
 //	char ke2[2];//{normal jump, @end (use original)}
 };
 static const WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant bits, access: [ke-33]={Xoffset, Yomask, Zomask, ke2[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)]}
@@ -6079,6 +6259,72 @@ float3			mix(float3 const &a, float3 const &b, float alpha)
 }
 void			vstore3(float3 const &result, int idx, float *a){a[idx]=result.x, a[idx+1]=result.y, a[idx+2]=result.z;}
 #endif
+typedef unsigned long long ulong;
+union			WorkIdx
+{
+	struct{unsigned short ke, kx, ky, kz;};
+	struct{unsigned kw, kt;};
+	unsigned long long idx;
+	WorkIdx():idx(0){}
+	WorkIdx(short kx, short ky, short kz, short ke):kx(kx), ky(ky), kz(kz), ke(ke){}
+	WorkIdx(unsigned kw, unsigned kt):kw(kw), kt(kt){}
+	void set(short kx, short ky, short kz, short ke){this->kx=kx, this->ky=ky, this->kz=kz, this->ke=ke;}
+	void set(unsigned kw, unsigned kt){this->kw=kw, this->kt=kt;}
+};
+enum			ExEdgeBitIdx//54edges
+{
+	//main (new) edge indices
+	DSW_DSE, DSW_DNW, DSW_USW,
+
+	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
+	DSW_mSm, USW_mSm, USE_mSm, DSE_mSm,
+	DSW_Dmm, DSE_Dmm, DNE_Dmm, DNW_Dmm,
+
+	mmW_Dmm, mmW_mSm, mmW_Umm, mmW_mNm,
+	Umm_mNm, mNm_Dmm, Dmm_mSm, mSm_Umm,
+	mmE_Dmm, mmE_mSm, mmE_Umm, mmE_mNm,
+
+	mmm_Dmm, mmm_mSm, mmm_mmW, mmm_Umm, mmm_mNm, mmm_mmE,
+
+	//extended (redundant) edge indices
+	DSE_DNE, DNE_DNW, DSE_USE, DNE_UNE, DNW_UNW, USW_USE, USE_UNE, UNE_UNW, UNW_USW,
+	mmE_DSE, mmE_USE, mmE_UNE, mmE_DNE,
+	mNm_DNW, mNm_UNW, mNm_UNE, mNm_DNE,
+	Umm_USW, Umm_USE, Umm_UNE, Umm_UNW,
+};
+enum			ExEdgeBitIdxRev//54edges
+{
+	//main (new) edge indices
+	DSE_DSW, DNW_DSW, USW_DSW,
+
+	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
+	mSm_DSW, mSm_USW, mSm_USE, mSm_DSE,
+	Dmm_DSW, Dmm_DSE, Dmm_DNE, Dmm_DNW,
+
+	Dmm_mmW, mSm_mmW, Umm_mmW, mNm_mmW,
+	mNm_Umm, Dmm_mNm, mSm_Dmm, Umm_mSm,
+	Dmm_mmE, mSm_mmE, Umm_mmE, mNm_mmE,
+
+	Dmm_mmm, mSm_mmm, mmW_mmm, Umm_mmm, mNm_mmm, mmE_mmm,
+
+	//extended (redundant) edge indices
+	DNE_DSE, DNW_DNE, USE_DSE, UNE_DNE, UNW_DNW, USE_USW, UNE_USE, UNW_UNE, USW_UNW,
+	DSE_mmE, USE_mmE, UNE_mmE, DNE_mmE,
+	DNW_mNm, UNW_mNm, UNE_mNm, DNE_mNm,
+	USW_Umm, USE_Umm, UNE_Umm, UNW_Umm,
+};
+const ulong		obsmask[8]=//original bit selection mask
+{
+	0x00000001FFFFFFFF,//all coords inside
+	(1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE)|0x00000001FFFFFFFF,//x at end: DSE's originals
+	(1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//y at end: DNW's originals
+	(1ULL<<DNE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//x&y at end: (DSE, DNW & DNE)'s originals
+
+	(1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//z at end: USW's originals
+	(1ULL<<USE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//x&z at end: (DSE, USW & USE)'s originals
+	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
+	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
+};
 void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ...)
 {//expression -> OpenGL texture
 	if(OCL_state<CL_READY_UNTESTED)
@@ -6798,11 +7044,84 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 			break;
 		case MODE_C3D:
 			{
+				float th=1;//isovalue
 #ifdef V6_GPU
-				//CPU side code 1: determine work size and space indices for kernel 3 & reverse workidx 'bitindices' for CPU part 2
+				int Xplaces=mp.Xplaces, Yplaces=mp.Yplaces, Zplaces=mp.Zplaces;
+				int XYplaces=Xplaces*Yplaces;
+				int sizes_host[7]=
+				{
+					Xplaces, Yplaces, Zplaces, ndrSize
+				};
+				cl_free_buffer(size_buf);
+				size_buf=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, 7*sizeof(int), nullptr, &error);	CL_CHECK(error);
+				error=p_clEnqueueWriteBuffer(commandqueue, size_buf, CL_FALSE, 0, 7*sizeof(int), sizes_host, 0, nullptr, nullptr);	CL_CHECK(error);
+				cl_mem ndr_buf=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*5*sizeof(float), nullptr, &error);	CL_CHECK(error);
+				auto kernel=kernels[V_TI3D_AV];
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &result.r);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);	CL_CHECK(error);
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+				prof_add("K1.1 av");
+
+				kernel=kernels[V_TI3D_AV_EAST];
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &result.r);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);	CL_CHECK(error);
+				size_t temp_g=host_sizes[0], temp_l=host_sizes_local[0];
+				host_sizes[0]=1, host_sizes_local[0]=1;
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+				host_sizes[0]=temp_g, host_sizes_local[0]=temp_l;
+				prof_add("K1.2 av yz");
+				
+				kernel=kernels[V_TI3D_AV_NORTH];
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &result.r);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);	CL_CHECK(error);
+				temp_g=host_sizes[1], temp_l=host_sizes_local[1];
+				host_sizes[1]=1, host_sizes_local[1]=1;
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+				host_sizes[1]=temp_g, host_sizes_local[1]=temp_l;
+				prof_add("K1.3 av xz");
+				
+				kernel=kernels[V_TI3D_AV_UP];
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &result.r);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);	CL_CHECK(error);
+				temp_g=host_sizes[2], temp_l=host_sizes_local[2];
+				host_sizes[2]=1, host_sizes_local[2]=1;
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+				host_sizes[2]=temp_g, host_sizes_local[2]=temp_l;
+				prof_add("K1.3 av xy");
+				error=p_clFinish(commandqueue);	CL_CHECK(error);
+				prof_add("clFinish");
+
+				cl_mem edgeinfo_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(ulong), nullptr, &error);	CL_CHECK(error);
+				cl_mem nvert_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(char), nullptr, &error);	CL_CHECK(error);
+				cl_mem ntrgl_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(char), nullptr, &error);	CL_CHECK(error);
+				prof_add("alloc info");
+
+				kernel=kernels[TI3D_CLASSIFYEDGES];
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &nvert_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &ntrgl_buf);		CL_CHECK(error);
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+				prof_add("K2 classify edges");
+				error=p_clFinish(commandqueue);	CL_CHECK(error);//just a debug check
+				prof_add("clFinish");//
+
+				std::vector<ulong> edgeinfo(ndrSize);
+				std::vector<char> nvert(ndrSize), ntrgl(ndrSize);
+				error=p_clEnqueueReadBuffer(commandqueue, edgeinfo_buf, CL_TRUE, 0, ndrSize*sizeof(float), edgeinfo.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+				error=p_clEnqueueReadBuffer(commandqueue, nvert_buf,	CL_TRUE, 0, ndrSize*sizeof(float), nvert.data(),	0, nullptr, nullptr);	CL_CHECK(error);
+				error=p_clEnqueueReadBuffer(commandqueue, ntrgl_buf,	CL_TRUE, 0, ndrSize*sizeof(float), ntrgl.data(),	0, nullptr, nullptr);	CL_CHECK(error);
+				prof_add("read");
+
+				//CPU side code: determine work size and space indices for kernel 3 & reverse workidx 'bitindices' for CPU part 2
 				int nvert_total=0, ntrgl_total=0;
 				std::vector<WorkIdx> workidx, tworkidx;
-				std::vector<int> bitindices;
+			//	std::vector<ulong> bitindices;
 			//	std::map<WorkIdx, int> bitindices;
 				for(unsigned kw=0;kw<ndrSize;++kw)
 				{
@@ -6813,27 +7132,59 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];//boundary mask: selects original bits at boundary
 						auto uwork=edgeinfo[kw]&mask;//unique work
 						for(unsigned short ke=0;ke<54;++ke)//for each original bit
-						{
 							if(uwork>>ke&1)
-							{
-								WorkIdx idx(kx, ky, kz, ke);
-								bitindices[idx]=workidx.size();
-								workidx.push_back(idx);
-							}
-						}
+								workidx.push_back(WorkIdx(kx, ky, kz, ke));
 					}
 					if(ntrgl[kw])
 						tworkidx.push_back(WorkIdx(kw, ntrgl_total));
 					nvert_total+=nvert[kw], ntrgl_total+=ntrgl[kw];
 				}
-				prof_add("CPU1 workidx");
+				int active_ndrSize=tworkidx.size();
+				prof_add("CPU workidx");
+
+				gl_buf->create_VN_CL(nvert_total*6, ntrgl_total*3);
+				prof_add("GL resize");
+				
+				cl_mem coeffs_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, 7*sizeof(float), nullptr, &error);				CL_CHECK(error);
+				cl_mem workidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, nvert_total*sizeof(ulong), nullptr, &error);		CL_CHECK(error);
+				cl_mem tworkidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, active_ndrSize*sizeof(ulong), nullptr, &error);	CL_CHECK(error);
+				cl_mem vertices_buf	=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->VBO, &error);						CL_CHECK(error);
+				cl_mem indices_buf	=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->EBO, &error);						CL_CHECK(error);
+				prof_add("alloc VN");
+				float coeffs_host[7]=
+				{
+					(float)mp.cx, (float)mp.mx,
+					(float)mp.cy, (float)mp.my,
+					(float)mp.cz, (float)mp.mz, th//threshold (isovalue)
+				};
+				error=p_clEnqueueWriteBuffer(commandqueue, coeffs_buf,		CL_FALSE, 0, 7*sizeof(float), coeffs_host, 0, nullptr, nullptr);	CL_CHECK(error);
+				error=p_clEnqueueWriteBuffer(commandqueue, workidx_buf,		CL_FALSE, 0, nvert_total*sizeof(ulong), workidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+				error=p_clEnqueueWriteBuffer(commandqueue, tworkidx_buf,	CL_FALSE, 0, active_ndrSize*sizeof(ulong), tworkidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+				prof_add("send workidx");
+
+				kernel=kernels[TI3D_ZEROCROSS];
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &coeffs_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &vertices_buf);	CL_CHECK(error);
+				size_t l_worksize=g_maxlocalsize, g_worksize=nvert_total-nvert_total%g_maxlocalsize+g_maxlocalsize;
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
+				prof_add("K3 zerocross");
+
+				kernel=kernels[TI3D_TRGL_INDICES];
+				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &tworkidx_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &indices_buf);	CL_CHECK(error);
+				g_worksize=active_ndrSize-active_ndrSize%g_maxlocalsize+g_maxlocalsize;
+				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
+				prof_add("K4 indices");
+				error=p_clFinish(commandqueue);	CL_CHECK(error);
+				prof_add("clFinish");
 #endif
 #if defined V5_CPU||defined V6_CPU
-				float th=1;//isovalue
-				//auto Xplaces=mp.Xplaces, Yplaces=mp.Yplaces, Zplaces=mp.Zplaces;
-				//auto Xplaces1=Xplaces+1, Yplaces1=Yplaces+1, Zplaces1=Zplaces+1;
-				//auto XYplaces1=Xplaces1*Yplaces1, ndrSize1=Xplaces1*Yplaces1*Zplaces1;
-
 				int Xplaces=mp.Xplaces, Yplaces=mp.Yplaces, Zplaces=mp.Zplaces;
 				int XYplaces=Xplaces*Yplaces;
 				auto ndr=(float*)malloc(ndrSize*5*sizeof(float));
@@ -7061,7 +7412,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				int nvert_total=0, ntrgl_total=0;
 				std::vector<WorkIdx> workidx, tworkidx;
 #ifdef V6_CPU
-				std::vector<ulong> bitindices;
+				std::vector<ulong> bitindices;//same as workidx
 #else
 				std::map<WorkIdx, int> bitindices;
 #endif
@@ -7081,7 +7432,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 							{
 								WorkIdx idx(kx, ky, kz, ke);
 #ifdef V6_CPU
-								bitindices.push_back((ulong&)idx);
+								bitindices.push_back((ulong&)idx);//same as workidx
 #else
 								bitindices[idx]=workidx.size();
 #endif
@@ -7448,7 +7799,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				free(edgeinfo), free(nvert), free(ntrgl), free(vertices);
 				free(ndr);
 				prof_add("free");
-				prof_sum("CPU V5", 11);
+				prof_sum("CPU V6", 11);
 #endif
 			}
 			break;
@@ -7470,6 +7821,8 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 			cl_free_buffer(term.j);
 			cl_free_buffer(term.k);
 		}
+		cl_free_buffer(size_buf);
+		cl_free_buffer(args_buf);
 		prof_add("free");
 #if 0//DEBUG
 		error=p_clFinish(commandqueue);	CL_CHECK(error);//DEBUG

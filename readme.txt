@@ -19,6 +19,14 @@ How to compile:
 	4) Comment out '#include"avx.h"' in g2.cpp.
 	5) Compile everything excluding avx.cpp & avx.h
 
+MSVC2013 project structure:
+project: AVX
+	Header Files:	g2_avx.h, g2_common.h
+	Source Files:	g2_avx.cpp, g2_common.cpp
+project: Grapher 2
+	Header files:	g2_avx.h, g2_cl.h, g2_common.h, g2_error.h, g2_expr.h, g2_file.h, g2_graphics.h, g2_mp.h, g2_sse2.h
+	Source Files:	g2.cpp, g2_cl.cpp, g2_common.cpp, g2_error.cpp, g2_expr.cpp, g2_file.cpp, g2_graphics.cpp, g2_mp.cpp, g2_sse2.cpp
+
 
 How to install:
 	1) Install Microsoft Visual C++ 2013 Redistributable (x86) if not installed:

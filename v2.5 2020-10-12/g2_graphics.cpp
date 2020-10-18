@@ -3622,7 +3622,7 @@ void			resize_2D()
 }
 
 //CL-GL interop.
-void			GPUBuffer::create_VN_I(float *VVVNNN, int n_floats, int *indices, int n_ints)
+void			GPUBuffer::create_VN_I(float *VVVNNN, int n_floats, int *indices, int n_ints)//vertices & normals: immediate
 {
 	n_vertices=n_ints;
 	vertices_stride=6<<2, vertices_start=0;
@@ -3635,4 +3635,18 @@ void			GPUBuffer::create_VN_I(float *VVVNNN, int n_floats, int *indices, int n_i
 	glBufferData(GL_ARRAY_BUFFER, n_floats<<2, VVVNNN, GL_STATIC_DRAW);			GL_CHECK();
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);									GL_CHECK();
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_ints<<2, indices, GL_STATIC_DRAW);	GL_CHECK();
+}
+void			GPUBuffer::create_VN_CL(int n_floats, int n_ints)//vertices & normals for OpenCL
+{
+	n_vertices=n_ints;
+	vertices_stride=6<<2, vertices_start=0;
+	normals_stride=6<<2, normals_start=3<<2;
+	if(!VBO)
+		glGenBuffers(1, &VBO);
+	if(!EBO)
+		glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);											GL_CHECK();
+	glBufferData(GL_ARRAY_BUFFER, n_floats<<2, nullptr, GL_STATIC_DRAW);		GL_CHECK();
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);									GL_CHECK();
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, n_ints<<2, nullptr, GL_STATIC_DRAW);	GL_CHECK();
 }
