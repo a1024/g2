@@ -17,9 +17,10 @@
 
 //dependencies:
 //AVX.lib								g2_common.h/cpp, g2_avx.h/cpp					D:\C\Grapher 2 2013\Grapher 2 2013;
-//boost									https://www.boost.org/							D:\C\boost_1_70_0;												
-//Agner Fog's Vectorclass version1		https://github.com/vectorclass/version1			D:\C\Grapher 2 2010\Grapher 2\vectorclass version1-master;		
-//MPFR & MPFR C++						http://www.holoborodko.com/pavel/mpfr/			D:\C\! Multiprecision\Library;									
+//boost									https://www.boost.org/							D:\C\boost_1_70_0;
+//Agner Fog's Vectorclass version1		https://github.com/vectorclass/version1			D:\C\Grapher 2 2010\Grapher 2\vectorclass version1-master;
+//MPFR & MPFR C++						http://www.holoborodko.com/pavel/mpfr/			D:\C\! Multiprecision\Library;
+//FFTW									http://www.fftw.org/
 //OpenCL								https://github.com/KhronosGroup/OpenCL-Headers	D:\Android\!-Lib\OpenCL-Headers-master;
 
 #ifdef _DEBUG
@@ -31480,8 +31481,8 @@ namespace	modes
 						if(!paused)
 							solver.synchronize();
 
-						generate_glcl_buffer(gl_buf.VBO);
-						generate_glcl_buffer(gl_buf.EBO);
+						//generate_glcl_buffer(gl_buf.VBO);
+						//generate_glcl_buffer(gl_buf.EBO);
 
 						cl_setsizes(MODE_C3D, &Xplaces, &Yplaces, &Zplaces);
 						xs.set_Xplaces(Xplaces), ys.set_Xplaces(Yplaces), zs.set_Xplaces(Zplaces);

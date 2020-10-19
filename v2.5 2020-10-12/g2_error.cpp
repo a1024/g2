@@ -34,6 +34,13 @@ void				copy_to_clipboard(const char *a, int size)
 	clipboard[size]='\0';
 	OpenClipboard(ghWnd), EmptyClipboard(), SetClipboardData(CF_OEMTEXT, (void*)clipboard), CloseClipboard();
 }
+void				set_window_title(const char *format, ...)
+{
+	vsprintf_s(g_buf, g_buf_size, format, (char*)(&format+1));
+	int success=SetWindowTextA(ghWnd, g_buf);
+	if(!success)
+		SYS_CHECK();
+}
 
 char				first_error_msg[e_msg_size]={}, latest_error_msg[e_msg_size]={};
 void				messageboxa(HWND hWnd, const char *title, const char *format, ...)

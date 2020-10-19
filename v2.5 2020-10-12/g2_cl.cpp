@@ -21,7 +21,7 @@
 #include		"g2_graphics.h"
 #define			CL_TARGET_OPENCL_VERSION 120
 #include		<CL/opencl.h>
-int				OCL_state=CL_NOTHING;
+int				OCL_state=CL_NOTHING, OCL_version=0;
 bool			cl_gl_interop=false;
 
 //	#define		COPY_INITIALIZATION
@@ -33,7 +33,7 @@ bool			cl_gl_interop=false;
 //	#define		DEBUG2//performance impact
 
 	const bool	loadbinary=true;
-//	const bool	loadbinary=false;//
+//	const bool	loadbinary=false;//DEBUG
 
 int				*rgb=nullptr;
 std::vector<DebugInfo> debug_info;
@@ -96,7 +96,6 @@ const char		debug_edges[54*7]=//x1, y1, z1, x2, y2, z2, color_idx		0: no additio
 
 //OpenCL API
 #define 		DECL_CL_FUNC(clFunc)	decltype(clFunc) *p_##clFunc=nullptr
-//#define			CL_API_DECL_START	__LINE__
 const int 		cl_api_decl_start=__LINE__;
 DECL_CL_FUNC(clGetPlatformIDs);
 DECL_CL_FUNC(clGetPlatformInfo);
@@ -125,7 +124,6 @@ DECL_CL_FUNC(clCreateFromGLBuffer);
 DECL_CL_FUNC(clCreateFromGLTexture);//OpenCL 1.2+?
 DECL_CL_FUNC(clReleaseMemObject);
 const int 		cl_api_decl_end=__LINE__;
-//#define			CL_API_DECL_END		__LINE__
 #undef			DECL_CL_FUNC
 HMODULE			hOpenCL=nullptr;
 void 			load_OpenCL_API()
@@ -163,7 +161,6 @@ void 			load_OpenCL_API()
 			OCL_state=CL_LOADING_API;
 #define		GET_CL_FUNC(handle, clFunc)				p_##clFunc=(decltype(p_##clFunc))GetProcAddress(handle, #clFunc), p_check(p_##clFunc, __FILE__, __LINE__, #clFunc)
 #define		GET_CL_FUNC_UNCHECKED(handle, clFunc)	p_##clFunc=(decltype(p_##clFunc))GetProcAddress(handle, #clFunc)
-//#define		CL_API_INIT_START	__LINE__
 			const int cl_api_init_start=__LINE__;
 			GET_CL_FUNC(hOpenCL, clGetPlatformIDs);
 			GET_CL_FUNC(hOpenCL, clGetPlatformInfo);
@@ -192,7 +189,6 @@ void 			load_OpenCL_API()
 			GET_CL_FUNC_UNCHECKED(hOpenCL, clCreateFromGLTexture);
 			GET_CL_FUNC(hOpenCL, clReleaseMemObject);
 			const int cl_api_init_end=__LINE__;
-//#define		CL_API_INIT_END		__LINE__
 #undef		GET_CL_FUNC
 #undef		GET_CL_FUNC_UNCHECKED
 #if CL_API_DECL_END-(CL_API_DECL_START+1)!=CL_API_INIT_END-(CL_API_INIT_START+1)
@@ -253,7 +249,8 @@ namespace		CLSource
 #define		ARG_CI(arg)		__global const int *arg
 #define		ARG_F(arg)		__global float *arg
 #define		ARG_CF(arg)		__global const float *arg
-#define		ARG_C(arg)		__global char *arg
+#define		ARG_I(arg)		__global int *arg
+//#define	ARG_C(arg)		__global char *arg//needs cl_khr_byte_addressable_store
 #define		G2_R_R(func)	__kernel void  r_r_##func(ARG_CI(size), ARG_F(rr), ARG_CF(xr))
 #define		G2_C_C(func)	__kernel void  c_c_##func(ARG_CI(size), ARG_F(rr), ARG_F(ri), ARG_CF(xr), ARG_CF(xi))
 #define		G2_Q_Q(func)	__kernel void  q_q_##func(ARG_CI(size), ARG_F(rr), ARG_F(ri), ARG_F(rj), ARG_F(rk), ARG_CF(xr), ARG_CF(xi), ARG_CF(xj), ARG_CF(xk))
@@ -281,21 +278,21 @@ namespace		CLSource
 #define		G2_R_QQ(func)	__kernel void r_qq_##func(ARG_CI(size), ARG_F(rr), ARG_CF(xr), ARG_CF(xi), ARG_CF(xj), ARG_CF(xk), ARG_CF(yr), ARG_CF(yi), ARG_CF(yj), ARG_CF(yk))
 #define		G2_C_QC(func)	__kernel void c_qc_##func(ARG_CI(size), ARG_F(rr), ARG_F(ri), ARG_CF(xr), ARG_CF(xi), ARG_CF(xj), ARG_CF(xk), ARG_CF(yr), ARG_CF(yi))
 
-#define		DISC_R_O(func)	__kernel void disc_r_##func##_o(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr))
-#define		DISC_C_O(func)	__kernel void disc_c_##func##_o(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi))
-#define		DISC_Q_O(func)	__kernel void disc_q_##func##_o(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk))
-#define		DISC_R_I(func)	__kernel void disc_r_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr))
-#define		DISC_C_I(func)	__kernel void disc_c_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi))
-#define		DISC_Q_I(func)	__kernel void disc_q_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk))
-#define		DISC_RR_I(func)	__kernel void disc_rr_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(yr))
-#define		DISC_RC_I(func)	__kernel void disc_rc_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(yr), ARG_F(yi))
-#define		DISC_RQ_I(func)	__kernel void disc_rq_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(yr), ARG_F(yi), ARG_F(yj), ARG_F(yk))
-#define		DISC_CR_I(func)	__kernel void disc_cr_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(yr))
-#define		DISC_CC_I(func)	__kernel void disc_cc_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(yr), ARG_F(yi))
-#define		DISC_CQ_I(func)	__kernel void disc_cq_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(yr), ARG_F(yi), ARG_F(yj), ARG_F(yk))
-#define		DISC_QR_I(func)	__kernel void disc_qr_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk), ARG_F(yr))
-#define		DISC_QC_I(func)	__kernel void disc_qc_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk), ARG_F(yr), ARG_F(yi))
-#define		DISC_QQ_I(func)	__kernel void disc_qq_##func##_i(ARG_CI(size), const int offset, ARG_C(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk), ARG_F(yr), ARG_F(yi), ARG_F(yj), ARG_F(yk))
+#define		DISC_R_O(func)	__kernel void disc_r_##func##_o(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr))
+#define		DISC_C_O(func)	__kernel void disc_c_##func##_o(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi))
+#define		DISC_Q_O(func)	__kernel void disc_q_##func##_o(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk))
+#define		DISC_R_I(func)	__kernel void disc_r_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr))
+#define		DISC_C_I(func)	__kernel void disc_c_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi))
+#define		DISC_Q_I(func)	__kernel void disc_q_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk))
+#define		DISC_RR_I(func)	__kernel void disc_rr_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(yr))
+#define		DISC_RC_I(func)	__kernel void disc_rc_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(yr), ARG_F(yi))
+#define		DISC_RQ_I(func)	__kernel void disc_rq_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(yr), ARG_F(yi), ARG_F(yj), ARG_F(yk))
+#define		DISC_CR_I(func)	__kernel void disc_cr_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(yr))
+#define		DISC_CC_I(func)	__kernel void disc_cc_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(yr), ARG_F(yi))
+#define		DISC_CQ_I(func)	__kernel void disc_cq_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(yr), ARG_F(yi), ARG_F(yj), ARG_F(yk))
+#define		DISC_QR_I(func)	__kernel void disc_qr_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk), ARG_F(yr))
+#define		DISC_QC_I(func)	__kernel void disc_qc_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk), ARG_F(yr), ARG_F(yi))
+#define		DISC_QQ_I(func)	__kernel void disc_qq_##func##_i(ARG_CI(size), const int offset, ARG_I(disc), ARG_F(xr), ARG_F(xi), ARG_F(xj), ARG_F(xk), ARG_F(yr), ARG_F(yi), ARG_F(yj), ARG_F(yk))
 
 #define		IDX						const unsigned idx=get_idx(size)
 #define		ASSIGN_R(r)				rr[idx]=r
@@ -1660,7 +1657,7 @@ DISC_QR_I(condition_zero){IDX; disc[idx]=_1d_zero_in_range(xr[idx], xr[idx+offse
 DISC_QC_I(condition_zero){IDX; disc[idx]=_1d_zero_in_range(xr[idx], xr[idx+offset])||_1d_zero_in_range(xi[idx], xi[idx+offset])||_1d_zero_in_range(xj[idx], xj[idx+offset])||_1d_zero_in_range(xk[idx], xk[idx+offset]);}
 DISC_QQ_I(condition_zero){IDX; disc[idx]=_1d_zero_in_range(xr[idx], xr[idx+offset])||_1d_zero_in_range(xi[idx], xi[idx+offset])||_1d_zero_in_range(xj[idx], xj[idx+offset])||_1d_zero_in_range(xk[idx], xk[idx+offset]);}
 
-G2_R_R(percent){IDX; ASSIGN_R(xr[idx]*0.01);}
+G2_R_R(percent){IDX; ASSIGN_R(xr[idx]*0.01f);}
 G2_C_C(percent)
 {
 	IDX;
@@ -2133,7 +2130,7 @@ DISC_R_I(sec)
 {
 	IDX;
 	float x0=xr[idx], x1=xr[idx+offset];
-	disc[idx]=fabs(x1-x0)>3.2||_1d_int_in_range(x0/_pi-0.5f, x1/_pi-0.5f);
+	disc[idx]=fabs(x1-x0)>3.2f||_1d_int_in_range(x0/_pi-0.5f, x1/_pi-0.5f);
 }
 DISC_C_I(sec)
 {
@@ -2183,7 +2180,7 @@ DISC_C_I(sech)
 		}
 	}
 	else if(x0.x==x1.x)
-		disc[idx]=x0.x==0&&_1d_int_in_range(x0.y/_pi-.5, x1.y/_pi-.5);
+		disc[idx]=x0.x==0&&_1d_int_in_range(x0.y/_pi-0.5f, x1.y/_pi-0.5f);
 	else
 		disc[idx]=false;
 }
@@ -2275,7 +2272,7 @@ DISC_R_I(csc)
 {
 	IDX;
 	float x0=xr[idx], x1=xr[idx+offset];
-	if(fabs(x1-x0)>3.2)
+	if(fabs(x1-x0)>3.2f)
 		disc[idx]=true;
 	else
 		disc[idx]=_1d_int_in_range(x0/_pi, x1/_pi);
@@ -2343,7 +2340,7 @@ DISC_R_I(tan)
 {
 	IDX;
 	float x0=xr[idx], x1=xr[idx+offset];
-	disc[idx]=fabs(x1-x0)>3.2||_1d_int_in_range(x0/_pi-0.5f, x1/_pi-0.5f);
+	disc[idx]=fabs(x1-x0)>3.2f||_1d_int_in_range(x0/_pi-0.5f, x1/_pi-0.5f);
 }
 DISC_C_I(tan)
 {
@@ -2559,7 +2556,7 @@ DISC_R_I(tanc)
 {
 	IDX;
 	float x0=xr[idx], x1=xr[idx+offset];
-	disc[idx]=fabs(x1-x0)>3.2||_1d_int_in_range(x0/_pi-0.5f, x1/_pi-0.5f);
+	disc[idx]=fabs(x1-x0)>3.2f||_1d_int_in_range(x0/_pi-0.5f, x1/_pi-0.5f);
 }
 DISC_C_I(tanc)
 {
@@ -2593,7 +2590,7 @@ DISC_R_I(cot)
 {
 	IDX;
 	float x0=xr[idx], x1=xr[idx+offset];
-	if(fabs(x1-x0)>3.2)
+	if(fabs(x1-x0)>3.2f)
 		disc[idx]=true;
 	else
 		disc[idx]=_1d_int_in_range(x0/_pi, x1/_pi);
@@ -2793,7 +2790,7 @@ DISC_R_O(sqwv)//for all sqwv functions
 float clamp01(float x)
 {
 	float temp=x+fabs(x);//max(0, x)
-	return (temp+2-fabs(temp-2))*0.25;//min(x, 1)
+	return (temp+2-fabs(temp-2))*0.25f;//min(x, 1)
 }
 float trwv_dc(float x, float y)
 {
@@ -2836,14 +2833,14 @@ G2_R_QQ(trwv){IDX; ASSIGN_R(trwv_dc(xr[idx], yr[idx]));}
 float sawtooth(float x)
 {
 	float t=x-floor(x), t2=floor(1-t);//dc=1
-	return (t2+1)*(t2*0.5+t);
+	return (t2+1)*(t2*0.5f+t);
 }
 float sawtooth_dc(float x, float y)
 {
 	if(!y)
 		return 0;
 	float t=x-floor(x), t2=floor(y-t);
-	return (t2+1)*(t2*0.5+t)/y;
+	return (t2+1)*(t2*0.5f+t)/y;
 }
 bool sawtooth_dc_disc(float t0, float t1){return floor(t0)!=floor(t1);}
 G2_R_R(saw){IDX; ASSIGN_R(sawtooth(xr[idx]));}
@@ -3161,7 +3158,13 @@ float do_quadrant(float m, float R, float U, float UR)
 		return alpha_from_line(xU, 1, 1, yR);
 	return 0;//case 1
 }
-__kernel void ti2d_rgb(__global const int *size, __global const float *xr, __global const float *curvecolor, __write_only image2d_t rgb)
+__kernel void ti2d_rgb(__global const int *size, __global const float *xr, __global const float *curvecolor,
+#ifdef G2_OCL_IMAGES
+	__write_only image2d_t rgb
+#else
+	__global int *rgb
+#endif
+	)
 {//size{Xplaces, Yplaces}
 	const uint kx=get_global_id(0), ky=get_global_id(1);
 	const int w=size[0], h=size[1], idx=size[0]*ky+kx;
@@ -3180,15 +3183,25 @@ __kernel void ti2d_rgb(__global const int *size, __global const float *xr, __glo
 		alpha=max(alpha, do_quadrant(Vmm, Vmw, Vsm, Vsw));
 		alpha=max(alpha, do_quadrant(Vmm, Vsm, Vme, Vse));
 	}
+#ifdef G2_OCL_IMAGES
 	write_imagef(rgb, (int2)(kx, ky), (float4)(curvecolor[0], curvecolor[1], curvecolor[2], alpha));
 //	write_imagef(rgb, (int2)(kx, ky), (float4)((1-alpha)*curvecolor[0], (1-alpha)*curvecolor[1], (1-alpha)*curvecolor[2], 1));
+#else
+	rgb[w*ky+kx]=(uchar)(255*alpha)<<24|(uchar)(255*curvecolor[2])<<16|(uchar)(255*curvecolor[1])<<8|(uchar)(255*curvecolor[0]);
+#endif
 }
 #define		COS_PI_6		0.866025403784439f
 #define		SIN_PI_6		0.5f
 #define		THRESHOLD		10
 #define		INV_THRESHOLD	0.1f
 #define		COMP_MUL		0.00392156862745098f
-__kernel void c2d_rgb(__global const int *size, __global const float *xr, __global const float *xi, __write_only image2d_t rgb)
+__kernel void c2d_rgb(__global const int *size, __global const float *xr, __global const float *xi,
+#ifdef G2_OCL_IMAGES
+	__write_only image2d_t rgb
+#else
+	__global int *rgb
+#endif
+	)
 {//size{Xplaces, Yplaces}
 	const int2 coords=(int2)(get_global_id(0), get_global_id(1));
 	const uint idx=size[0]*coords.y+coords.x;
@@ -3213,7 +3226,11 @@ __kernel void c2d_rgb(__global const int *size, __global const float *xr, __glob
 	//	rgb[idx]=0xFF<<24|(uchar)blue<<16|(uchar)green<<8|(uchar)red;
 	}
 //	color=(float4)(1, 1, coords.x/size[0], coords.y/size[1]);//
+#ifdef G2_OCL_IMAGES
 	write_imagef(rgb, coords, color);
+#else
+	rgb[idx]=0xFF000000|(uchar)(255*color.z)<<16|(uchar)(255*color.y)<<8|(uchar)(255*color.x);
+#endif
 }
 
 __kernel void c2d_rgb2(__global const int *size, __global const float *xr, __global const float *xi, __global int *rgb)
@@ -3327,11 +3344,24 @@ __constant unsigned char nt[16]=//number of triangles produced from tetrahedron 
 	1,	2,	2,	1,//10
 	2,	1,	1,	0,//11
 };
-char hammingweight(ulong x)//https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+int hammingweight(ulong x)//https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
 {
 	x-=x>>1&0x5555555555555555;
 	x=(x&0x3333333333333333)+(x>>2&0x3333333333333333);
-	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;
+	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;//0xc1200000, 0xc0f00000
+
+//	x=(x&0x5555555555555555ULL)+(x>> 1&0x5555555555555555ULL);
+//	x=(x&0x3333333333333333ULL)+(x>> 2&0x3333333333333333ULL);
+//	x=(x&0x0F0F0F0F0F0F0F0FULL)+(x>> 4&0x0F0F0F0F0F0F0F0FULL);
+//	x=(x&0x00FF00FF00FF00FFULL)+(x>> 8&0x00FF00FF00FF00FFULL);
+//	x=(x&0x0000FFFF0000FFFFULL)+(x>>16&0x0000FFFF0000FFFFULL);//0xc1200000, 0xc0f00000
+//	x=(uint)x+(uint)(x>>32);
+//	return (int)x;
+
+//	int sum=0;
+//	for(int k=0;k<64;++k)
+//		sum+=x>>k&1;
+//	return sum;
 }
 enum ExEdgeBitIdx//54edges
 {
@@ -3387,7 +3417,7 @@ __constant ulong obsmask[8]=//original bit selection mask
 	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
 	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
 };
-__kernel void ti3d_classifyedges(__constant int *size, __constant float *coeffs, __constant float *ndr, __global ulong *edgeinfo, __global uchar *nvert, __global uchar *ntrgl)
+__kernel void ti3d_classifyedges(__constant int *size, __constant float *coeffs, __constant float *ndr, __global ulong *edgeinfo, __global int *nvert, __global int *ntrgl)
 {//size: {Xplaces, Yplaces, Zplaces, ndrSize}, coeffs: {Xstart, Xsample, Ystart, Ysample, Zstart, Zsample, isovalue} (just for isovalue)
 	int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2];
 	int kx=get_global_id(0), ky=get_global_id(1), kz=get_global_id(2);
@@ -3450,6 +3480,8 @@ __kernel void ti3d_classifyedges(__constant int *size, __constant float *coeffs,
 			EC(45)|EC(46)|EC(47)|EC(48)|EC(49)|EC(50)|EC(51)|EC(52)|EC(53);
 #undef		EC
 		ulong mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
+	//	nvert[idx]=idx;
+	//	nvert[idx]=hammingweight(0xc0f00000c0f00000&mask);//
 		nvert[idx]=hammingweight(edgeinfo[idx]&mask);
 #define		NT(V0, V1, V2, V3)		nt[V3<<3|V2<<2|V1<<1|V0]
 		ntrgl[idx]=
@@ -3649,7 +3681,16 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 	int id=get_global_id(0), nvert_total=size[4];
 	if(id<nvert_total)
 	{
-		int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], ndrSize=size[3], XYplaces=Xplaces*Yplaces;
+		int kv=id*6;//DEBUG
+		float4 coords=(float4)(1, 2, 3, 0), normal=(float4)(4, 5, 6, 0);
+		vertices[kv  ]=coords.x;
+		vertices[kv+1]=coords.y;
+		vertices[kv+2]=coords.z;
+		vertices[kv+3]=normal.x;
+		vertices[kv+4]=normal.y;
+		vertices[kv+5]=normal.z;
+
+/*		int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], ndrSize=size[3], XYplaces=Xplaces*Yplaces;
 		ulong wi=workidx[id];
 		int kx=(ushort)(wi>>16), ky=(ushort)(wi>>32), kz=(ushort)(wi>>48), ke=(ushort)wi;
 		int idx=Xplaces*(Yplaces*kz+ky)+kx;
@@ -3709,15 +3750,20 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 			ret=(float2)((th-A.w)/(B.w-A.w), 1);
 		else
 			ret=solvecubic(a, b, c, d);
-		float3 coords;
-		float3 pa={A.x, A.y, A.z}, pb={B.x, B.y, B.z};
+	//	float3 pa={A.x, A.y, A.z}, pb={B.x, B.y, B.z};
 		if(!ret.y)//solvecubic failed, use linear interpolation
 			ret=(float2)((th-A.w)/(B.w-A.w), 1);
-		coords=mix(pa, pb, ret.x);
-		vstore3(coords, id*6, vertices);
-		float3 normal;
+		float4 coords=mix(A, B, ret.x);
+	//	float4 coords=mix(pa, pb, ret.x);
+	//	vstore3(coords, id*6, vertices);
+		int kv=id*6;
+		vertices[kv  ]=coords.x;
+		vertices[kv+1]=coords.y;
+		vertices[kv+2]=coords.z;
+
+		float4 normal=(float4)(0, 0, 0, 0);//calculate normal
 		{
-			float3 a=(float3)((coords.x-X_W)/Xsample, (coords.y-Y_S)/Ysample, (coords.z-Z_D)/Zsample);
+			float4 a=(float4)((coords.x-X_W)/Xsample, (coords.y-Y_S)/Ysample, (coords.z-Z_D)/Zsample, 0);
 			float
 				V_DSW_DSE=V_DSE-V_DSW,
 				V_DNW_DNE=V_DNE-V_DNW,
@@ -3729,11 +3775,12 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 				V_UN=V_UNW+V_UNW_UNE*a.x,
 				TY=V_DSW_DSE+(V_DNW_DNE-V_DSW_DSE)*a.y,
 				V_D_SN=V_DN-V_DS, V_U_SN=V_UN-V_US;
-			normal=(float3)
+			normal=(float4)
 			(
 				TY+((V_USW_USE+(V_UNW_UNE-V_USW_USE)*a.y)-TY)*a.z,
 				V_D_SN+(V_U_SN-V_D_SN)*a.z,
-				(V_US+V_U_SN*a.y)-(V_DS+V_D_SN*a.y)
+				(V_US+V_U_SN*a.y)-(V_DS+V_D_SN*a.y),
+				0
 			);
 			float inv_abs=sqrt(normal.x*normal.x+normal.y*normal.y+normal.z*normal.z);
 			if(inv_abs)
@@ -3742,7 +3789,10 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 				normal.x*=inv_abs, normal.y*=inv_abs, normal.z*=inv_abs;
 			}
 		}
-		vstore3(normal, id*6+3, vertices);
+	//	vstore3(normal, id*6+3, vertices);
+		vertices[kv+3]=normal.x;
+		vertices[kv+4]=normal.y;
+		vertices[kv+5]=normal.z;	//*/
 	}
 }
 )CLSRC";
@@ -3872,16 +3922,19 @@ __constant struct WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant
 	{0, 0, 1,		{Umm_UNE,	Umm_UNE,	Umm_UNE,	Umm_UNE,	Dmm_DNE,	Dmm_DNE,	Dmm_DNE,	Dmm_DNE}},//Umm_UNE
 	{0, 0, 1,		{Umm_UNW,	Umm_UNW,	Umm_UNW,	Umm_UNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW}},//Umm_UNW
 };
-char getbit(long long x, char bit){return x>>bit&1;}
+char getbit(ulong x, char bit){return x>>bit&1;}
 __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant int *workidx, __global int *indices)
 {//size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total, active_ndrsize, ntrgl_total}, workidx: {short ke, kx, ky, kz; (kz<<48|ky<<32|kx<<16|ke)}
 	int id=get_global_id(0), active_ndrsize=size[5];
 	if(id<active_ndrsize)
 	{
 		const int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], nvert_total=size[4], nindices=size[6]*3, XYplaces=Xplaces*Yplaces;
-		ulong twi=ac_workidx[id];//active cube work index
+
+		indices[id]=id%nvert_total;//DEBUG
+
+/*		ulong twi=ac_workidx[id];//active cube work index
 		unsigned kw=(uint)(twi>>32), ki=(uint)twi*3;
-		ushort kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+		int kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
 		ulong work=edgeinfo[kw];
 		ulong mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
 		for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra in the data cube
@@ -3907,11 +3960,11 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_worki
 					int original=getbit(mask, ke);
 					int kv=0;
 
-					//__constant struct WE_Offset *weo=we_offsets+select(0, ke-33, original);	//ORIGINAL: aborts, NO CONDITION: aborts
+					__constant struct WE_Offset *weo=we_offsets+select(0, ke-33, original);	//ORIGINAL: aborts, NO CONDITION: aborts
 					//__constant struct WE_Offset *weo=we_offsets+(ke-33)*original;				//NO CONDITION: aborts, UNUSED: succeeds
 					//__constant struct WE_Offset *weo=we_offsets;								//aborts, NO CONDITION: succeeds
 					int
-					//	xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
+						xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
 					//	kx2=kx+(weo->dx&-xbc),
 					//	ky2=ky+(weo->dy&-ybc),
 					//	kz2=kz+(weo->dz&-zbc),
@@ -3926,10 +3979,10 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_worki
 					//	kzF=kz,
 					//	keF=0;
 
-						kxF=kx+we_offsets[0].dx,//crashes
-						kyF=ky+we_offsets[0].dy,
-						kzF=kz+we_offsets[0].dz,
-						keF=0;
+					//	kxF=kx+we_offsets[0].dx,//crashes	TOSH: succeeds
+					//	kyF=ky+we_offsets[0].dy,
+					//	kzF=kz+we_offsets[0].dz,
+					//	keF=0;
 
 					//	kxF=kx+weo->dx,//succeeds, ORIGINAL SELECT (ABOVE): aborts
 					//	kyF=ky+weo->dy,
@@ -3973,6 +4026,11 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_worki
 					//	kzF=select(kz, (ushort)(kz+(weo->dz&-zbc)), (ushort)original),
 					//	keF=0;
 
+						kxF=select(kx, kx+(weo->dx&-xbc), original),//TOSH: succeeds
+						kyF=select(ky, ky+(weo->dy&-ybc), original),
+						kzF=select(kz, kz+(weo->dz&-zbc), original),
+						keF=select(ke, (int)weo->ke2[zbc<<2|ybc<<1|xbc], original);
+
 					//	kxF=select(kx, (ushort)(kx+(weo->dx&-xbc)), (ushort)original),//ORIGINAL: aborts
 					//	kyF=select(ky, (ushort)(ky+(weo->dy&-ybc)), (ushort)original),
 					//	kzF=select(kz, (ushort)(kz+(weo->dz&-zbc)), (ushort)original),
@@ -3995,7 +4053,7 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_worki
 				//		idx=(ulong)kz2<<48|(ulong)ky2<<32|(ulong)kx2<<16|ke2;
 				//	}
 
-					int lk=0, rk=nvert_total-1;
+				//	int lk=0, rk=nvert_total-1;
 					ulong v=0;
 					for(int lk=0, rk=nvert_total-1, ik=0;ik<31;++ik)		//ENABLE bin search w/o if(e[kb]): succeeds
 					{
@@ -4008,18 +4066,19 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_worki
 					++esum;
 				}
 			}
-			char one_triangle=esum==3&&ki+2<nindices, two_triangles=esum==4&&ki+5<nindices;
+			int //one_triangle=esum==3&&ki+2<nindices,
+				two_triangles=esum==4&&ki+5<nindices;
 
-			indices[ki]=tcvi[0];//
+		//	indices[ki]=tcvi[0];//
 
-		//	indices[select(ki+3, ki  , two_triangles)]=tcvi[1];
-		//	indices[select(ki+4, ki+1, two_triangles)]=tcvi[2];
-		//	indices[select(ki+5, ki+2, two_triangles)]=tcvi[3];
-		//	indices[ki  ]=tcvi[0];		//aborts, aborts
-		//	indices[ki+1]=tcvi[1];
-		//	indices[ki+2]=tcvi[2];
+			indices[select(ki+3, ki  , two_triangles)]=tcvi[1];
+			indices[select(ki+4, ki+1, two_triangles)]=tcvi[2];
+			indices[select(ki+5, ki+2, two_triangles)]=tcvi[3];
+			indices[ki  ]=tcvi[0];		//aborts, aborts
+			indices[ki+1]=tcvi[1];
+			indices[ki+2]=tcvi[2];
 			ki+=3+3*two_triangles;
-		}//end tetrahedron loop
+		}//end tetrahedron loop		//*/
 	}
 }
 )CLSRC";
@@ -5154,8 +5213,9 @@ void			cl_compile()
 		else//compile from source first
 #endif
 		{
-		//	for(int kp=0;kp<nprograms;++kp)
-			for(int kp=22;kp<nprograms;++kp)//
+			int success=0;
+			for(int kp=0;kp<nprograms;++kp)
+		//	for(int kp=19;kp<nprograms;++kp)//
 			{
 				OCL_state=CL_COMPILING_PROGRAM00+kp;
 				ProgramBinary bin={};
@@ -5164,6 +5224,7 @@ void			cl_compile()
 			//	snprintf(g_buf, g_buf_size, "%s/cl_program%02d.bin", statedir, kp);
 				if(loadbinary&&!loadFile(programpath.c_str(), (char*&)bin.bin, bin.size))//binary file is there
 				{
+					set_window_title("Loading program %d/%d...", kp+1, nprograms);
 					int status=0;
 					programs[kp]=p_clCreateProgramWithBinary(context, 1, &device, &bin.size, (const unsigned char**)&bin.bin, &status, &error);	CL_CHECK(error);
 					error=p_clBuildProgram(programs[kp], 0, nullptr, "", nullptr, nullptr);					CL_CHECK(error);
@@ -5172,6 +5233,7 @@ void			cl_compile()
 				}
 				else//compile from source
 				{
+					set_window_title("Compiling program %d/%d...", kp+1, nprograms);
 					const char *sources[2]={};
 					size_t srclen[2]={};
 					int nsources=0;
@@ -5189,11 +5251,16 @@ void			cl_compile()
 					//	sources[1]=CLSource::programs[kp],		srclen[1]=strlen(CLSource::programs[kp]);
 					//	nsources=1;
 					//}
-					if(kp==22)
+					if(kp==19)
+				//	if(kp==22)
 						int LOL_1=0;
+					const char *c_options="";//compilation options
+					if(kp==19&&cl_gl_interop&&OCL_version>120&&p_clCreateFromGLTexture)
+						c_options=" -D G2_OCL_IMAGES ";
 					G2_CL::programs[kp]=p_clCreateProgramWithSource(context, nsources, sources, srclen, &error);	CL_CHECK(error);
 					//G2_CL::programs[kp]=p_clCreateProgramWithSource(context, 1, sources, srclen, &error);			CL_CHECK(error);
-					error=p_clBuildProgram(programs[kp], 0, nullptr, " -cl-opt-disable -Werror -cl-std=CL1.1 ", nullptr, nullptr);			CL_CHECK(error);//amdocl.dll: U.E. A.V. reading 0x14D3A98C, 0x147AF43C
+					error=p_clBuildProgram(programs[kp], 0, nullptr, c_options, nullptr, nullptr);					CL_CHECK(error);//calls abort(1)
+				//	error=p_clBuildProgram(programs[kp], 0, nullptr, " -cl-opt-disable -Werror -cl-std=CL1.1 ", nullptr, nullptr);			CL_CHECK(error);//amdocl.dll: U.E. A.V. reading 0x14D3A98C, 0x147AF43C
 				//	error=p_clBuildProgram(programs[kp], 0, nullptr, "-cl-opt-disable", nullptr, nullptr);			CL_CHECK(error);//amdocl.dll: unhandled exception: access violation, unrelated to try/catch
 				//	error=p_clBuildProgram(programs[kp], 0, nullptr, "", nullptr, nullptr);							CL_CHECK(error);//calls abort(1)
 					checkforbuildfailure(error, programs, kp, device, err_msg);
@@ -5211,6 +5278,7 @@ void			cl_compile()
 				}
 			}
 			OCL_state=CL_PROGRAMS_COMPILED;
+			set_window_title("");
 			if(!err_msg.empty())
 				copy_to_clipboard(err_msg.c_str(), err_msg.size());
 #if 0
@@ -5289,6 +5357,18 @@ void 			cl_initiate()
 			{error=p_clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, &n_devices);	CL_CHECK(error);}//was CL_DEVICE_TYPE_ALL
 
 		error=p_clGetPlatformInfo(platform, CL_PLATFORM_VERSION, g_buf_size, g_buf, &retlen);	CL_CHECK(error);
+		if(!OCL_version)
+		{
+			int k=0;
+			for(;g_buf[k]>='A'&&g_buf[k]<='Z'||g_buf[k]>='a'&&g_buf[k]<='z';++k);//skip 'OpenCL'
+			for(;g_buf[k]==' '||g_buf[k]=='\t'||g_buf[k]=='\r'||g_buf[k]=='\n';++k);//skip whitespace
+			if(g_buf[k]>='0'&&g_buf[k]<='9')
+			{
+				OCL_version=(g_buf[k]-'0')*100;
+				if(g_buf[k+1]=='.'&&k+2<(int)retlen)
+					OCL_version+=(g_buf[k+2]-'0')*10;
+			}
+		}
 	//	LOGI("%s", g_buf);
 		error=p_clGetDeviceInfo(device, CL_DEVICE_NAME, g_buf_size, g_buf, &retlen);	CL_CHECK(error);	//query device info
 	//	LOGI("\n\n\t%*s\n\n", (int)retlen, g_buf);
@@ -6325,6 +6405,12 @@ const ulong		obsmask[8]=//original bit selection mask
 	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
 	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
 };
+int hammingweight(ulong x)//https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+{
+	x-=x>>1&0x5555555555555555;
+	x=(x&0x3333333333333333)+(x>>2&0x3333333333333333);
+	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;
+}
 void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ...)
 {//expression -> OpenGL texture
 	if(OCL_state<CL_READY_UNTESTED)
@@ -6925,9 +7011,9 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 		switch(mp.mode_idx)
 		{
 		case MODE_I2D:
-			if(!p_clCreateFromGLTexture)
-				LOGERROR("OpenCL-TI2D is not supported yet w/o clCreateFromGLTexture.");
-			else
+			//if(!p_clCreateFromGLTexture)
+			//	LOGERROR("OpenCL-TI2D is not supported yet w/o clCreateFromGLTexture.");
+			//else
 			{
 #if 0//DEBUG
 				auto xr=(float*)malloc(ndrSize*sizeof(float));
@@ -6942,21 +7028,21 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 #endif
 #if 1//RELEASE
 				cl_kernel kernel=nullptr;
-			//	if(cl_gl_interop)
-			//	{
-					kernel=kernels[V_TI2D_RGB];
+				kernel=kernels[V_TI2D_RGB];
+				bool use_texture=cl_gl_interop&&OCL_version>120&&p_clCreateFromGLTexture;
+				if(use_texture)
+				{
 				//	if(context0!=context)
 				//	{
 						context0=context;
 						cl_free_buffer(image);
 						image=p_clCreateFromGLTexture(context, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, gl_texture, &error);	CL_CHECK(error);
 				//	}
-			//	}
-			//	else
-			//	{
-			//		kernel=kernels[];
-			//		image=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(int), nullptr, &error);	CL_CHECK(error);
-			//	}
+				}
+				else//use int buffer
+				{
+					image=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(int), nullptr, &error);	CL_CHECK(error);
+				}
 				cl_mem color_buf=p_clCreateBuffer(context, CL_MEM_READ_ONLY, 3*sizeof(float), nullptr, &error);	CL_CHECK(error);
 				float color[3];
 				if(mp.nExpr>1)
@@ -6973,6 +7059,12 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &color_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &image);		CL_CHECK(error);
 				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 2, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
+				if(!use_texture)
+				{
+					rgb=(int*)realloc(rgb, ndrSize*sizeof(int));
+					error=p_clEnqueueReadBuffer(commandqueue, image, CL_TRUE, 0, ndrSize*sizeof(int), rgb, 0, nullptr, nullptr);	CL_CHECK(error);
+					cl_free_buffer(image);
+				}
 #endif
 				prof_add("raster");
 			}
@@ -6982,7 +7074,8 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				if(result.mathSet=='c')//always true for C2D
 				{
 					cl_kernel kernel=nullptr;
-					if(cl_gl_interop&&p_clCreateFromGLTexture)
+					bool use_texture=cl_gl_interop&&OCL_version>120&&p_clCreateFromGLTexture;
+					if(use_texture)
 					{
 						kernel=kernels[V_C2D_RGB];
 						//if(context0!=context)
@@ -7003,7 +7096,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 					error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &result.i);	CL_CHECK(error);
 					error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &image);		CL_CHECK(error);
 					error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 2, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
-					if(!(cl_gl_interop&&p_clCreateFromGLTexture))
+					if(!use_texture)
 					{
 						rgb=(int*)realloc(rgb, ndrSize*sizeof(int));
 						error=p_clEnqueueReadBuffer(commandqueue, image, CL_FALSE, 0, ndrSize*sizeof(int), rgb, 0, nullptr, nullptr);	CL_CHECK(error);
@@ -7092,30 +7185,49 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
 				host_sizes[2]=temp_g, host_sizes_local[2]=temp_l;
 				prof_add("K1.3 av xy");
+				for(int kn=0;kn<nterms;++kn)//free memory
+				{
+					auto &term=terms[kn];
+					cl_free_buffer(term.r);
+					cl_free_buffer(term.i);
+					cl_free_buffer(term.j);
+					cl_free_buffer(term.k);
+				}
+				prof_add("free terms");
 				error=p_clFinish(commandqueue);	CL_CHECK(error);
 				prof_add("clFinish");
-
+				
+				cl_mem coeffs_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, 7*sizeof(float), nullptr, &error);		CL_CHECK(error);
 				cl_mem edgeinfo_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(ulong), nullptr, &error);	CL_CHECK(error);
-				cl_mem nvert_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(char), nullptr, &error);	CL_CHECK(error);
-				cl_mem ntrgl_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(char), nullptr, &error);	CL_CHECK(error);
+				cl_mem nvert_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(int), nullptr, &error);	CL_CHECK(error);
+				cl_mem ntrgl_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ndrSize*sizeof(int), nullptr, &error);	CL_CHECK(error);
+				float coeffs_host[7]=
+				{
+					(float)mp.cx, (float)mp.mx,
+					(float)mp.cy, (float)mp.my,
+					(float)mp.cz, (float)mp.mz, th//threshold (isovalue)
+				};
+				error=p_clEnqueueWriteBuffer(commandqueue, coeffs_buf,		CL_FALSE, 0, 7*sizeof(float), coeffs_host, 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("alloc info");
 
 				kernel=kernels[TI3D_CLASSIFYEDGES];
+				//__kernel void ti3d_classifyedges(__constant int *size, __constant float *coeffs, __constant float *ndr, __global ulong *edgeinfo, __global int *nvert, __global int *ntrgl)
 				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &nvert_buf);		CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &ntrgl_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &coeffs_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &nvert_buf);		CL_CHECK(error);
+				error=p_clSetKernelArg(kernel, 5, sizeof(cl_mem), &ntrgl_buf);		CL_CHECK(error);
 				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 3, nullptr, host_sizes, host_sizes_local, 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("K2 classify edges");
 				error=p_clFinish(commandqueue);	CL_CHECK(error);//just a debug check
 				prof_add("clFinish");//
 
 				std::vector<ulong> edgeinfo(ndrSize);
-				std::vector<char> nvert(ndrSize), ntrgl(ndrSize);
-				error=p_clEnqueueReadBuffer(commandqueue, edgeinfo_buf, CL_TRUE, 0, ndrSize*sizeof(float), edgeinfo.data(), 0, nullptr, nullptr);	CL_CHECK(error);
-				error=p_clEnqueueReadBuffer(commandqueue, nvert_buf,	CL_TRUE, 0, ndrSize*sizeof(float), nvert.data(),	0, nullptr, nullptr);	CL_CHECK(error);
-				error=p_clEnqueueReadBuffer(commandqueue, ntrgl_buf,	CL_TRUE, 0, ndrSize*sizeof(float), ntrgl.data(),	0, nullptr, nullptr);	CL_CHECK(error);
+				std::vector<int> nvert(ndrSize), ntrgl(ndrSize);
+				error=p_clEnqueueReadBuffer(commandqueue, edgeinfo_buf, CL_TRUE, 0, ndrSize*sizeof(ulong), edgeinfo.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+				error=p_clEnqueueReadBuffer(commandqueue, nvert_buf,	CL_TRUE, 0, ndrSize*sizeof(int), nvert.data(),	0, nullptr, nullptr);		CL_CHECK(error);
+				error=p_clEnqueueReadBuffer(commandqueue, ntrgl_buf,	CL_TRUE, 0, ndrSize*sizeof(int), ntrgl.data(),	0, nullptr, nullptr);		CL_CHECK(error);
 				prof_add("read");
 
 				//CPU side code: determine work size and space indices for kernel 3 & reverse workidx 'bitindices' for CPU part 2
@@ -7126,63 +7238,121 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				for(unsigned kw=0;kw<ndrSize;++kw)
 				{
 					//fill 'workidx' & 'tworkidx'
-					if(nvert[kw])
+					short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+					if(kx<Xplaces-1&&ky<Yplaces-1&&kz<Zplaces-1)
 					{
-						short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
-						auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];//boundary mask: selects original bits at boundary
-						auto uwork=edgeinfo[kw]&mask;//unique work
-						for(unsigned short ke=0;ke<54;++ke)//for each original bit
-							if(uwork>>ke&1)
-								workidx.push_back(WorkIdx(kx, ky, kz, ke));
+						int nvert_k=nvert[kw], ntrgl_k=ntrgl[kw];
+						if(nvert_k)
+						{
+							short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+							auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];//boundary mask: selects original bits at boundary
+							auto uwork=edgeinfo[kw]&mask;//unique work
+							for(unsigned short ke=0;ke<54;++ke)//for each original bit
+								if(uwork>>ke&1)
+									workidx.push_back(WorkIdx(kx, ky, kz, ke));
+						}
+						if(ntrgl_k)
+							tworkidx.push_back(WorkIdx(kw, ntrgl_total));
+						nvert_total+=nvert_k, ntrgl_total+=ntrgl_k;
 					}
-					if(ntrgl[kw])
-						tworkidx.push_back(WorkIdx(kw, ntrgl_total));
-					nvert_total+=nvert[kw], ntrgl_total+=ntrgl[kw];
 				}
 				int active_ndrSize=tworkidx.size();
+#if 0//DEBUG
+				std::stringstream LOL_1;
+				std::vector<int> unique_nvert;
+				for(int k=0;k<ndrSize;++k)
+				{
+					int nvk=nvert[k];
+					bool found=false;
+					for(int k2=0;k2<(int)unique_nvert.size();++k2)
+					{
+						if(nvk==unique_nvert[k2])
+						{
+							found=true;
+							break;
+						}
+					}
+					if(!found)
+					{
+						unique_nvert.push_back(nvk);
+						sprintf_s(g_buf, g_buf_size, "%d\t0x%08X\r\n", k, nvk);
+						LOL_1<<g_buf;
+					}
+				}
+				copy_to_clipboard(LOL_1.str());
+				messageboxa(ghWnd, "Information", "Unique nvert copied to clipboard.");
+				//int hw=hammingweight(0xc0f00000c0f00000);//
+#endif
 				prof_add("CPU workidx");
-
-				gl_buf->create_VN_CL(nvert_total*6, ntrgl_total*3);
-				prof_add("GL resize");
 				
-				cl_mem coeffs_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, 7*sizeof(float), nullptr, &error);				CL_CHECK(error);
 				cl_mem workidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, nvert_total*sizeof(ulong), nullptr, &error);		CL_CHECK(error);
 				cl_mem tworkidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, active_ndrSize*sizeof(ulong), nullptr, &error);	CL_CHECK(error);
-				cl_mem vertices_buf	=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->VBO, &error);						CL_CHECK(error);
-				cl_mem indices_buf	=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->EBO, &error);						CL_CHECK(error);
-				prof_add("alloc VN");
-				float coeffs_host[7]=
+				cl_mem vertices_buf=nullptr, indices_buf=nullptr;
+				bool use_gl_buffers=cl_gl_interop&&OCL_version>120;
+				if(use_gl_buffers)
 				{
-					(float)mp.cx, (float)mp.mx,
-					(float)mp.cy, (float)mp.my,
-					(float)mp.cz, (float)mp.mz, th//threshold (isovalue)
-				};
-				error=p_clEnqueueWriteBuffer(commandqueue, coeffs_buf,		CL_FALSE, 0, 7*sizeof(float), coeffs_host, 0, nullptr, nullptr);	CL_CHECK(error);
-				error=p_clEnqueueWriteBuffer(commandqueue, workidx_buf,		CL_FALSE, 0, nvert_total*sizeof(ulong), workidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+					gl_buf->create_VN_CL(nvert_total*6, ntrgl_total*3);
+					vertices_buf	=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->VBO, &error);						CL_CHECK(error);
+					indices_buf		=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->EBO, &error);						CL_CHECK(error);
+				}
+				else
+				{
+					vertices_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, nvert_total*6*sizeof(float), nullptr, &error);	CL_CHECK(error);
+					indices_buf		=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ntrgl_total*3*sizeof(int), nullptr, &error);		CL_CHECK(error);
+				}
+				prof_add("alloc VN");
+				error=p_clEnqueueWriteBuffer(commandqueue, workidx_buf,		CL_FALSE, 0, nvert_total*sizeof(ulong), workidx.data(), 0, nullptr, nullptr);		CL_CHECK(error);
 				error=p_clEnqueueWriteBuffer(commandqueue, tworkidx_buf,	CL_FALSE, 0, active_ndrSize*sizeof(ulong), tworkidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("send workidx");
 
-				kernel=kernels[TI3D_ZEROCROSS];
+				kernel=kernels[TI3D_ZEROCROSS];//ti3d_zerocross
 				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &coeffs_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &vertices_buf);	CL_CHECK(error);
-				size_t l_worksize=g_maxlocalsize, g_worksize=nvert_total-nvert_total%g_maxlocalsize+g_maxlocalsize;
+														//ATI RV710
+														//(Mobility Radeon HD 5145)
+				size_t l_worksize=g_maxlocalsize,		//OUT_OF_RESOURCES
+			//	size_t l_worksize=g_maxlocalsize>>1,	//OUT_OF_RESOURCES
+			//	size_t l_worksize=g_maxlocalX,			//OUT_OF_RESOURCES
+			//	size_t l_worksize=1,					//OUT_OF_RESOURCES
+					g_worksize=nvert_total-nvert_total%g_maxlocalsize+g_maxlocalsize;//OUT_OF_RESOURCES
+				//	g_worksize=1;						//OUT_OF_RESOURCES
 				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("K3 zerocross");
 
-				kernel=kernels[TI3D_TRGL_INDICES];
+				kernel=kernels[TI3D_TRGL_INDICES];//ti3d_trgl_indices
+				//__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant int *workidx, __global int *indices)
 				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &tworkidx_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &indices_buf);	CL_CHECK(error);
-				g_worksize=active_ndrSize-active_ndrSize%g_maxlocalsize+g_maxlocalsize;
+				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &indices_buf);	CL_CHECK(error);
+				g_worksize=active_ndrSize-active_ndrSize%g_maxlocalsize+g_maxlocalsize;//OUT_OF_RESOURCES
+			//	g_worksize=1;//OUT_OF_RESOURCES
 				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("K4 indices");
+
+				if(!use_gl_buffers)
+				{
+					std::vector<float> vertices(nvert_total*6);
+					std::vector<int> indices(ntrgl_total*3);
+					error=p_clEnqueueReadBuffer(commandqueue, vertices_buf, CL_TRUE, 0, nvert_total*6*sizeof(float), vertices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+					error=p_clEnqueueReadBuffer(commandqueue, indices_buf, CL_TRUE, 0, ntrgl_total*3*sizeof(int), indices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+					gl_buf->create_VN_I(vertices.data(), nvert_total*6, indices.data(), ntrgl_total*3);
+				}
+
+				cl_free_buffer(ndr_buf);
+				cl_free_buffer(coeffs_buf), cl_free_buffer(edgeinfo_buf), cl_free_buffer(nvert_buf), cl_free_buffer(ntrgl_buf);
+				cl_free_buffer(workidx_buf), cl_free_buffer(tworkidx_buf);
+				prof_add("free");
+
 				error=p_clFinish(commandqueue);	CL_CHECK(error);
 				prof_add("clFinish");
+				cl_free_buffer(vertices_buf);
+				cl_free_buffer(indices_buf);
+				prof_add("free");
 #endif
 #if defined V5_CPU||defined V6_CPU
 				int Xplaces=mp.Xplaces, Yplaces=mp.Yplaces, Zplaces=mp.Zplaces;

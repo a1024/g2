@@ -24,6 +24,7 @@ extern char			g_buf[0x100000];
 
 void				copy_to_clipboard(const char *a, int size);
 inline void			copy_to_clipboard(std::string const &str){copy_to_clipboard(str.c_str(), str.size());}
+void				set_window_title(const char *format, ...);
 
 static const int	e_msg_size=2048;
 extern char			first_error_msg[e_msg_size], latest_error_msg[e_msg_size];

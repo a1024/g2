@@ -254,7 +254,7 @@ enum			OpenCL_state
 	CL_READY,
 //	CL_NOTHING, CL_API_LOADED, CL_CONTEXT_CREATED, CL_PROGRAMS_COMPILED, CL_KERNELS_LOADED
 };
-extern int		OCL_state;
+extern int		OCL_state, OCL_version;
 extern bool		cl_gl_interop;
 extern const bool loadbinary;
 extern int		*rgb;
