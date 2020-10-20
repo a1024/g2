@@ -65,7 +65,16 @@ void		Region::destroy(){DeleteObject(hRgn);}
 void		Region::use(){SelectClipRgn(ghMemDC, hRgn);}
 void		Region::drop(){SelectClipRgn(ghMemDC, 0);}
 
-void		capture_window(int *rgb){std::copy(gBitmap.rgb, gBitmap.rgb+w*h, rgb);}
+void		capture_window(int *rgb)
+{
+	if(gBitmap.w!=w||gBitmap.h!=h)
+	{
+		gBitmap.drop();
+		gBitmap.resize(w, h);
+		gBitmap.use();
+	}
+	std::copy(gBitmap.rgb, gBitmap.rgb+w*h, rgb);
+}
 void		display_texture_fullwindow(int *rgb){std::copy(rgb, rgb+w*h, gBitmap.rgb);}
 
 //text API:
