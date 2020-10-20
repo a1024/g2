@@ -45,6 +45,46 @@ union				G2Version
 extern const G2Version g2_version;//hi: g2 version, lo: cl component version
 
 //time-measuring functions
+inline double		time_sec()
+{
+#ifdef TIMING_USE_QueryPerformanceCounter
+	static long long t=0;
+	static LARGE_INTEGER li={};
+	QueryPerformanceFrequency(&li);
+	t=li.QuadPart;
+	QueryPerformanceCounter(&li);
+	return (double)li.QuadPart/t;
+#elif defined TIMING_USE_rdtsc
+	static LARGE_INTEGER li={};
+	QueryPerformanceFrequency(&li);
+	return (double)__rdtsc()*0.001/li.QuadPart;//pre-multiplied by 1000
+#elif defined TIMING_USE_GetProcessTimes
+	FILETIME create, exit, kernel, user;
+	int success=GetProcessTimes(GetCurrentProcess(), &create, &exit, &kernel, &user);
+	if(success)
+//#ifdef PROFILER_CYCLES
+	{
+		const auto hns2sec=100e-9;
+		return hns2ms*(unsigned long long&)user;
+	//	return hns2ms*(unsigned long long&)kernel;
+	}
+//#else
+//	{
+//		SYSTEMTIME t;
+//		success=FileTimeToSystemTime(&user, &t);
+//		if(success)
+//			return t.wHour*3600000.+t.wMinute*60000.+t.wSecond*1000.+t.wMilliseconds;
+//		//	return t.wHour*3600.+t.wMinute*60.+t.wSecond+t.wMilliseconds*0.001;
+//	}
+//#endif
+	SYS_CHECK();
+	return -1;
+#elif defined TIMING_USE_GetTickCount
+	return (double)GetTickCount()*0.001;//the number of milliseconds that have elapsed since the system was started
+#elif defined TIMING_USE_timeGetTime
+	return (double)timeGetTime()*0.001;//system time, in milliseconds
+#endif
+}
 inline double		time_ms()
 {
 #ifdef TIMING_USE_QueryPerformanceCounter

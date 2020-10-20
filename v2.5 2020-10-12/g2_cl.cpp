@@ -3275,9 +3275,9 @@ __kernel void ti3d_av(__constant int *size, __constant float *result, __global f
 
 		ndr[idx+Xplaces	]=V_DNW;				ndr[idx+Xplaces	+1]=V_DNE;
 		ndr[idx			]=V_DSW;				ndr[idx			+1]=V_DSE;
-		ndr[ndrSize+(idx<<2)  ]=(V_UNW+V_DNW+V_DSW+V_USW)*0.25f;//V_Dmm
+		ndr[ndrSize+(idx<<2)  ]=(V_DNW+V_DSW+V_DNE+V_DSE)*0.25f;//V_Dmm
 		ndr[ndrSize+(idx<<2)+1]=(V_DSW+V_USW+V_USE+V_DSE)*0.25f;//V_mSm
-		ndr[ndrSize+(idx<<2)+2]=(V_DNW+V_DSW+V_DNE+V_DSE)*0.25f;//V_Dmm
+		ndr[ndrSize+(idx<<2)+2]=(V_UNW+V_DNW+V_DSW+V_USW)*0.25f;//V_mmW
 		ndr[ndrSize+(idx<<2)+3]=(V_UNW+V_DNW+V_DSW+V_USW+V_UNE+V_DNE+V_USE+V_DSE)*0.125f;//V_mmm
 	}
 }
@@ -3479,6 +3479,23 @@ __kernel void ti3d_classifyedges(__constant int *size, __constant float *coeffs,
 			EC(36)|EC(37)|EC(38)|EC(39)|EC(40)|EC(41)|EC(42)|EC(43)|EC(44)|
 			EC(45)|EC(46)|EC(47)|EC(48)|EC(49)|EC(50)|EC(51)|EC(52)|EC(53);
 #undef		EC
+		//if(edgeinfo[idx]&&kx==3&&ky==0&&kz==0)
+		//{
+		//	printf("th=%f\n\n", th);
+		//	printf("V_UNW=%f, V_UNE=%f,\nV_USW=%f, V_USE=%f,\n\nV_DNW=%f, V_DNE=%f,\nV_DSW=%f, V_DSE=%f\n\n", V_UNW, V_UNE, V_USW, V_USE, V_DNW, V_DNE, V_DSW, V_DSE);
+		//	printf("V_Dmm=%f,\nV_mSm=%f,\nV_mmW=%f,\nV_mmm=%f,\nV_mmE=%f,\nV_mNm=%f,\nV_Umm=%f\n\n", V_Dmm, V_mSm, V_mmW, V_mmm, V_mmE, V_mNm, V_Umm);
+		//	printf("C_UNW=%d, C_UNE=%d,\nC_USW=%d, C_USE=%d,\nC_DNW=%d, C_DNE=%d,\nC_DSW=%d, C_DSE=%d,\n\nC_Umm=%d, C_mNm=%d,\nC_mmW=%d, C_mmE=%d,\nC_mSm=%d, C_Dmm=%d,\nC_mmm=%d\n\n",
+		//		(int)C_UNW, (int)C_UNE,
+		//		(int)C_USW, (int)C_USE,
+		//		(int)C_DNW, (int)C_DNE,
+		//		(int)C_DSW, (int)C_DSE,
+		//
+		//		(int)C_Umm, (int)C_mNm,
+		//		(int)C_mmW, (int)C_mmE,
+		//		(int)C_mSm, (int)C_Dmm,
+		//		(int)C_mmm);
+		//	printf("edgeinfo[%d] = 0x%016LLX\n\n", idx, edgeinfo[idx]);
+		//}
 		ulong mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
 	//	nvert[idx]=idx;
 	//	nvert[idx]=hammingweight(0xc0f00000c0f00000&mask);//
@@ -3681,16 +3698,23 @@ __kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __c
 	int id=get_global_id(0), nvert_total=size[4];
 	if(id<nvert_total)
 	{
-		int kv=id*6;//DEBUG
-		float4 coords=(float4)(1, 2, 3, 0), normal=(float4)(4, 5, 6, 0);
-		vertices[kv  ]=coords.x;
-		vertices[kv+1]=coords.y;
-		vertices[kv+2]=coords.z;
-		vertices[kv+3]=normal.x;
-		vertices[kv+4]=normal.y;
-		vertices[kv+5]=normal.z;
+	//	int kv=id*6;	//DEBUG
+	//	vertices[kv  ]=42;
+	//	vertices[kv+1]=42;
+	//	vertices[kv+2]=42;
+	//	vertices[kv+3]=42;
+	//	vertices[kv+4]=42;
+	//	vertices[kv+5]=42;
 
-/*		int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], ndrSize=size[3], XYplaces=Xplaces*Yplaces;
+	//	float4 coords=(float4)(1, 2, 3, 0), normal=(float4)(4, 5, 6, 0);	//DEBUG
+	//	vertices[kv  ]=coords.x;
+	//	vertices[kv+1]=coords.y;
+	//	vertices[kv+2]=coords.z;
+	//	vertices[kv+3]=normal.x;
+	//	vertices[kv+4]=normal.y;
+	//	vertices[kv+5]=normal.z;
+
+		int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], ndrSize=size[3], XYplaces=Xplaces*Yplaces;
 		ulong wi=workidx[id];
 		int kx=(ushort)(wi>>16), ky=(ushort)(wi>>32), kz=(ushort)(wi>>48), ke=(ushort)wi;
 		int idx=Xplaces*(Yplaces*kz+ky)+kx;
@@ -3923,20 +3947,25 @@ __constant struct WE_Offset we_offsets[54-33]=//work-edge offsets, for redundant
 	{0, 0, 1,		{Umm_UNW,	Umm_UNW,	Umm_UNW,	Umm_UNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW,	Dmm_DNW}},//Umm_UNW
 };
 char getbit(ulong x, char bit){return x>>bit&1;}
-__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant int *workidx, __global int *indices)
+__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant ulong *workidx, __global int *indices)
 {//size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total, active_ndrsize, ntrgl_total}, workidx: {short ke, kx, ky, kz; (kz<<48|ky<<32|kx<<16|ke)}
 	int id=get_global_id(0), active_ndrsize=size[5];
 	if(id<active_ndrsize)
 	{
 		const int Xplaces=size[0], Yplaces=size[1], Zplaces=size[2], nvert_total=size[4], nindices=size[6]*3, XYplaces=Xplaces*Yplaces;
 
-		indices[id]=id%nvert_total;//DEBUG
+	//	indices[id]=42;//DEBUG
+	//	indices[id]=id%nvert_total;//DEBUG
 
-/*		ulong twi=ac_workidx[id];//active cube work index
-		unsigned kw=(uint)(twi>>32), ki=(uint)twi*3;
+		ulong twi=ac_workidx[id];//active cube work index
+		unsigned kw=(uint)twi, ki=(uint)(twi>>32)*3;
 		int kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
 		ulong work=edgeinfo[kw];
 		ulong mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
+
+	//	indices[id]=ki<<9|kz<<6|ky<<3|kx;//DEBUG
+	//	indices[id]=kz<<6|ky<<3|kx;//DEBUG
+
 		for(int kth=0;kth<28;++kth)//for each tetrahedron kth of the 28 tetrahedra in the data cube
 		{
 			int kt6=kth*6;
@@ -3953,131 +3982,110 @@ __kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_worki
 			int tcvi[6]={};//tetrahedron cut vertex indices
 			for(char kb=0;kb<6;++kb)//for each tetrahedron edge
 			{
-			//	if(e[kb])				//DISABLE if(e[kb]): aborts		//DISABLE body: succeeds
+				if(e[kb])
 				{
 					int ke=ti[kth*6+kb];//relative edge index
 					ulong idx=0;
-					int original=getbit(mask, ke);
+					int original=getbit(mask, ke), not_original_mask=-!original;
 					int kv=0;
 
-					__constant struct WE_Offset *weo=we_offsets+select(0, ke-33, original);	//ORIGINAL: aborts, NO CONDITION: aborts
-					//__constant struct WE_Offset *weo=we_offsets+(ke-33)*original;				//NO CONDITION: aborts, UNUSED: succeeds
-					//__constant struct WE_Offset *weo=we_offsets;								//aborts, NO CONDITION: succeeds
+					__constant struct WE_Offset *weo=we_offsets+((ke-33)&not_original_mask);
+				//	__constant struct WE_Offset *weo=we_offsets+select(ke-33, 0, -original);//select(a, b, c)==c?b:a
 					int
-						xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
-					//	kx2=kx+(weo->dx&-xbc),
-					//	ky2=ky+(weo->dy&-ybc),
-					//	kz2=kz+(weo->dz&-zbc),
+						xjm=kx<Xplaces-2, yjm=ky<Yplaces-2, zjm=kz<Zplaces-2,//jump masks: control jump in each dimension by boundary conditions: *places-2 is last cube (pre-last datapoint)
 
-					//	kxF=0,//succeeds
-					//	kyF=0,
-					//	kzF=0,
-					//	keF=0;
+						kxF=kx+(weo->dx&-xjm&not_original_mask),//
+						kyF=ky+(weo->dy&-yjm&not_original_mask),
+						kzF=kz+(weo->dz&-zjm&not_original_mask),
 
-					//	kxF=kx,//succeeds
-					//	kyF=ky,
-					//	kzF=kz,
-					//	keF=0;
+					//	kxF=select(kx+(weo->dx&-xjm), kx, original),//TOSH: succeeds, MSI: succeeds
+					//	kyF=select(ky+(weo->dy&-yjm), ky, original),
+					//	kzF=select(kz+(weo->dz&-zjm), kz, original),
 
-					//	kxF=kx+we_offsets[0].dx,//crashes	TOSH: succeeds
-					//	kyF=ky+we_offsets[0].dy,
-					//	kzF=kz+we_offsets[0].dz,
-					//	keF=0;
-
-					//	kxF=kx+weo->dx,//succeeds, ORIGINAL SELECT (ABOVE): aborts
-					//	kyF=ky+weo->dy,
-					//	kzF=kz+weo->dz,
-					//	keF=0;
-
-					//	kxF=kx*original+weo->dx,//aborts
-					//	kyF=ky*original+weo->dy,
-					//	kzF=kz*original+weo->dz,
-					//	keF=0;
-
-					//	kxF=kx+weo->dx*original,//aborts
-					//	kyF=ky+weo->dy*original,
-					//	kzF=kz+weo->dz*original,
-					//	keF=0;
-
-					//	xbc=weo->dx*((kx<Xplaces-2)&&original), ybc=weo->dy*((ky<Yplaces-2)&&original), zbc=weo->dz*((kz<Zplaces-2)&&original),//boundary conditions: *places-2 is last cube (pre-last datapoint)
-					//	kxF=kx+xbc,		//aborts
-					//	kyF=ky+ybc,
-					//	kzF=kz+zbc,
-					//	keF=0;
-
-					//	xbc=(kx<Xplaces-2)&&original, ybc=(ky<Yplaces-2)&&original, zbc=(kz<Zplaces-2)&&original,//boundary conditions: *places-2 is last cube (pre-last datapoint)
-					//	kxF=kx+weo->dx*xbc,			//aborts
-					//	kyF=ky+weo->dy*ybc,
-					//	kzF=kz+weo->dz*zbc,
-					//	keF=0;
-
-					//	kxF=kx+(weo->dx&-xbc&-(short)original),//aborts
-					//	kyF=ky+(weo->dy&-ybc&-(short)original),
-					//	kzF=kz+(weo->dz&-zbc&-(short)original),
-					//	keF=0;
-
-					//	kxF=select(kx, (ushort)kx2, (ushort)original),//aborts
-					//	kyF=select(ky, (ushort)ky2, (ushort)original),
-					//	kzF=select(kz, (ushort)kz2, (ushort)original),
-					//	keF=0;
-
-					//	kxF=select(kx, (ushort)(kx+(weo->dx&-xbc)), (ushort)original),//aborts
-					//	kyF=select(ky, (ushort)(ky+(weo->dy&-ybc)), (ushort)original),
-					//	kzF=select(kz, (ushort)(kz+(weo->dz&-zbc)), (ushort)original),
-					//	keF=0;
-
-						kxF=select(kx, kx+(weo->dx&-xbc), original),//TOSH: succeeds
-						kyF=select(ky, ky+(weo->dy&-ybc), original),
-						kzF=select(kz, kz+(weo->dz&-zbc), original),
-						keF=select(ke, (int)weo->ke2[zbc<<2|ybc<<1|xbc], original);
-
-					//	kxF=select(kx, (ushort)(kx+(weo->dx&-xbc)), (ushort)original),//ORIGINAL: aborts
-					//	kyF=select(ky, (ushort)(ky+(weo->dy&-ybc)), (ushort)original),
-					//	kzF=select(kz, (ushort)(kz+(weo->dz&-zbc)), (ushort)original),
-					//	keF=select(ke, weo->ke2[zbc<<2|ybc<<1|xbc], original);
-
+						keF=select((int)weo->ke2[zjm<<2|yjm<<1|xjm], ke, -original);
 					idx=(ulong)kzF<<48|(ulong)kyF<<32|(ulong)kxF<<16|keF;
 
-
-				//	if(original)//original bit, in this data point				//DISABLE [if(original), tcvi[esum]=kv[: aborts		//SAME w/o if(e[kb]): succeeds
-				//		idx=(ulong)kz<<48|(ulong)ky<<32|(ulong)kx<<16|ke;
-				//	else//redundant bit, look up in another data point
-				//	{
-				//		__constant struct WE_Offset *weo=we_offsets+ke-33;
-				//		short
-				//			xbc=kx<Xplaces-2, ybc=ky<Yplaces-2, zbc=kz<Zplaces-2,//boundary conditions: *places-2 is last cube (pre-last datapoint)
-				//			kx2=kx+(weo->dx&-xbc),
-				//			ky2=ky+(weo->dy&-ybc),
-				//			kz2=kz+(weo->dz&-zbc),
-				//			ke2=weo->ke2[zbc<<2|ybc<<1|xbc];
-				//		idx=(ulong)kz2<<48|(ulong)ky2<<32|(ulong)kx2<<16|ke2;
-				//	}
-
-				//	int lk=0, rk=nvert_total-1;
-					ulong v=0;
-					for(int lk=0, rk=nvert_total-1, ik=0;ik<31;++ik)		//ENABLE bin search w/o if(e[kb]): succeeds
+					ulong v=0;//bin search
+					int lk=0, rk=nvert_total-1;
+					//if(kx==4&&ky==0&&kz==0&&ke==8)//
+					//	printf("lk,\trk,\tkv,\tv,\tworkidx[kv], (idx=0x%016LLX)\n", idx);//
+					for(int ik=0;ik<31;++ik)
 					{
 						kv=(lk+rk)>>1;
-						v=workidx[kv];
-						lk=select(kv+1, lk, v<idx);
-						rk=select(kv-1, rk, v>idx);
+						v=select(workidx[0], workidx[kv], (ulong)(kv>=0&&kv<nvert_total));
+						//if(kx==4&&ky==0&&kz==0&&ke==8)//
+						//	printf("%d, %d, %d, 0x%016LLX, 0x%016LLX\n", lk, rk, kv, v, workidx[kv]);//
+						//	printf("lk=%d, rk=%d, kv=%d, v=0x%016LLX, workidx[kv]=0x%016LLX\n", lk, rk, kv, v, workidx[kv]);//
+					//	v=workidx[kv];
+						lk=select(lk, kv+1, v<idx);
+						rk=select(rk, kv-1, v>idx);
 					}
+				//	tcvi[esum]=((kzF&7)<<12|(kyF&7)<<9|(kxF&7)<<6|(0x3F&keF))<<16|(kz&7)<<12|(ky&7)<<9|(kx&7)<<6|(0x3F&ke);//DEBUG
+				//	if(kx==4&&ky==0&&kz==0&&ke==8)
+				//	{
+				//		printf("nvert_total=%d, active_ndrsize=%d, ntrgl_total=%d, nindices=%d\n", nvert_total, active_ndrsize, nindices/3, nindices);
+				//		printf("(%d, %d, %d, %d), kth=%d, kb=%d\n", kx, ky, kz, ke, kth, kb);
+				//		printf("original = %d != 0x%08X\n", original, not_original_mask);
+				//		printf("weo-we_offsets=%d, select: %d, and: %d, MSB select=%d\n", (int)(weo-we_offsets), select(ke-33, 0, original), (ke-33)&not_original_mask, select(ke-33, 0, -original));
+				//		printf("-xjm=0x%08X, -yjm=0x%08X, -zjm=0x%08X\n", -xjm, -yjm, -zjm);
+				//		printf("F(%d, %d, %d, %d)\n", kxF, kyF, kzF, keF);
+				//		printf("lk=%d, rk=%d, kv=%d\n\n", lk, rk, kv);
+				//	}
+				//	tcvi[esum]=(kzF&7)<<12|(kyF&7)<<9|(kxF&7)<<6|(0x3F&keF);//DEBUG
+				//	tcvi[esum]=select(-42, kv, lk==rk);
+				//	if(tcvi[esum]==-1)//RESULTS 0 or -43
+				//		tcvi[esum]=-43;
+				//	tcvi[esum]=select(-42, tcvi[esum], tcvi[esum]!=-1);//DEBUG
 					tcvi[esum]=kv;
 					++esum;
 				}
 			}
-			int //one_triangle=esum==3&&ki+2<nindices,
-				two_triangles=esum==4&&ki+5<nindices;
+			if(esum)//tetrahedron has active edges (produced triangles)
+			{
+				int //one_triangle=esum==3&&ki+2<nindices,
+					two_triangles=esum==4&&ki+5<nindices;
+			//	indices[ki]=tcvi[0];//
 
-		//	indices[ki]=tcvi[0];//
+			//	indices[select(ki  , ki+3, two_triangles)]=-id;//DEBUG
+			//	indices[select(ki+1, ki+4, two_triangles)]=-id;
+			//	indices[select(ki+2, ki+5, two_triangles)]=-id;
+			//	indices[ki  ]=id;
+			//	indices[ki+1]=id;
+			//	indices[ki+2]=id;
 
-			indices[select(ki+3, ki  , two_triangles)]=tcvi[1];
-			indices[select(ki+4, ki+1, two_triangles)]=tcvi[2];
-			indices[select(ki+5, ki+2, two_triangles)]=tcvi[3];
-			indices[ki  ]=tcvi[0];		//aborts, aborts
-			indices[ki+1]=tcvi[1];
-			indices[ki+2]=tcvi[2];
-			ki+=3+3*two_triangles;
+			//	indices[select(ki  , ki+3, two_triangles)]=kx;//DEBUG
+			//	indices[select(ki+1, ki+4, two_triangles)]=ky;
+			//	indices[select(ki+2, ki+5, two_triangles)]=kz;
+			//	indices[ki  ]=-ki;
+			//	indices[ki+1]=-kw;
+			//	indices[ki+2]=-kth;
+
+			//	indices[select(ki  , ki+3, two_triangles)]=43;//DEBUG
+			//	indices[select(ki+1, ki+4, two_triangles)]=id;
+			//	indices[select(ki+2, ki+5, two_triangles)]=ki;
+			//	indices[ki  ]=size[4+id%3];
+			//	indices[ki+1]=size[4+(id+1)%3];
+			//	indices[ki+2]=size[4+(id+2)%3];
+
+			//	indices[select(ki  , ki+3, two_triangles)]=43;//DEBUG
+			//	indices[select(ki+1, ki+4, two_triangles)]=43;
+			//	indices[select(ki+2, ki+5, two_triangles)]=43;
+			//	indices[ki  ]=42;
+			//	indices[ki+1]=42;
+			//	indices[ki+2]=42;
+
+			//	indices[ki  ]=nvert_total-2;//DEBUG
+			//	indices[ki+1]=nvert_total-2;
+			//	indices[ki+2]=nvert_total-2;
+
+				indices[select(ki  , ki+3, two_triangles)]=tcvi[1];//2nd triangle (optional)
+				indices[select(ki+1, ki+4, two_triangles)]=tcvi[2];
+				indices[select(ki+2, ki+5, two_triangles)]=tcvi[3];
+				indices[ki  ]=tcvi[0];//1st triangle
+				indices[ki+1]=tcvi[1];
+				indices[ki+2]=tcvi[2];
+				ki+=3+3*two_triangles;
+			}
 		}//end tetrahedron loop		//*/
 	}
 }
@@ -5213,6 +5221,7 @@ void			cl_compile()
 		else//compile from source first
 #endif
 		{
+			double t_start=time_sec();
 			int success=0;
 			for(int kp=0;kp<nprograms;++kp)
 		//	for(int kp=19;kp<nprograms;++kp)//
@@ -5222,9 +5231,10 @@ void			cl_compile()
 				programname2g_buf(kp);
 				std::string programpath=g_buf;
 			//	snprintf(g_buf, g_buf_size, "%s/cl_program%02d.bin", statedir, kp);
+				double t2=time_sec();
 				if(loadbinary&&!loadFile(programpath.c_str(), (char*&)bin.bin, bin.size))//binary file is there
 				{
-					set_window_title("Loading program %d/%d...", kp+1, nprograms);
+					set_window_title("Loading program %d/%d... (%.2lf sec)", kp+1, nprograms, t2-t_start);
 					int status=0;
 					programs[kp]=p_clCreateProgramWithBinary(context, 1, &device, &bin.size, (const unsigned char**)&bin.bin, &status, &error);	CL_CHECK(error);
 					error=p_clBuildProgram(programs[kp], 0, nullptr, "", nullptr, nullptr);					CL_CHECK(error);
@@ -5233,7 +5243,7 @@ void			cl_compile()
 				}
 				else//compile from source
 				{
-					set_window_title("Compiling program %d/%d...", kp+1, nprograms);
+					set_window_title("Compiling program %d/%d... (%.2lf sec)", kp+1, nprograms, t2-t_start);
 					const char *sources[2]={};
 					size_t srclen[2]={};
 					int nsources=0;
@@ -5919,6 +5929,108 @@ void			cl_setsizes(int mode_idx, int *Xplaces, int *Yplaces, int *Zplaces, char 
 		}
 	}
 }
+typedef unsigned long long ulong;
+union			WorkIdx
+{
+	struct{unsigned short ke, kx, ky, kz;};
+	struct{unsigned kw, kt;};
+	unsigned long long idx;
+	WorkIdx():idx(0){}
+	WorkIdx(short kx, short ky, short kz, short ke):kx(kx), ky(ky), kz(kz), ke(ke){}
+	WorkIdx(unsigned kw, unsigned kt):kw(kw), kt(kt){}
+	void set(short kx, short ky, short kz, short ke){this->kx=kx, this->ky=ky, this->kz=kz, this->ke=ke;}
+	void set(unsigned kw, unsigned kt){this->kw=kw, this->kt=kt;}
+};
+enum			ExEdgeBitIdx//54edges
+{
+	//main (new) edge indices
+	DSW_DSE, DSW_DNW, DSW_USW,
+
+	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
+	DSW_mSm, USW_mSm, USE_mSm, DSE_mSm,
+	DSW_Dmm, DSE_Dmm, DNE_Dmm, DNW_Dmm,
+
+	mmW_Dmm, mmW_mSm, mmW_Umm, mmW_mNm,
+	Umm_mNm, mNm_Dmm, Dmm_mSm, mSm_Umm,
+	mmE_Dmm, mmE_mSm, mmE_Umm, mmE_mNm,
+
+	mmm_Dmm, mmm_mSm, mmm_mmW, mmm_Umm, mmm_mNm, mmm_mmE,
+
+	//extended (redundant) edge indices
+	DSE_DNE, DNE_DNW, DSE_USE, DNE_UNE, DNW_UNW, USW_USE, USE_UNE, UNE_UNW, UNW_USW,
+	mmE_DSE, mmE_USE, mmE_UNE, mmE_DNE,
+	mNm_DNW, mNm_UNW, mNm_UNE, mNm_DNE,
+	Umm_USW, Umm_USE, Umm_UNE, Umm_UNW,
+};
+enum			ExEdgeBitIdxRev//54edges
+{
+	//main (new) edge indices
+	DSE_DSW, DNW_DSW, USW_DSW,
+
+	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
+	mSm_DSW, mSm_USW, mSm_USE, mSm_DSE,
+	Dmm_DSW, Dmm_DSE, Dmm_DNE, Dmm_DNW,
+
+	Dmm_mmW, mSm_mmW, Umm_mmW, mNm_mmW,
+	mNm_Umm, Dmm_mNm, mSm_Dmm, Umm_mSm,
+	Dmm_mmE, mSm_mmE, Umm_mmE, mNm_mmE,
+
+	Dmm_mmm, mSm_mmm, mmW_mmm, Umm_mmm, mNm_mmm, mmE_mmm,
+
+	//extended (redundant) edge indices
+	DNE_DSE, DNW_DNE, USE_DSE, UNE_DNE, UNW_DNW, USE_USW, UNE_USE, UNW_UNE, USW_UNW,
+	DSE_mmE, USE_mmE, UNE_mmE, DNE_mmE,
+	DNW_mNm, UNW_mNm, UNE_mNm, DNE_mNm,
+	USW_Umm, USE_Umm, UNE_Umm, UNW_Umm,
+};
+const ulong		obsmask[8]=//original bit selection mask
+{
+	0x00000001FFFFFFFF,//all coords inside
+	(1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE)|0x00000001FFFFFFFF,//x at end: DSE's originals
+	(1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//y at end: DNW's originals
+	(1ULL<<DNE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//x&y at end: (DSE, DNW & DNE)'s originals
+
+	(1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//z at end: USW's originals
+	(1ULL<<USE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//x&z at end: (DSE, USW & USE)'s originals
+	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
+	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
+};
+const char*		edgenumber2str(int ke)
+{
+	const char *a="???";
+	switch(ke)
+	{
+		//case-string
+#define	CS(name)	case name:a=#name;break;
+		//main (new) edge indices
+		CS(DSW_DSE)	CS(DSW_DNW)	CS(DSW_USW)
+		
+		CS(DSW_mmW)	CS(USW_mmW)	CS(UNW_mmW)	CS(DNW_mmW)
+		CS(DSW_mSm)	CS(USW_mSm)	CS(USE_mSm)	CS(DSE_mSm)
+		CS(DSW_Dmm)	CS(DSE_Dmm)	CS(DNE_Dmm)	CS(DNW_Dmm)
+		
+		CS(mmW_Dmm)	CS(mmW_mSm)	CS(mmW_Umm)	CS(mmW_mNm)
+		CS(Umm_mNm)	CS(mNm_Dmm)	CS(Dmm_mSm)	CS(mSm_Umm)
+		CS(mmE_Dmm)	CS(mmE_mSm)	CS(mmE_Umm)	CS(mmE_mNm)
+		
+		CS(mmm_Dmm)	CS(mmm_mSm)	CS(mmm_mmW)	CS(mmm_Umm)	CS(mmm_mNm)	CS(mmm_mmE)
+
+		//extended (redundant) edge indices
+		CS(DSE_DNE)	CS(DNE_DNW)	CS(DSE_USE)	CS(DNE_UNE)	CS(DNW_UNW)	CS(USW_USE)	CS(USE_UNE)	CS(UNE_UNW)	CS(UNW_USW)
+
+		CS(mmE_DSE)	CS(mmE_USE)	CS(mmE_UNE)	CS(mmE_DNE)
+		CS(mNm_DNW)	CS(mNm_UNW)	CS(mNm_UNE)	CS(mNm_DNE)
+		CS(Umm_USW)	CS(Umm_USE)	CS(Umm_UNE)	CS(Umm_UNW)
+#undef	CS
+	}
+	return a;
+}
+//int hammingweight(ulong x)//https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+//{
+//	x-=x>>1&0x5555555555555555;
+//	x=(x&0x3333333333333333)+(x>>2&0x3333333333333333);
+//	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;
+//}
 #ifdef V6_CPU
 typedef unsigned long long ulong;
 static const unsigned char nt[16]=//number of triangles produced from tetrahedron given 4 bit vertex condition
@@ -6339,77 +6451,79 @@ float3			mix(float3 const &a, float3 const &b, float alpha)
 }
 void			vstore3(float3 const &result, int idx, float *a){a[idx]=result.x, a[idx+1]=result.y, a[idx+2]=result.z;}
 #endif
-typedef unsigned long long ulong;
-union			WorkIdx
+void			exndr2clipboard(const float *ndr5, int Xplaces, int Yplaces, int Zplaces)
 {
-	struct{unsigned short ke, kx, ky, kz;};
-	struct{unsigned kw, kt;};
-	unsigned long long idx;
-	WorkIdx():idx(0){}
-	WorkIdx(short kx, short ky, short kz, short ke):kx(kx), ky(ky), kz(kz), ke(ke){}
-	WorkIdx(unsigned kw, unsigned kt):kw(kw), kt(kt){}
-	void set(short kx, short ky, short kz, short ke){this->kx=kx, this->ky=ky, this->kz=kz, this->ke=ke;}
-	void set(unsigned kw, unsigned kt){this->kw=kw, this->kt=kt;}
-};
-enum			ExEdgeBitIdx//54edges
+	const char *endl="\r\n";
+	std::stringstream LOL_1;
+	LOL_1<<
+		"ExNDR\r\n"
+		"kx = \t";
+	for(int kx=0;kx<Xplaces;++kx)
+		LOL_1<<'\t'<<kx;
+	LOL_1<<endl<<endl;
+	for(int kz=0;kz<Zplaces;++kz)
+	{
+		LOL_1<<"kz = "<<kz<<endl;
+		for(int ky=0;ky<Yplaces;++ky)
+		{
+			LOL_1<<"(kx, "<<ky<<", "<<kz<<')';
+			for(int kx=0;kx<Xplaces;++kx)
+				LOL_1<<'\t'<<ndr5[Xplaces*(Yplaces*kz+ky)+kx];
+			LOL_1<<endl;
+		}
+		LOL_1<<endl;
+	}
+	int XYplaces=Xplaces*Yplaces, ndrSize=Xplaces*Yplaces*Zplaces, exndrSize=ndrSize*5;
+	LOL_1<<"\r\nAverages: down face, south face, west face, center\r\n";
+	for(int k=ndrSize;k+3<exndrSize;k+=4)
+	{
+		int kw=(k-ndrSize)>>2, kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+		LOL_1<<kw<<'('<<kx<<", "<<ky<<", "<<kz<<"):\t"<<ndr5[kw]<<'\t'<<ndr5[kw+1]<<'\t'<<ndr5[kw+2]<<'\t'<<ndr5[kw+3]<<endl;
+	}
+	copy_to_clipboard(LOL_1.str());
+	messageboxa(ghWnd, "Information", "Extended NDR copied to clipboard.");
+}
+void			classifyedges2clipboard(const ulong *edgeinfo, const int *nvert, const int *ntrgl, int Xplaces, int Yplaces, int Zplaces)
 {
-	//main (new) edge indices
-	DSW_DSE, DSW_DNW, DSW_USW,
-
-	DSW_mmW, USW_mmW, UNW_mmW, DNW_mmW,
-	DSW_mSm, USW_mSm, USE_mSm, DSE_mSm,
-	DSW_Dmm, DSE_Dmm, DNE_Dmm, DNW_Dmm,
-
-	mmW_Dmm, mmW_mSm, mmW_Umm, mmW_mNm,
-	Umm_mNm, mNm_Dmm, Dmm_mSm, mSm_Umm,
-	mmE_Dmm, mmE_mSm, mmE_Umm, mmE_mNm,
-
-	mmm_Dmm, mmm_mSm, mmm_mmW, mmm_Umm, mmm_mNm, mmm_mmE,
-
-	//extended (redundant) edge indices
-	DSE_DNE, DNE_DNW, DSE_USE, DNE_UNE, DNW_UNW, USW_USE, USE_UNE, UNE_UNW, UNW_USW,
-	mmE_DSE, mmE_USE, mmE_UNE, mmE_DNE,
-	mNm_DNW, mNm_UNW, mNm_UNE, mNm_DNE,
-	Umm_USW, Umm_USE, Umm_UNE, Umm_UNW,
-};
-enum			ExEdgeBitIdxRev//54edges
-{
-	//main (new) edge indices
-	DSE_DSW, DNW_DSW, USW_DSW,
-
-	mmW_DSW, mmW_USW, mmW_UNW, mmW_DNW,
-	mSm_DSW, mSm_USW, mSm_USE, mSm_DSE,
-	Dmm_DSW, Dmm_DSE, Dmm_DNE, Dmm_DNW,
-
-	Dmm_mmW, mSm_mmW, Umm_mmW, mNm_mmW,
-	mNm_Umm, Dmm_mNm, mSm_Dmm, Umm_mSm,
-	Dmm_mmE, mSm_mmE, Umm_mmE, mNm_mmE,
-
-	Dmm_mmm, mSm_mmm, mmW_mmm, Umm_mmm, mNm_mmm, mmE_mmm,
-
-	//extended (redundant) edge indices
-	DNE_DSE, DNW_DNE, USE_DSE, UNE_DNE, UNW_DNW, USE_USW, UNE_USE, UNW_UNE, USW_UNW,
-	DSE_mmE, USE_mmE, UNE_mmE, DNE_mmE,
-	DNW_mNm, UNW_mNm, UNE_mNm, DNE_mNm,
-	USW_Umm, USE_Umm, UNE_Umm, UNW_Umm,
-};
-const ulong		obsmask[8]=//original bit selection mask
-{
-	0x00000001FFFFFFFF,//all coords inside
-	(1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE)|0x00000001FFFFFFFF,//x at end: DSE's originals
-	(1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//y at end: DNW's originals
-	(1ULL<<DNE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE)|0x00000001FFFFFFFF,//x&y at end: (DSE, DNW & DNE)'s originals
-
-	(1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//z at end: USW's originals
-	(1ULL<<USE_UNE) | (1ULL<<DSE_USE)|(1ULL<<DSE_DNE)|(1ULL<<mmE_DSE)|(1ULL<<mmE_USE)|(1ULL<<mmE_UNE)|(1ULL<<mmE_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//x&z at end: (DSE, USW & USE)'s originals
-	(1ULL<<UNW_UNE) | (1ULL<<DNW_UNW)|(1ULL<<DNW_DNE)|(1ULL<<mNm_DNW)|(1ULL<<mNm_UNW)|(1ULL<<mNm_UNE)|(1ULL<<mNm_DNE) | (1ULL<<USW_USE)|(1ULL<<USW_UNW)|(1ULL<<Umm_USW)|(1ULL<<Umm_USE)|(1ULL<<Umm_UNE)|(1ULL<<Umm_UNW)|0x00000001FFFFFFFF,//y&z at end: (DNW, USW & UNW)'s originals
-	0x003FFFFFFFFFFFFF,//x,y&z at end: entire cube
-};
-int hammingweight(ulong x)//https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
-{
-	x-=x>>1&0x5555555555555555;
-	x=(x&0x3333333333333333)+(x>>2&0x3333333333333333);
-	return ((x+(x>>4))&0x0F0F0F0F0F0F0F0F)*0x0101010101010101>>56;
+	const char *endl="\r\n";
+	std::stringstream LOL_1;
+	LOL_1<<
+		"classifyedges output\r\n"
+		"kw\t(kx, ky, kz)\tedgeinfo[kw]\t\tnvert[kw]\tntrgl[kw]\r\n";
+	int XYplaces=Xplaces*Yplaces, ndrSize=XYplaces*Zplaces;
+	for(int kw=0;kw<ndrSize;++kw)
+	{
+		int kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
+		int length=0;
+		if(kx>=Xplaces-1||ky>=Yplaces-1||kz>=Zplaces-1)
+			length+=sprintf_s(g_buf+length, g_buf_size-length, "\t");
+	//	int length=sprintf_s(g_buf, g_buf_size, "%d\t0x%016LLX\t", kw, edgeinfo[kw]);
+		length+=sprintf_s(g_buf+length, g_buf_size-length, "%d\t(%d, %d, %d)\t0x%016LLX\t", kw, kx, ky, kz, edgeinfo[kw]);
+		int nvk=nvert[kw];
+		length+=sprintf_s(g_buf+length, g_buf_size-length, nvk<0||nvk>54?"0x%08X\t":"%d\t", nvk);
+		int ntk=ntrgl[kw];
+		length+=sprintf_s(g_buf+length, g_buf_size-length, ntk<0||ntk>100?"0x%08X":"%d", ntk);
+	//	length+=sprintf_s(g_buf, g_buf_size, "%d\t0x%016LLX\t%d\t%d\r\n", kw, edgeinfo[kw], nvert[kw], ntrgl[kw]);
+		LOL_1<<g_buf;
+		if(kx<Xplaces-1||ky<Yplaces-1||kz<Zplaces-1)
+		{
+			LOL_1<<'\t';
+			auto eik=edgeinfo[kw];
+			for(int ke=0;ke<64;++ke)
+				if(eik>>ke&1)
+					LOL_1<<' '<<edgenumber2str(ke)<<',';
+		}
+		LOL_1<<endl;
+	//	LOL_1<<g_buf<<endl;
+		if(!((kw+1)%Xplaces))
+		{
+			LOL_1<<endl;
+			if(!((kw+1)%XYplaces))
+				LOL_1<<endl;
+		}
+	}
+	copy_to_clipboard(LOL_1.str());
+	messageboxa(ghWnd, "Information", "ti3d_classifyedges() output copied to clipboard.");
 }
 void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ...)
 {//expression -> OpenGL texture
@@ -7209,7 +7323,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				};
 				error=p_clEnqueueWriteBuffer(commandqueue, coeffs_buf,		CL_FALSE, 0, 7*sizeof(float), coeffs_host, 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("alloc info");
-
+				
 				kernel=kernels[TI3D_CLASSIFYEDGES];
 				//__kernel void ti3d_classifyedges(__constant int *size, __constant float *coeffs, __constant float *ndr, __global ulong *edgeinfo, __global int *nvert, __global int *ntrgl)
 				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
@@ -7226,7 +7340,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				std::vector<ulong> edgeinfo(ndrSize);
 				std::vector<int> nvert(ndrSize), ntrgl(ndrSize);
 				error=p_clEnqueueReadBuffer(commandqueue, edgeinfo_buf, CL_TRUE, 0, ndrSize*sizeof(ulong), edgeinfo.data(), 0, nullptr, nullptr);	CL_CHECK(error);
-				error=p_clEnqueueReadBuffer(commandqueue, nvert_buf,	CL_TRUE, 0, ndrSize*sizeof(int), nvert.data(),	0, nullptr, nullptr);		CL_CHECK(error);
+				error=p_clEnqueueReadBuffer(commandqueue, nvert_buf,	CL_TRUE, 0, ndrSize*sizeof(int), nvert.data(),	0, nullptr, nullptr);		CL_CHECK(error);//TODO: 1 buffer nvert_ntrgl_buf[kw]=ntrgl[kw]<<8|nvert[kw];
 				error=p_clEnqueueReadBuffer(commandqueue, ntrgl_buf,	CL_TRUE, 0, ndrSize*sizeof(int), ntrgl.data(),	0, nullptr, nullptr);		CL_CHECK(error);
 				prof_add("read");
 
@@ -7244,7 +7358,6 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 						int nvert_k=nvert[kw], ntrgl_k=ntrgl[kw];
 						if(nvert_k)
 						{
-							short kx=kw%Xplaces, ky=kw/Xplaces%Yplaces, kz=kw/XYplaces;
 							auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];//boundary mask: selects original bits at boundary
 							auto uwork=edgeinfo[kw]&mask;//unique work
 							for(unsigned short ke=0;ke<54;++ke)//for each original bit
@@ -7258,6 +7371,27 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				}
 				int active_ndrSize=tworkidx.size();
 #if 0//DEBUG
+				//{//get extended NDR
+				//	std::vector<float> ndr5(ndrSize*5);
+				//	error=p_clEnqueueReadBuffer(commandqueue, ndr_buf, CL_TRUE, 0, ndrSize*5*sizeof(float), ndr5.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+				//	exndr2clipboard(ndr5.data(), Xplaces, Yplaces, Zplaces);//identical to V6 CPU
+				//}
+				//classifyedges2clipboard(edgeinfo.data(), nvert.data(), ntrgl.data(), Xplaces, Yplaces, Zplaces);//get edgeinfo, nvert, ntrgl
+				{
+					std::stringstream LOL_1;//get tworkidx
+					LOL_1<<"V6 GPU tworkidx (active cubes)\r\n"
+						"idx\tkw(kx, ky, kz)\tktr\tki=ktr*3\r\n";
+					for(int k=0;k<active_ndrSize;++k)
+					{
+						auto &idx=tworkidx[k];
+						int kx=idx.kw%Xplaces, ky=idx.kw/Xplaces%Yplaces, kz=idx.kw/XYplaces;
+						LOL_1<<k<<"\t"<<idx.kw<<'('<<kx<<", "<<ky<<", "<<kz<<")\t"<<idx.kt<<'\t'<<idx.kt*3<<"\r\n";
+					}
+					copy_to_clipboard(LOL_1.str());
+					messageboxa(ghWnd, "Information", "Active cubes copied to clipboard.");
+				}
+#endif
+#if 0//DEBUG: get unique values from nvert
 				std::stringstream LOL_1;
 				std::vector<int> unique_nvert;
 				for(int k=0;k<ndrSize;++k)
@@ -7301,47 +7435,138 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 					indices_buf		=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ntrgl_total*3*sizeof(int), nullptr, &error);		CL_CHECK(error);
 				}
 				prof_add("alloc VN");
+				//size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total, active_ndrsize, ntrgl_total}
+				sizes_host[4]=nvert_total, sizes_host[5]=active_ndrSize, sizes_host[6]=ntrgl_total;
+				error=p_clEnqueueWriteBuffer(commandqueue, size_buf,		CL_FALSE, 0, 7*sizeof(int), sizes_host, 0, nullptr, nullptr);	CL_CHECK(error);
 				error=p_clEnqueueWriteBuffer(commandqueue, workidx_buf,		CL_FALSE, 0, nvert_total*sizeof(ulong), workidx.data(), 0, nullptr, nullptr);		CL_CHECK(error);
 				error=p_clEnqueueWriteBuffer(commandqueue, tworkidx_buf,	CL_FALSE, 0, active_ndrSize*sizeof(ulong), tworkidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("send workidx");
-
-				kernel=kernels[TI3D_ZEROCROSS];//ti3d_zerocross
+				
+			//	log_start(LL_PROGRESS);//
+				kernel=kernels[TI3D_ZEROCROSS];//3) ti3d_zerocross
+				//__kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __constant float *ndr, __constant ulong *workidx, __global float *vertices)
 				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &coeffs_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &vertices_buf);	CL_CHECK(error);
-														//ATI RV710
-														//(Mobility Radeon HD 5145)
-				size_t l_worksize=g_maxlocalsize,		//OUT_OF_RESOURCES
-			//	size_t l_worksize=g_maxlocalsize>>1,	//OUT_OF_RESOURCES
-			//	size_t l_worksize=g_maxlocalX,			//OUT_OF_RESOURCES
-			//	size_t l_worksize=1,					//OUT_OF_RESOURCES
-					g_worksize=nvert_total-nvert_total%g_maxlocalsize+g_maxlocalsize;//OUT_OF_RESOURCES
-				//	g_worksize=1;						//OUT_OF_RESOURCES
+				size_t l_worksize=g_maxlocalsize,
+			//	size_t l_worksize=1,
+					g_worksize=nvert_total-nvert_total%g_maxlocalsize+g_maxlocalsize;
+				//	g_worksize=1;
 				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("K3 zerocross");
 
-				kernel=kernels[TI3D_TRGL_INDICES];//ti3d_trgl_indices
+				kernel=kernels[TI3D_TRGL_INDICES];//4) ti3d_trgl_indices
 				//__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant int *workidx, __global int *indices)
 				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &tworkidx_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
 				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &indices_buf);	CL_CHECK(error);
-				g_worksize=active_ndrSize-active_ndrSize%g_maxlocalsize+g_maxlocalsize;//OUT_OF_RESOURCES
-			//	g_worksize=1;//OUT_OF_RESOURCES
+				g_worksize=active_ndrSize-active_ndrSize%g_maxlocalsize+g_maxlocalsize;
+			//	g_worksize=1;
 				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
 				prof_add("K4 indices");
+#if 0//DEBUG
+				std::vector<float> vertices(nvert_total*6);
+				std::vector<int> indices(ntrgl_total*3);
+				error=p_clEnqueueReadBuffer(commandqueue, vertices_buf, CL_TRUE, 0, vertices.size()*sizeof(float), vertices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+				error=p_clEnqueueReadBuffer(commandqueue, indices_buf, CL_TRUE, 0, indices.size()*sizeof(int), indices.data(), 0, nullptr, nullptr);		CL_CHECK(error);
+			//	cl_test();//
+#if 0
+				{
+					error=p_clEnqueueReadBuffer(commandqueue, workidx_buf, CL_TRUE, 0, nvert_total*sizeof(ulong), workidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+					std::stringstream LOL_1;//get workidx calculated by CPU
+					LOL_1<<"V6 GPU workidx\r\n";
+					LOL_1<<"e/v\tkx\tky\tkz\tke\r\n";
+					for(int k=0;k<(int)workidx.size();++k)
+					{
+						auto &idx=workidx[k];
+						LOL_1<<k<<"\t("<<idx.kx<<", "<<idx.ky<<", "<<idx.kz<<", "<<idx.ke<<' '<<edgenumber2str(idx.ke)<<")\r\n";
+					}
+					copy_to_clipboard(LOL_1.str());
+					messageboxa(ghWnd, "Information", "workidx (vertex locations) copied to clipboard.");
+				}
+			/*	{//
+					std::stringstream LOL_1;//DEBUG test 9: get just active cubes from ti3d_trgl_indices
+					LOL_1<<"V6 GPU Active cubes reported by ti3d_trgl_indices\r\n";
+					LOL_1<<"id\t(kx, ky, kz)\tstarting ki\r\n";
+					for(int k=0;k<(int)indices.size();++k)
+					{
+						int idx=indices[k];
+						LOL_1<<k<<"\t("<<(idx&7)<<", "<<(idx>>3&7)<<", "<<(idx>>6&7)<<")\t"<<(idx>>9)<<"\r\n";
+					}
+					copy_to_clipboard(LOL_1.str());
+					messageboxa(ghWnd, "Information", "Active cubes copied to clipboard.");
+				}//*/
+				std::vector<int> indices2(indices.size());
+				for(int k=0;k<(int)indices.size();++k)
+				{
+					int idx2=indices[k];
+					WorkIdx idx(idx2>>6&7, idx2>>9&7, idx2>>12&7, idx2&0x3F);
+					int kv=0;
+					int lk=0, rk=nvert_total-1;
+					ulong v=0;
+					for(int ik=0;ik<31;++ik)
+					{
+						kv=(lk+rk)>>1;
+						if(kv>0&&kv<nvert_total)
+							v=workidx[kv].idx;
+						else
+							v=workidx[0].idx;
+					//	v=workidx[kv];
+						lk=v<idx.idx?kv+1:lk;
+						rk=v>idx.idx?kv-1:rk;
+					//	lk=select(lk, kv+1, v<idx);
+					//	rk=select(rk, kv-1, v>idx);
+					}
+					indices2[k]=kv;
+				}
+				{
+					std::stringstream LOL_1;//DEBUG test 7 special
+					LOL_1<<
+						"indices\r\n"
+						"idx-idx\t(kx, ky, kz, ke)\tjump(kx, ky, kz, ke)\tCPU idx\r\n";
+					//LOL_1<<
+					//	"indices\r\n"
+					//	"idx-idx\tkx\tky\tkz\tke\tCPU idx\r\n";
+					for(int k=0;k<(int)indices.size();++k)
+					{
+						int idx=(short)indices[k], ke=idx&0x3F,
+							idx2=short(indices[k]>>16), ke2=idx2&0x3F;
 
+						LOL_1<<k<<"\t("<<(idx >>6&7)<<", "<<(idx >>9&7)<<", "<<(idx >>12&7)<<", "<<ke <<' '<<edgenumber2str(ke )<<")\t";
+						if(idx==idx2)
+							LOL_1<<"same\t\t";
+						else
+							LOL_1<<"("<<(idx2>>6&7)<<", "<<(idx2>>9&7)<<", "<<(idx2>>12&7)<<", "<<ke2<<' '<<edgenumber2str(ke2)<<")\t";
+						LOL_1<<indices2[k]<<"\r\n";
+
+					//	const char *comparison=idx==idx2?"same":"";
+					//	LOL_1<<k<<"\t("
+					//				<<(idx >>6&7)<<", "<<(idx >>9&7)<<", "<<(idx >>12&7)<<", "<<ke <<' '<<edgenumber2str(ke )<<")\t"<<comparison
+					//		<<"("	<<(idx2>>6&7)<<", "<<(idx2>>9&7)<<", "<<(idx2>>12&7)<<", "<<ke2<<' '<<edgenumber2str(ke2)<<")\t"
+					//		<<indices2[k]<<"\r\n";
+
+					//	LOL_1<<k<<"\t("<<(idx>>6&7)<<", "<<(idx>>9&7)<<", "<<(idx>>12&7)<<", "<<ke<<' '<<edgenumber2str(ke)<<")\t"<<indices2[k]<<"\r\n";
+					//	LOL_1<<k<<'\t'<<(idx>>6&7)<<'\t'<<(idx>>9&7)<<'\t'<<(idx>>12&7)<<'\t'<<(idx&0x3F)<<":\t"<<indices2[k]<<"\r\n";
+					//	LOL_1<<k<<'\t'<<(idx>>6&7)<<'\t'<<(idx>>9&7)<<'\t'<<(idx>>12&7)<<'\t'<<(idx&0x3F)<<"\r\n";
+					}
+					copy_to_clipboard(LOL_1.str());
+					messageboxa(ghWnd, "Information", "indices + info copied to clipboard.");
+				}//*/
+#endif
+#endif
 				if(!use_gl_buffers)
 				{
 					std::vector<float> vertices(nvert_total*6);
 					std::vector<int> indices(ntrgl_total*3);
-					error=p_clEnqueueReadBuffer(commandqueue, vertices_buf, CL_TRUE, 0, nvert_total*6*sizeof(float), vertices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
-					error=p_clEnqueueReadBuffer(commandqueue, indices_buf, CL_TRUE, 0, ntrgl_total*3*sizeof(int), indices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+					error=p_clEnqueueReadBuffer(commandqueue, vertices_buf,	CL_TRUE, 0, nvert_total*6*sizeof(float), vertices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+					error=p_clEnqueueReadBuffer(commandqueue, indices_buf,	CL_TRUE, 0, ntrgl_total*3*sizeof(int), indices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
 					gl_buf->create_VN_I(vertices.data(), nvert_total*6, indices.data(), ntrgl_total*3);
 				}
+				g_nvert=nvert_total, g_ntrgl=ntrgl_total;
 
 				cl_free_buffer(ndr_buf);
 				cl_free_buffer(coeffs_buf), cl_free_buffer(edgeinfo_buf), cl_free_buffer(nvert_buf), cl_free_buffer(ntrgl_buf);
@@ -7452,10 +7677,10 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				prof_add("k1 av4");
 				auto edgeinfo=(ulong*)malloc(ndrSize*sizeof(ulong));
 				memset(edgeinfo, 0, ndrSize*sizeof(ulong));
-				auto nvert=(unsigned char*)malloc(ndrSize);//number of edges producing a vertex
-				memset(nvert, 0, ndrSize);
-				auto ntrgl=(unsigned char*)malloc(ndrSize);
-				memset(ntrgl, 0, ndrSize);
+				auto nvert=(int*)malloc(ndrSize*sizeof(int));//number of edges producing a vertex
+				memset(nvert, 0, ndrSize*sizeof(int));
+				auto ntrgl=(int*)malloc(ndrSize*sizeof(int));
+				memset(ntrgl, 0, ndrSize*sizeof(int));
 				//kernel 2: classify edges: fills edgeinfo, nvert, ntrgl
 				//arguments: __global const float *ndr, __global ulong *edgeinfo, __global char *nvert, __global char *ntrgl
 				for(int kz=0, zend=Zplaces-1;kz<zend;++kz)
@@ -7518,6 +7743,8 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 								EC(36)|EC(37)|EC(38)|EC(39)|EC(40)|EC(41)|EC(42)|EC(43)|EC(44)|
 								EC(45)|EC(46)|EC(47)|EC(48)|EC(49)|EC(50)|EC(51)|EC(52)|EC(53);
 #undef						EC
+							if(kx==3&&ky==0&&kz==0)
+								int LOL_1=0;
 							auto mask=obsmask[(kz>=Zplaces-2)<<2|(ky>=Yplaces-2)<<1|(kx>=Xplaces-2)];
 							nvert[idx]=hammingweight(edgeinfo[idx]&mask);
 #define						NT(V0, V1, V2, V3)		nt[V3<<3|V2<<2|V1<<1|V0]
@@ -7615,6 +7842,8 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 					nvert_total+=nvert[kw], ntrgl_total+=ntrgl[kw];
 				}
 				prof_add("CPU1 workidx");
+			//	exndr2clipboard(ndr, Xplaces, Yplaces, Zplaces);//
+				classifyedges2clipboard(edgeinfo, nvert, ntrgl, Xplaces, Yplaces, Zplaces);//
 
 				debug_info.clear();//
 				auto vertices=(float*)malloc(nvert_total*6*sizeof(float));
@@ -7802,7 +8031,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 								char original=getbit(mask, ke);
 								if(original)//original bit, in this data point		note: all bits are original at boundary
 									idx.set(kx, ky, kz, ke);
-								else//redundant bit, look up in another data point
+								else//redundant bit, look up in another data point (jump)
 								{
 									auto &weo=we_offsets[ke-33];
 									short
@@ -7816,36 +8045,32 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 #ifdef V6_CPU
 								int kv=0;
 								char found=0;
-								for(int lk=0, rk=bitindices.size()-1;lk<=rk;)
+
+								for(int lk=0, rk=nvert_total-1, ik=0;ik<31;++ik)
 								{
 									kv=(lk+rk)>>1;
-									ulong v=bitindices[kv];
-									if(v<idx.idx)
-										lk=kv+1;
-									else if(v>idx.idx)
-										rk=kv-1;
-									else
-									{
-										found=1;
-										break;
-									}
+									ulong v=workidx[kv].idx;
+									lk=v<idx.idx?kv+1:lk;
+									rk=v>idx.idx?kv-1:rk;
+									//lk=select(lk, kv+1, v<idx);
+									//rk=select(rk, kv-1, v>idx);
 								}
-								//for(int step=kv>>1;;)
-								//{
-								//	ulong v=bitindices[kv];
-								//	if(v==idx.idx)
-								//	{
-								//		found=1;
-								//		break;
-								//	}
-								//	else if(!step)
-								//		break;
-								//	else if(v>idx.idx)//go back
-								//		kv-=step;
-								//	else//go forward
-								//		kv+=step;
-								//	step>>=1;
-								//}
+								found=kv>=0&&kv<nvert_total;
+
+							//	for(int lk=0, rk=bitindices.size()-1;lk<=rk;)
+							//	{
+							//		kv=(lk+rk)>>1;
+							//		ulong v=bitindices[kv];
+							//		if(v<idx.idx)
+							//			lk=kv+1;
+							//		else if(v>idx.idx)
+							//			rk=kv-1;
+							//		else
+							//		{
+							//			found=1;
+							//			break;
+							//		}
+							//	}
 								if(found)
 									tcvi[esum]=kv;
 #else

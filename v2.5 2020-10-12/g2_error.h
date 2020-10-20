@@ -26,6 +26,22 @@ void				copy_to_clipboard(const char *a, int size);
 inline void			copy_to_clipboard(std::string const &str){copy_to_clipboard(str.c_str(), str.size());}
 void				set_window_title(const char *format, ...);
 
+enum				LogLevel
+{
+	LL_CRITICAL,	//talk only when unavoidable		//inspired by FFmpeg
+	LL_OPERATIONS,	//talk only when doing dangerous stuff
+	LL_PROGRESS,	//report progress
+};
+extern int			loglevel;
+extern bool			consoleactive;
+void				RedirectIOToConsole();//https://stackoverflow.com/questions/191842/how-do-i-get-console-output-in-c-with-a-windows-program
+void				freeconsole();
+void				print_closewarning();
+void				log_start(int priority);
+void				log(int priority, const char *format, ...);
+void				log_pause(int priority);
+#define				log_end freeconsole
+
 static const int	e_msg_size=2048;
 extern char			first_error_msg[e_msg_size], latest_error_msg[e_msg_size];
 void				messageboxa(HWND hWnd, const char *title, const char *format, ...);
