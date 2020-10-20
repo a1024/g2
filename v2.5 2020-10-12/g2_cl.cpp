@@ -5528,7 +5528,10 @@ __kernel void myfunc(__global const float *in1, __global const float *in2, __glo
 }
 void			cl_terminate()
 {
-	int error=p_clReleaseContext(context);	CL_CHECK(error);
+	if(OCL_state>=CL_API_LOADED)
+	{
+		int error=p_clReleaseContext(context);	CL_CHECK(error);
+	}
 }
 
 struct			CLTerm
