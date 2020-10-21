@@ -100,7 +100,7 @@ public:
 		font=newFont;
 		return A;
 	}
-	int					getTextW(const char *a, int i, int f){return short(GetTabbedTextExtentA(ghMemDC, &a[i], f-i, 0, 0));}
+	int					getTextW(const char *a, int i, int f){return (short)GetTabbedTextExtentA(ghMemDC, a+i, f-i, 0, nullptr);}
 	~					Font();
 } font;
 HFONT Font::_hFont_[]=
@@ -1397,7 +1397,7 @@ namespace		resources
 	const char sf10_height=16, sf8_height=12, sf7_height=10, sf6_height=8;
 	const char sf10_widths[]=
 	{
-		0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,//'\t'
 		0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,
 		0,0,4,4,6,8,8,11,9,4,
@@ -2263,7 +2263,7 @@ int				print_array(int x, int y, const char *msg, int msg_length, int tab_origin
 		char c=msg[k];
 		width=0;
 		if(c=='\t')
-			width=gl_tabWidth-(msg_width-tab_origin)%gl_tabWidth, c=' ';
+			width=gl_tabWidth-(x+msg_width-tab_origin)%gl_tabWidth, c=' ';
 		else if(c>=32&&c<0xFF&&(width=font_widths[c]))
 			width*=pixel_x;
 		rect[0]=(x+msg_width		)*_2_w-1, rect[1]=1- y			*_2_h;
@@ -3050,28 +3050,28 @@ void		deselectFont()
 }
 inline int		gl_getFontHeight(){return pixel_y*gl_fontH;}
 inline int		gl_getCharWidth(char c){return pixel_x*font_widths[c];}
-int			getTextWidth(const char *a, int length)
+inline int		gl_gettextWidth(const char *a, int length, int x_from_tab_origin)
+{
+	int width=0;
+	for(int k=0;k<length;++k)
+	{
+		if(a[k]=='\t')
+			width+=gl_tabWidth-(x_from_tab_origin+width)%gl_tabWidth;
+		else if(a[k]>0&&a[k]<127)
+			width+=gl_getCharWidth(a[k]);
+	}
+	return width;
+}
+int			getTextWidth(const char *a, int length, int x_from_tab_origin)
 {
 	if(usingOpenGL)
-	{
-		int width=0;
-		for(int k=0;k<length;++k)
-			if(a[k]>0&&a[k]<127)
-				width+=gl_getCharWidth(a[k]);
-		return width;
-	}
+		return gl_gettextWidth(a, length, x_from_tab_origin);
 	return font.getTextW(a, 0, length);
 }
-int			getTextWidth(const char *a, int i, int f)
+int			getTextWidth(const char *a, int i, int f, int x_from_tab_origin)
 {
 	if(usingOpenGL)
-	{
-		int width=0;
-		for(int k=i;k<f;++k)
-			if(a[k]>0&&a[k]<127)
-				width+=gl_getCharWidth(a[k]);
-		return width;
-	}
+		return gl_gettextWidth(a+i, f-i, x_from_tab_origin);
 	return font.getTextW(a, i, f);
 }
 int			getBkMode()

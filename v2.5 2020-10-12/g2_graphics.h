@@ -398,6 +398,7 @@ inline mat3		normalMatrix(mat4 const &m)//inverse transpose of top left 3x3 subm
 	mat4 r=GetTransformInverseNoScale(m);
 	return (mat3)transpose(r);
 }
+//end of vector algebra
 
 struct			Camera
 {
@@ -540,8 +541,8 @@ double			smallerFont();
 double			setFont(int newFont);
 void			selectFont();
 void			deselectFont();
-int				getTextWidth(const char *a, int length);
-int				getTextWidth(const char *a, int i, int f);
+int				getTextWidth(const char *a, int length, int x_from_tab_origin);
+int				getTextWidth(const char *a, int i, int f, int x_from_tab_origin);
 
 int				getBkMode();
 int				setBkMode(int mode);//TODO: merge mode & color

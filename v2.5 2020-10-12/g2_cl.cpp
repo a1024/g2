@@ -7352,6 +7352,7 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				std::vector<WorkIdx> workidx, tworkidx;
 			//	std::vector<ulong> bitindices;
 			//	std::map<WorkIdx, int> bitindices;
+				g_max_trgl_cube=0;
 				for(unsigned kw=0;kw<ndrSize;++kw)
 				{
 					//fill 'workidx' & 'tworkidx'
@@ -7368,7 +7369,11 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 									workidx.push_back(WorkIdx(kx, ky, kz, ke));
 						}
 						if(ntrgl_k)
+						{
 							tworkidx.push_back(WorkIdx(kw, ntrgl_total));
+							if((int)g_max_trgl_cube<ntrgl_k)
+								g_max_trgl_cube=ntrgl_k;
+						}
 						nvert_total+=nvert_k, ntrgl_total+=ntrgl_k;
 					}
 				}
@@ -7422,55 +7427,57 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 #endif
 				prof_add("CPU workidx");
 				
-				cl_mem workidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, nvert_total*sizeof(ulong), nullptr, &error);		CL_CHECK(error);
-				cl_mem tworkidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, active_ndrSize*sizeof(ulong), nullptr, &error);	CL_CHECK(error);
-				cl_mem vertices_buf=nullptr, indices_buf=nullptr;
-				bool use_gl_buffers=cl_gl_interop&&OCL_version>120;
-				if(use_gl_buffers)
+				if(nvert_total&&ntrgl_total&&active_ndrSize)
 				{
-					gl_buf->create_VN_CL(nvert_total*6, ntrgl_total*3);
-					vertices_buf	=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->VBO, &error);						CL_CHECK(error);
-					indices_buf		=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->EBO, &error);						CL_CHECK(error);
-				}
-				else
-				{
-					vertices_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, nvert_total*6*sizeof(float), nullptr, &error);	CL_CHECK(error);
-					indices_buf		=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ntrgl_total*3*sizeof(int), nullptr, &error);		CL_CHECK(error);
-				}
-				prof_add("alloc VN");
-				//size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total, active_ndrsize, ntrgl_total}
-				sizes_host[4]=nvert_total, sizes_host[5]=active_ndrSize, sizes_host[6]=ntrgl_total;
-				error=p_clEnqueueWriteBuffer(commandqueue, size_buf,		CL_FALSE, 0, 7*sizeof(int), sizes_host, 0, nullptr, nullptr);	CL_CHECK(error);
-				error=p_clEnqueueWriteBuffer(commandqueue, workidx_buf,		CL_FALSE, 0, nvert_total*sizeof(ulong), workidx.data(), 0, nullptr, nullptr);		CL_CHECK(error);
-				error=p_clEnqueueWriteBuffer(commandqueue, tworkidx_buf,	CL_FALSE, 0, active_ndrSize*sizeof(ulong), tworkidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
-				prof_add("send workidx");
+					cl_mem workidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, nvert_total*sizeof(ulong), nullptr, &error);		CL_CHECK(error);
+					cl_mem tworkidx_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, active_ndrSize*sizeof(ulong), nullptr, &error);	CL_CHECK(error);
+					cl_mem vertices_buf=nullptr, indices_buf=nullptr;
+					bool use_gl_buffers=cl_gl_interop&&OCL_version>120;
+					if(use_gl_buffers)
+					{
+						gl_buf->create_VN_CL(nvert_total*6, ntrgl_total*3);
+						vertices_buf	=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->VBO, &error);						CL_CHECK(error);
+						indices_buf		=p_clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, gl_buf->EBO, &error);						CL_CHECK(error);
+					}
+					else
+					{
+						vertices_buf	=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, nvert_total*6*sizeof(float), nullptr, &error);	CL_CHECK(error);
+						indices_buf		=p_clCreateBuffer(context, CL_MEM_WRITE_ONLY, ntrgl_total*3*sizeof(int), nullptr, &error);		CL_CHECK(error);
+					}
+					prof_add("alloc VN");
+					//size: {Xplaces, Yplaces, Zplaces, ndrSize, nvert_total, active_ndrsize, ntrgl_total}
+					sizes_host[4]=nvert_total, sizes_host[5]=active_ndrSize, sizes_host[6]=ntrgl_total;
+					error=p_clEnqueueWriteBuffer(commandqueue, size_buf,		CL_FALSE, 0, 7*sizeof(int), sizes_host, 0, nullptr, nullptr);	CL_CHECK(error);
+					error=p_clEnqueueWriteBuffer(commandqueue, workidx_buf,		CL_FALSE, 0, nvert_total*sizeof(ulong), workidx.data(), 0, nullptr, nullptr);		CL_CHECK(error);
+					error=p_clEnqueueWriteBuffer(commandqueue, tworkidx_buf,	CL_FALSE, 0, active_ndrSize*sizeof(ulong), tworkidx.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+					prof_add("send workidx");
 				
-			//	log_start(LL_PROGRESS);//
-				kernel=kernels[TI3D_ZEROCROSS];//3) ti3d_zerocross
-				//__kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __constant float *ndr, __constant ulong *workidx, __global float *vertices)
-				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &coeffs_buf);		CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &vertices_buf);	CL_CHECK(error);
-				size_t l_worksize=g_maxlocalsize,
-			//	size_t l_worksize=1,
-					g_worksize=nvert_total-nvert_total%g_maxlocalsize+g_maxlocalsize;
-				//	g_worksize=1;
-				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
-				prof_add("K3 zerocross");
+				//	log_start(LL_PROGRESS);//
+					kernel=kernels[TI3D_ZEROCROSS];//3) ti3d_zerocross
+					//__kernel void ti3d_zerocross(__constant int *size, __constant float *coeffs, __constant float *ndr, __constant ulong *workidx, __global float *vertices)
+					error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &coeffs_buf);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &ndr_buf);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &vertices_buf);	CL_CHECK(error);
+					size_t l_worksize=g_maxlocalsize,
+				//	size_t l_worksize=1,
+						g_worksize=nvert_total-nvert_total%g_maxlocalsize+g_maxlocalsize;
+					//	g_worksize=1;
+					error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
+					prof_add("K3 zerocross");
 
-				kernel=kernels[TI3D_TRGL_INDICES];//4) ti3d_trgl_indices
-				//__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant int *workidx, __global int *indices)
-				error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &tworkidx_buf);	CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
-				error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &indices_buf);	CL_CHECK(error);
-				g_worksize=active_ndrSize-active_ndrSize%g_maxlocalsize+g_maxlocalsize;
-			//	g_worksize=1;
-				error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
-				prof_add("K4 indices");
+					kernel=kernels[TI3D_TRGL_INDICES];//4) ti3d_trgl_indices
+					//__kernel void ti3d_trgl_indices(__constant int *size, __constant ulong *ac_workidx, __constant ulong *edgeinfo, __constant int *workidx, __global int *indices)
+					error=p_clSetKernelArg(kernel, 0, sizeof(cl_mem), &size_buf);		CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 1, sizeof(cl_mem), &tworkidx_buf);	CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 2, sizeof(cl_mem), &edgeinfo_buf);	CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 3, sizeof(cl_mem), &workidx_buf);	CL_CHECK(error);
+					error=p_clSetKernelArg(kernel, 4, sizeof(cl_mem), &indices_buf);	CL_CHECK(error);
+					g_worksize=active_ndrSize-active_ndrSize%g_maxlocalsize+g_maxlocalsize;
+				//	g_worksize=1;
+					error=p_clEnqueueNDRangeKernel(commandqueue, kernel, 1, nullptr, &g_worksize, &l_worksize, 0, nullptr, nullptr);	CL_CHECK(error);
+					prof_add("K4 indices");
 #if 0//DEBUG
 				std::vector<float> vertices(nvert_total*6);
 				std::vector<int> indices(ntrgl_total*3);
@@ -7561,26 +7568,26 @@ void 			cl_solve(Expression const &ex, ModeParameters const &mp, double time, ..
 				}//*/
 #endif
 #endif
-				if(!use_gl_buffers)
-				{
-					std::vector<float> vertices(nvert_total*6);
-					std::vector<int> indices(ntrgl_total*3);
-					error=p_clEnqueueReadBuffer(commandqueue, vertices_buf,	CL_TRUE, 0, nvert_total*6*sizeof(float), vertices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
-					error=p_clEnqueueReadBuffer(commandqueue, indices_buf,	CL_TRUE, 0, ntrgl_total*3*sizeof(int), indices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
-					gl_buf->create_VN_I(vertices.data(), nvert_total*6, indices.data(), ntrgl_total*3);
+					if(!use_gl_buffers)
+					{
+						std::vector<float> vertices(nvert_total*6);
+						std::vector<int> indices(ntrgl_total*3);
+						error=p_clEnqueueReadBuffer(commandqueue, vertices_buf,	CL_TRUE, 0, nvert_total*6*sizeof(float), vertices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+						error=p_clEnqueueReadBuffer(commandqueue, indices_buf,	CL_TRUE, 0, ntrgl_total*3*sizeof(int), indices.data(), 0, nullptr, nullptr);	CL_CHECK(error);
+						gl_buf->create_VN_I(vertices.data(), nvert_total*6, indices.data(), ntrgl_total*3);
+					}
+					cl_free_buffer(workidx_buf), cl_free_buffer(tworkidx_buf);
+					cl_free_buffer(vertices_buf);
+					cl_free_buffer(indices_buf);
 				}
 				g_nvert=nvert_total, g_ntrgl=ntrgl_total;
 
 				cl_free_buffer(ndr_buf);
 				cl_free_buffer(coeffs_buf), cl_free_buffer(edgeinfo_buf), cl_free_buffer(nvert_buf), cl_free_buffer(ntrgl_buf);
-				cl_free_buffer(workidx_buf), cl_free_buffer(tworkidx_buf);
 				prof_add("free");
 
 				error=p_clFinish(commandqueue);	CL_CHECK(error);
 				prof_add("clFinish");
-				cl_free_buffer(vertices_buf);
-				cl_free_buffer(indices_buf);
-				prof_add("free");
 #endif
 #if defined V5_CPU||defined V6_CPU
 				int Xplaces=mp.Xplaces, Yplaces=mp.Yplaces, Zplaces=mp.Zplaces;

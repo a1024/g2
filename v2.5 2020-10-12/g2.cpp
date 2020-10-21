@@ -975,20 +975,22 @@ void			TextBox::cursorAtMouse(int x, int y)
 	cursor=0;
 	if(y>=0)
 	{
-		for(int k=0, l=0;k<textlen-1;++k)
+		for(int k=0, l=0;k<textlen-1;++k)//find the start of line containing cursor
 		{
 			if(l==(tpy+y)/fontH)
 				break;
 			else if(text[k]=='\r')
-				cursor=++k+1, ++l;
+				cursor=++k+1, ++l;//skip '\n'
 		}
 	}
 	int lstart=cursor;
 	selectFont();
 //	font.hFont=(HFONT__*)SelectObject(ghMemDC, font.hFont);
-	for(int x2=0;text[cursor]!='\r'&&cursor<textlen;++cursor)
+	for(int x2=0;cursor<textlen&&text[cursor]!='\r';++cursor)
+//	for(int x2=0;text[cursor]!='\r'&&cursor<textlen;++cursor)
 	{
-		int tx2=getTextWidth(text+lstart, cursor+1-lstart);
+		int tx2=getTextWidth(text, lstart, cursor+1, 0);
+	//	int tx2=getTextWidth(text+lstart, cursor+1-lstart);
 	//	int tx2=font.getTextW(text, lstart, cursor+1);
 		if(tpx+x<x2+(tx2-x2)/2)
 			break;
@@ -1016,7 +1018,8 @@ void			TextBox::cursorTeleport()
 			}
 		}
 		if(currentLineStart<cursor)
-			cursorX=getTextWidth(text+currentLineStart, cursor-currentLineStart);
+			cursorX=getTextWidth(text, currentLineStart, cursor, 0);
+		//	cursorX=getTextWidth(text+currentLineStart, cursor-currentLineStart);
 		//	cursorX=font.getTextW(text, currentLineStart, cursor);
 		deselectFont();
 	//	font.hFont=(HFONT__*)SelectObject(ghMemDC, font.hFont);
@@ -1335,7 +1338,7 @@ int				TextBox::inputKeyDown(int wParam, int lParam)
 					{
 						selectFont();
 					//	font.hFont=(HFONT__*)SelectObject(ghMemDC, font.hFont);
-						int x=getTextWidth(text, k+2, cursor), x2=0;
+						int x=getTextWidth(text, k+2, cursor, 0), x2=0;
 					//	int x=font.getTextW(text, k+2, cursor), x2=0;
 						for(;;--k)
 							if(!k||text[k-1]=='\n')
@@ -1349,7 +1352,7 @@ int				TextBox::inputKeyDown(int wParam, int lParam)
 							}
 							int tx2;
 							if(text[k2]=='\t')
-								tx2=getTextWidth(text, k, k2+1);
+								tx2=getTextWidth(text, k, k2+1, 0);
 							//	tx2=font.getTextW(text, k, k2+1);
 							else
 								tx2=x2+fontW[text[k2]];
@@ -1384,9 +1387,10 @@ int				TextBox::inputKeyDown(int wParam, int lParam)
 					//	font.hFont=(HFONT__*)SelectObject(ghMemDC, font.hFont);
 						int k2=cursor;
 						for(;k2>0;--k2)
-							if(text[k2-1]=='\n')
+							if(text[k2-1]=='\n')//k2 points at start of line
 								break;
-						int x=getTextWidth(text+k2, cursor-k2), x2=0;
+						int x=getTextWidth(text, k2, cursor, 0), x2=0;
+					//	int x=getTextWidth(text+k2, cursor-k2), x2=0;
 					//	int x=font.getTextW(text, k2, cursor), x2=0;
 						for(int k2=++k;;++k2)
 						{
@@ -1397,7 +1401,8 @@ int				TextBox::inputKeyDown(int wParam, int lParam)
 							}
 							int tx2;
 							if(text[k2]=='\t')
-								tx2=getTextWidth(text+k, k2+1-k);
+								tx2=getTextWidth(text, k, k2+1, 0);
+							//	tx2=getTextWidth(text+k, k2+1-k);
 							//	tx2=font.getTextW(text, k, k2+1);
 							else
 								tx2=x2+fontW[text[k2]];
@@ -2792,7 +2797,7 @@ int				InputTextBox::inputKeyDown(int wParam, int lParam)
 				{
 					selectFont();
 				//	font.hFont=(HFONT__*)SelectObject(ghMemDC, font.hFont);
-					int x=getTextWidth(text, k+2, cursor), x2=0;
+					int x=getTextWidth(text, k+2, cursor, 0), x2=0;
 				//	int x=font.getTextW(text, k+2, cursor), x2=0;
 					for(;;--k)
 						if(!k||text[k-1]=='\n')
@@ -2806,7 +2811,7 @@ int				InputTextBox::inputKeyDown(int wParam, int lParam)
 						}
 						int tx2;
 						if(text[k2]=='\t')
-							tx2=getTextWidth(text, k, k2+1);
+							tx2=getTextWidth(text, k, k2+1, 0);
 						//	tx2=font.getTextW(text, k, k2+1);
 						else
 							tx2=x2+fontW[text[k2]];
@@ -2831,17 +2836,17 @@ int				InputTextBox::inputKeyDown(int wParam, int lParam)
 			}
 			return 0;
 		case VK_DOWN:
-			for(int k=cursor;k<textlen;++k)
+			for(int k=cursor;k<textlen;++k)//find next newline
 			{
 				if(text[k]=='\n')
 				{
 					selectFont();
 				//	font.hFont=(HFONT__*)SelectObject(ghMemDC, font.hFont);
 					int k2=cursor;
-					for(;k2>0;--k2)
+					for(;k2>0;--k2)//find start of current line
 						if(text[k2-1]=='\n')
 							break;
-					int x=getTextWidth(text, k2, cursor), x2=0;
+					int x=getTextWidth(text, k2, cursor, 0), x2=0;//start of line till cursor
 				//	int x=font.getTextW(text, k2, cursor), x2=0;
 					for(int k2=++k;;++k2)
 					{
@@ -2852,7 +2857,7 @@ int				InputTextBox::inputKeyDown(int wParam, int lParam)
 						}
 						int tx2;
 						if(text[k2]=='\t')
-							tx2=getTextWidth(text, k, k2+1);
+							tx2=getTextWidth(text, k, k2+1, 0);
 						//	tx2=font.getTextW(text, k, k2+1);
 						else
 							tx2=x2+fontW[text[k2]];
