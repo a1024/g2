@@ -32327,7 +32327,8 @@ int copy_text_with_n0d_results(int wParam)//friend InputTextBox
 					{
 						int nTabs=(offset-linelen)/tabsize+1;
 						int buf_off=0;
-						ex.data[ex.resultTerm].print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
+						ex.nresult.print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
+					//	ex.data[ex.resultTerm].print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
 						str.insert(k2, std::string(clamp_positive(nTabs), '\t')+g_buf);
 					}
 				}
@@ -32345,7 +32346,8 @@ int copy_text_with_n0d_results(int wParam)//friend InputTextBox
 						linelen=oldlinelen;
 					int nTabs=(offset-linelen)/tabsize+1;
 					int buf_off=0;
-					ex.data[ex.resultTerm].print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
+					ex.nresult.print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
+				//	ex.data[ex.resultTerm].print(g_buf, buf_off, ex.resultMathSet, modes::n0d.base);
 					str.insert(k2, std::string(nTabs, '\t')+g_buf);
 					k2+=k2_rewind;
 					if(k2_rewind)
@@ -35886,6 +35888,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 			if(action)
 				render();
 		}
+	//	set_window_title("CTRL=%d, SHIFT=%d, C=%d", (int)kb[VK_CONTROL], (int)kb[VK_SHIFT], (int)kb['C']);//
 		if(message==WM_SYSKEYDOWN)
 			break;
 		return 0;
@@ -35894,6 +35897,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 		if(modes::active)
 			modes::mode->inputKeyUp(wParam);
 		kb[wParam]=0;
+	//	set_window_title("CTRL=%d, SHIFT=%d, C=%d", (int)kb[VK_CONTROL], (int)kb[VK_SHIFT], (int)kb['C']);//
 		return 0;
 	case WM_CLOSE:PostQuitMessage(0);
 		return 0;
