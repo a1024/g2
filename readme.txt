@@ -131,16 +131,26 @@ Functions - 1 argument:
 	gauss, erf, fib, zeta, lngamma,
 	step, sgn, rect, tent,
 	ceil, floor, round, int, frac,
-	abs, arg, real, imag, conjugate, polar, cartesian, rand
+	abs, arg, real, imag, conjugate, polar, cartesian, rand,
+	clamp		between 0 and 1
 
 
 Functions - 2 arguments:
 	rand, atan, log,
 	beta, gamma, permutation, combination,
 	bessel, neumann, hankel1
-	sqwv, trwv, saw, min, max, hypot, mandelbrot
+	sqwv, trwv, saw,
+	mandelbrot(complex variable, number if iterations),
+	clamp(x, hi)	between 0 and hi
 
-User-defined functions use C syntax (except switch is not supported)
+Functions - 3 arguments
+	clamp(lo, x, hi)
+
+Functions - variadic
+	min, max, av, hypot,
+	norm(n, a1, ... am)		= (a1^n + ... am^n)^(1/n)
+
+User-defined functions use C syntax (except switch and arrays are not supported)
 Examples:
 isprime(x)
 {
@@ -155,7 +165,41 @@ isprime(x)
 			return false;
 	return true;
 }
-min3(x, y, z){return min(min(x, y), z);}
+
+gcd(a, b)
+{
+	while(b)
+	{
+		t=b;
+		b=a%b;
+		a=t;
+	}
+	return a;
+}
+gcd(a, b)//recursion and redefinition of the same function gcd(a, b)
+{
+	if(b)
+		return gcd(b, a%b);
+	return a;
+}
+gcd(a, b, c){return gcd(a, gcd(b, c));}//overloading
+
+totient(x)//https://www.crazyforcode.com/eulers-totient-function/
+{
+	result=x;
+	for(factor=2;factor*factor<=x;++factor)
+	{
+		if(!(x%factor))
+		{
+			while(!(x%factor))
+				x/=factor;
+			result-=result/factor;
+		}
+	}
+	if(x>1)
+		result-=result/x;
+	return result;
+}
 
 
 

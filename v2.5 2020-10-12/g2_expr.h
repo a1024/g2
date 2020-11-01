@@ -208,7 +208,7 @@ namespace			G2
 		M_S_EQUAL_ASSIGN, M_S_NOT_EQUAL,											//= _!=				not supported
 		M_S_LESS, M_S_LESS_EQUAL, M_S_GREATER, M_S_GREATER_EQUAL,					//= _< =< _> =>		not supported
 
-			M_FSTART,
+			M_FSTART,//unary functions
 
 		M_COS, M_ACOS, M_COSH, M_ACOSH, M_COSC,
 		M_SEC, M_ASEC, M_SECH, M_ASECH,
@@ -222,14 +222,19 @@ namespace			G2
 		M_CEIL, M_FLOOR, M_ROUND, M_INT, M_FRAC,
 		M_ABS, M_ARG, M_REAL, M_IMAG, M_CONJUGATE, M_POLAR, M_CARTESIAN,
 		
-			M_BFSTART,
+			M_BFSTART,//binary functions
 
 		M_RAND,
 		M_ATAN,
 		M_LOG,
 		M_BETA, M_GAMMA, M_PERMUTATION, M_COMBINATION,
 		M_BESSEL_J, M_BESSEL_Y, M_HANKEL1,
-		M_SQWV, M_TRWV, M_SAW, M_MIN, M_MAX, M_HYPOT, M_MANDELBROT,
+		M_SQWV, M_TRWV, M_SAW, M_MANDELBROT,
+
+			M_VFSTART,//variadic functions
+
+		M_CLAMP,//up to 3 args
+		M_MIN, M_MAX, M_AV, M_HYPOT, M_NORM,
 
 		M_USER_FUNCTION
 	};
@@ -303,7 +308,11 @@ enum				InstructionSignature
 
 	SIG_C_QC,
 
-	SIG_INLINE_IF,
+//	SIG_T,//triary
+	SIG_INLINE_IF,// SIG_CLAMP,
+
+	SIG_VA,//variadic
+	//SIG_MIN, SIG_MAX, SIG_AV, SIG_HYPOT, SIG_NORM,
 
 	SIG_CALL='c',
 	SIG_BIF='b',
@@ -562,134 +571,6 @@ template<int buffer_size>inline void printValue_unreal		(bool &written, char (&b
 		written=true;
 	}
 }
-template<typename T, int Align>struct aligned_vector
-{
-	typedef T *iterator;
-	typedef T const *const_iterator;
-	T *p;
-	int n;
-	aligned_vector():p(0), n(0){}
-	aligned_vector(aligned_vector<T, Align> const &other)
-	{
-		if(&other!=this)
-		{
-			n=other.n;
-			if(n)
-			{
-				p=(T*)_aligned_malloc(other.n*sizeof(T), Align);
-				memcpy(p, other.p, n*sizeof(T));
-			}
-			else
-				p=0;
-		}
-	}
-	aligned_vector(aligned_vector<T, Align> &&other)
-	{
-		if(&other!=this)
-		{
-			n=other.n, p=other.p;
-			other.n=0, other.p=0;
-		}
-	}
-	aligned_vector(unsigned n, T const &e=T()):n(n), p((T*)_aligned_malloc(n*sizeof(T), Align))
-	{
-		fill(0, n, e);
-	}
-	~aligned_vector()
-	{
-		if(p)
-		{
-			_aligned_free(p);
-			p=0;
-		}
-	}
-	aligned_vector& operator=(aligned_vector const &other)
-	{
-		if(&other!=this)
-		{
-			n=other.n;
-			realloc(n);
-			for(int k=0;k<n;++k)
-				p[k]=other[k];
-		}
-		return *this;
-	}
-	aligned_vector& operator=(aligned_vector &&other)
-	{
-		if(&other!=this)
-		{
-			if(p)
-				_aligned_free(p);
-			n=other.n, p=other.p;
-			other.n=0, other.p=0;
-		}
-		return *this;
-	}
-	unsigned size()const{return n;}
-	iterator begin(){return p;}
-	iterator end(){return p+n;}
-	const_iterator begin()const{return p;}
-	const_iterator end()const{return p+n;}
-	void realloc(unsigned n)
-	{
-		if(p)
-			p=(T*)_aligned_realloc(p, n*sizeof(T), Align);
-		else
-			p=(T*)_aligned_malloc(n*sizeof(T), Align);
-	}
-	void fill(unsigned start, unsigned end, T const &e)
-	{
-		for(unsigned k=start;k<end;++k)
-			p[k]=e;
-	}
-	void resize(unsigned n, T const &e=T())
-	{
-		if(n!=this->n)//
-		{
-			realloc(n);
-			fill(this->n, n, e);
-			this->n=n;
-		}
-	}
-	T& operator[](unsigned k){return p[k];}
-	T const& operator[](unsigned k)const{return p[k];}
-	void assign(unsigned n, T const &e=T())
-	{
-		this->n=n;
-		realloc(n);
-		fill(0, n, e);
-	}
-	void push_back(T const &e)
-	{
-		++n;
-		realloc(n);
-		p[n-1]=e;
-	}
-	void pop_back()
-	{
-		--n;
-		realloc(n);
-	}
-	void insert(unsigned position, T const &e, unsigned count=1)
-	{
-		unsigned n2=n+count;
-		realloc(n2);
-		n=n2;
-		unsigned pos2=position+count;
-		for(unsigned k=n2-1;k>=pos2;--k)
-			p[k]=p[k-count];
-		fill(position, pos2, e);
-	}
-	void erase(unsigned position, unsigned count=1)
-	{
-		for(unsigned k=position, kEnd=n-count;k<kEnd;++k)
-			p[k]=p[k+count];
-		n-=count;
-		realloc(n);
-	}
-	void clear(){n=0; if(p)_aligned_free(p), p=0;}
-};
-typedef aligned_vector<double, 32> AVector_v4d;
 struct				CompRef
 {
 	double &r, &i;
@@ -905,8 +786,10 @@ namespace			MP
 		//};
 		typedef void (*UF)(Quat &r, Quat const &x);//1, 2, 3, 13, 14, 15, 16
 		typedef void (*BF)(Quat &r, Quat const &x, Quat const &y);//4,5,6,7,8,9,10,11,12, 17, 18,19,20,21,22,23,24,25, 26
+		typedef void (*VAF)(std::vector<MP::Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
 		UF uf;
 		BF bf;
+		VAF vf;
 		FP():uf(nullptr){}
 		FP(void *p):uf((void(*)(Quat&, const Quat&))p){}
 		FP& operator=(void *p){uf=(void(*)(Quat&, const Quat&))p; return *this;}//*/
@@ -1044,6 +927,8 @@ union				FP//function pointer
 	typedef void (*R_QQ)(VectP &r, QuatP const &x,	QuatP const &y);//25
 
 	typedef void (*C_QC)(CompP &r, QuatP const &x,	CompP const &y);//26	//conditional 110 & 101
+
+	typedef void (*VAF)(void *n, void *data, ArgIdx result, std::vector<ArgIdx> const &args, int idx);
 	R_R r_r;//1
 	C_C c_c;//2
 	Q_Q q_q;//3
@@ -1076,6 +961,8 @@ union				FP//function pointer
 	R_QQ r_qq;//25
 
 	C_QC c_qc;//26	//conditional 110 & 101
+
+	VAF vf;			//min, max, av, hypot, norm & clamp (clamp is always triary)
 
 	//Vect2d (*r_r)(Vect2d const&);//1
 	//Comp2d (*c_c)(Comp2d const&);//2
@@ -1157,37 +1044,39 @@ struct				FPSetter
 	void set(FP::C_QC c_qc,	MP::FP::BF mp_c_qc)	{ia32.c_qc=sse2.c_qc=avx.c_qc=c_qc, mp=mp_c_qc,	type=SIG_C_QC, simd=false;}
 
 	//simd setters
-	void set(FP::R_R ia32_r_r,		FP::R_R sse2_r_r,	FP::R_R avx_r_r,	MP::FP::UF mp_r_r)	{ia32.r_r=ia32_r_r,		sse2.r_r=sse2_r_r,		avx.r_r=avx_r_r,	mp=mp_r_r,	type=SIG_R_R, simd=true;}
-	void set(FP::C_C ia32_c_c,		FP::C_C sse2_c_c,	FP::C_C avx_c_c,	MP::FP::UF mp_c_c)	{ia32.c_c=ia32_c_c,		sse2.c_c=sse2_c_c,		avx.c_c=avx_c_c,	mp=mp_c_c,	type=SIG_C_C, simd=true;}
-	void set(FP::Q_Q ia32_q_q,		FP::Q_Q sse2_q_q,	FP::Q_Q avx_q_q,	MP::FP::UF mp_q_q)	{ia32.q_q=ia32_q_q,		sse2.q_q=sse2_q_q,		avx.q_q=avx_q_q,	mp=mp_q_q,	type=SIG_Q_Q, simd=true;}
-	void set(FP::R_RR ia32_r_rr,	FP::R_RR sse2_r_rr, FP::R_RR avx_r_rr,	MP::FP::BF mp_r_rr)	{ia32.r_rr=ia32_r_rr,	sse2.r_rr=sse2_r_rr,	avx.r_rr=avx_r_rr,	mp=mp_r_rr,	type=SIG_R_RR, simd=true;}
-	void set(FP::C_RC ia32_c_rc,	FP::C_RC sse2_c_rc, FP::C_RC avx_c_rc,	MP::FP::BF mp_c_rc)	{ia32.c_rc=ia32_c_rc,	sse2.c_rc=sse2_c_rc,	avx.c_rc=avx_c_rc,	mp=mp_c_rc,	type=SIG_C_RC, simd=true;}
-	void set(FP::Q_RQ ia32_q_rq,	FP::Q_RQ sse2_q_rq, FP::Q_RQ avx_q_rq,	MP::FP::BF mp_q_rq)	{ia32.q_rq=ia32_q_rq,	sse2.q_rq=sse2_q_rq,	avx.q_rq=avx_q_rq,	mp=mp_q_rq,	type=SIG_Q_RQ, simd=true;}
-	void set(FP::C_CR ia32_c_cr,	FP::C_CR sse2_c_cr, FP::C_CR avx_c_cr,	MP::FP::BF mp_c_cr)	{ia32.c_cr=ia32_c_cr,	sse2.c_cr=sse2_c_cr,	avx.c_cr=avx_c_cr,	mp=mp_c_cr,	type=SIG_C_CR, simd=true;}
-	void set(FP::C_CC ia32_c_cc,	FP::C_CC sse2_c_cc, FP::C_CC avx_c_cc,	MP::FP::BF mp_c_cc)	{ia32.c_cc=ia32_c_cc,	sse2.c_cc=sse2_c_cc,	avx.c_cc=avx_c_cc,	mp=mp_c_cc,	type=SIG_C_CC, simd=true;}
-	void set(FP::Q_CQ ia32_q_cq,	FP::Q_CQ sse2_q_cq, FP::Q_CQ avx_q_cq,	MP::FP::BF mp_q_cq)	{ia32.q_cq=ia32_q_cq,	sse2.q_cq=sse2_q_cq,	avx.q_cq=avx_q_cq,	mp=mp_q_cq,	type=SIG_Q_CQ, simd=true;}
-	void set(FP::Q_QR ia32_q_qr,	FP::Q_QR sse2_q_qr, FP::Q_QR avx_q_qr,	MP::FP::BF mp_q_qr)	{ia32.q_qr=ia32_q_qr,	sse2.q_qr=sse2_q_qr,	avx.q_qr=avx_q_qr,	mp=mp_q_qr,	type=SIG_Q_QR, simd=true;}
-	void set(FP::Q_QC ia32_q_qc,	FP::Q_QC sse2_q_qc, FP::Q_QC avx_q_qc,	MP::FP::BF mp_q_qc)	{ia32.q_qc=ia32_q_qc,	sse2.q_qc=sse2_q_qc,	avx.q_qc=avx_q_qc,	mp=mp_q_qc,	type=SIG_Q_QC, simd=true;}
-	void set(FP::Q_QQ ia32_q_qq,	FP::Q_QQ sse2_q_qq, FP::Q_QQ avx_q_qq,	MP::FP::BF mp_q_qq)	{ia32.q_qq=ia32_q_qq,	sse2.q_qq=sse2_q_qq,	avx.q_qq=avx_q_qq,	mp=mp_q_qq,	type=SIG_Q_QQ, simd=true;}
+	void set(FP::R_R ia32_r_r,		FP::R_R sse2_r_r,	FP::R_R avx_r_r,	MP::FP::UF mp_r_r)	{ia32.r_r=ia32_r_r,		sse2.r_r=sse2_r_r,		avx.r_r=avx_r_r,	mp=mp_r_r,	type=SIG_R_R,	simd=true;}
+	void set(FP::C_C ia32_c_c,		FP::C_C sse2_c_c,	FP::C_C avx_c_c,	MP::FP::UF mp_c_c)	{ia32.c_c=ia32_c_c,		sse2.c_c=sse2_c_c,		avx.c_c=avx_c_c,	mp=mp_c_c,	type=SIG_C_C,	simd=true;}
+	void set(FP::Q_Q ia32_q_q,		FP::Q_Q sse2_q_q,	FP::Q_Q avx_q_q,	MP::FP::UF mp_q_q)	{ia32.q_q=ia32_q_q,		sse2.q_q=sse2_q_q,		avx.q_q=avx_q_q,	mp=mp_q_q,	type=SIG_Q_Q,	simd=true;}
+	void set(FP::R_RR ia32_r_rr,	FP::R_RR sse2_r_rr, FP::R_RR avx_r_rr,	MP::FP::BF mp_r_rr)	{ia32.r_rr=ia32_r_rr,	sse2.r_rr=sse2_r_rr,	avx.r_rr=avx_r_rr,	mp=mp_r_rr,	type=SIG_R_RR,	simd=true;}
+	void set(FP::C_RC ia32_c_rc,	FP::C_RC sse2_c_rc, FP::C_RC avx_c_rc,	MP::FP::BF mp_c_rc)	{ia32.c_rc=ia32_c_rc,	sse2.c_rc=sse2_c_rc,	avx.c_rc=avx_c_rc,	mp=mp_c_rc,	type=SIG_C_RC,	simd=true;}
+	void set(FP::Q_RQ ia32_q_rq,	FP::Q_RQ sse2_q_rq, FP::Q_RQ avx_q_rq,	MP::FP::BF mp_q_rq)	{ia32.q_rq=ia32_q_rq,	sse2.q_rq=sse2_q_rq,	avx.q_rq=avx_q_rq,	mp=mp_q_rq,	type=SIG_Q_RQ,	simd=true;}
+	void set(FP::C_CR ia32_c_cr,	FP::C_CR sse2_c_cr, FP::C_CR avx_c_cr,	MP::FP::BF mp_c_cr)	{ia32.c_cr=ia32_c_cr,	sse2.c_cr=sse2_c_cr,	avx.c_cr=avx_c_cr,	mp=mp_c_cr,	type=SIG_C_CR,	simd=true;}
+	void set(FP::C_CC ia32_c_cc,	FP::C_CC sse2_c_cc, FP::C_CC avx_c_cc,	MP::FP::BF mp_c_cc)	{ia32.c_cc=ia32_c_cc,	sse2.c_cc=sse2_c_cc,	avx.c_cc=avx_c_cc,	mp=mp_c_cc,	type=SIG_C_CC,	simd=true;}
+	void set(FP::Q_CQ ia32_q_cq,	FP::Q_CQ sse2_q_cq, FP::Q_CQ avx_q_cq,	MP::FP::BF mp_q_cq)	{ia32.q_cq=ia32_q_cq,	sse2.q_cq=sse2_q_cq,	avx.q_cq=avx_q_cq,	mp=mp_q_cq,	type=SIG_Q_CQ,	simd=true;}
+	void set(FP::Q_QR ia32_q_qr,	FP::Q_QR sse2_q_qr, FP::Q_QR avx_q_qr,	MP::FP::BF mp_q_qr)	{ia32.q_qr=ia32_q_qr,	sse2.q_qr=sse2_q_qr,	avx.q_qr=avx_q_qr,	mp=mp_q_qr,	type=SIG_Q_QR,	simd=true;}
+	void set(FP::Q_QC ia32_q_qc,	FP::Q_QC sse2_q_qc, FP::Q_QC avx_q_qc,	MP::FP::BF mp_q_qc)	{ia32.q_qc=ia32_q_qc,	sse2.q_qc=sse2_q_qc,	avx.q_qc=avx_q_qc,	mp=mp_q_qc,	type=SIG_Q_QC,	simd=true;}
+	void set(FP::Q_QQ ia32_q_qq,	FP::Q_QQ sse2_q_qq, FP::Q_QQ avx_q_qq,	MP::FP::BF mp_q_qq)	{ia32.q_qq=ia32_q_qq,	sse2.q_qq=sse2_q_qq,	avx.q_qq=avx_q_qq,	mp=mp_q_qq,	type=SIG_Q_QQ,	simd=true;}
 
-	void set(FP::C_R ia32_c_r,		FP::C_R sse2_c_r,	FP::C_R avx_c_r,	MP::FP::UF mp_c_r)	{ia32.c_r=ia32_c_r,		sse2.c_r=sse2_c_r,		avx.c_r=avx_c_r,	mp=mp_c_r,	type=SIG_C_R, simd=true;}
-	void set(FP::C_Q ia32_c_q,		FP::C_Q sse2_c_q,	FP::C_Q avx_c_q,	MP::FP::UF mp_c_q)	{ia32.c_q=ia32_c_q,		sse2.c_q=sse2_c_q,		avx.c_q=avx_c_q,	mp=mp_c_q,	type=SIG_C_Q, simd=true;}
+	void set(FP::C_R ia32_c_r,		FP::C_R sse2_c_r,	FP::C_R avx_c_r,	MP::FP::UF mp_c_r)	{ia32.c_r=ia32_c_r,		sse2.c_r=sse2_c_r,		avx.c_r=avx_c_r,	mp=mp_c_r,	type=SIG_C_R,	simd=true;}
+	void set(FP::C_Q ia32_c_q,		FP::C_Q sse2_c_q,	FP::C_Q avx_c_q,	MP::FP::UF mp_c_q)	{ia32.c_q=ia32_c_q,		sse2.c_q=sse2_c_q,		avx.c_q=avx_c_q,	mp=mp_c_q,	type=SIG_C_Q,	simd=true;}
 
-	void set(FP::R_C ia32_r_c,		FP::R_C sse2_r_c,	FP::R_C avx_r_c,	MP::FP::UF mp_r_c)	{ia32.r_c=ia32_r_c,		sse2.r_c=sse2_r_c,		avx.r_c=avx_r_c,	mp=mp_r_c,	type=SIG_R_C, simd=true;}
-	void set(FP::R_Q ia32_r_q,		FP::R_Q sse2_r_q,	FP::R_Q avx_r_q,	MP::FP::UF mp_r_q)	{ia32.r_q=ia32_r_q,		sse2.r_q=sse2_r_q,		avx.r_q=avx_r_q,	mp=mp_r_q,	type=SIG_R_Q, simd=true;}
+	void set(FP::R_C ia32_r_c,		FP::R_C sse2_r_c,	FP::R_C avx_r_c,	MP::FP::UF mp_r_c)	{ia32.r_c=ia32_r_c,		sse2.r_c=sse2_r_c,		avx.r_c=avx_r_c,	mp=mp_r_c,	type=SIG_R_C,	simd=true;}
+	void set(FP::R_Q ia32_r_q,		FP::R_Q sse2_r_q,	FP::R_Q avx_r_q,	MP::FP::UF mp_r_q)	{ia32.r_q=ia32_r_q,		sse2.r_q=sse2_r_q,		avx.r_q=avx_r_q,	mp=mp_r_q,	type=SIG_R_Q,	simd=true;}
 
-	void set(FP::C_RR ia32_c_rr,	FP::C_RR sse2_c_rr,	FP::C_RR avx_c_rr,	MP::FP::BF mp_c_rr)	{ia32.c_rr=ia32_c_rr,	sse2.c_rr=sse2_c_rr,	avx.c_rr=avx_c_rr,	mp=mp_c_rr,	type=SIG_C_RR, simd=true;}
+	void set(FP::C_RR ia32_c_rr,	FP::C_RR sse2_c_rr,	FP::C_RR avx_c_rr,	MP::FP::BF mp_c_rr)	{ia32.c_rr=ia32_c_rr,	sse2.c_rr=sse2_c_rr,	avx.c_rr=avx_c_rr,	mp=mp_c_rr,	type=SIG_C_RR,	simd=true;}
 	
-	void set(FP::R_RC ia32_r_rc,	FP::R_RC sse2_r_rc,	FP::R_RC avx_r_rc,	MP::FP::BF mp_r_rc)	{ia32.r_rc=ia32_r_rc,	sse2.r_rc=sse2_r_rc,	avx.r_rc=avx_r_rc,	mp=mp_r_rc,	type=SIG_R_RC, simd=true;}
-	void set(FP::R_RQ ia32_r_rq,	FP::R_RQ sse2_r_rq,	FP::R_RQ avx_r_rq,	MP::FP::BF mp_r_rq)	{ia32.r_rq=ia32_r_rq,	sse2.r_rq=sse2_r_rq,	avx.r_rq=avx_r_rq,	mp=mp_r_rq,	type=SIG_R_RQ, simd=true;}
-	void set(FP::R_CR ia32_r_cr,	FP::R_CR sse2_r_cr,	FP::R_CR avx_r_cr,	MP::FP::BF mp_r_cr)	{ia32.r_cr=ia32_r_cr,	sse2.r_cr=sse2_r_cr,	avx.r_cr=avx_r_cr,	mp=mp_r_cr,	type=SIG_R_CR, simd=true;}
-	void set(FP::R_CC ia32_r_cc,	FP::R_CC sse2_r_cc,	FP::R_CC avx_r_cc,	MP::FP::BF mp_r_cc)	{ia32.r_cc=ia32_r_cc,	sse2.r_cc=sse2_r_cc,	avx.r_cc=avx_r_cc,	mp=mp_r_cc,	type=SIG_R_CC, simd=true;}
-	void set(FP::R_CQ ia32_r_cq,	FP::R_CQ sse2_r_cq,	FP::R_CQ avx_r_cq,	MP::FP::BF mp_r_cq)	{ia32.r_cq=ia32_r_cq,	sse2.r_cq=sse2_r_cq,	avx.r_cq=avx_r_cq,	mp=mp_r_cq,	type=SIG_R_CQ, simd=true;}
-	void set(FP::R_QR ia32_r_qr,	FP::R_QR sse2_r_qr,	FP::R_QR avx_r_qr,	MP::FP::BF mp_r_qr)	{ia32.r_qr=ia32_r_qr,	sse2.r_qr=sse2_r_qr,	avx.r_qr=avx_r_qr,	mp=mp_r_qr,	type=SIG_R_QR, simd=true;}
-	void set(FP::R_QC ia32_r_qc,	FP::R_QC sse2_r_qc,	FP::R_QC avx_r_qc,	MP::FP::BF mp_r_qc)	{ia32.r_qc=ia32_r_qc,	sse2.r_qc=sse2_r_qc,	avx.r_qc=avx_r_qc,	mp=mp_r_qc,	type=SIG_R_QC, simd=true;}
-	void set(FP::R_QQ ia32_r_qq,	FP::R_QQ sse2_r_qq,	FP::R_QQ avx_r_qq,	MP::FP::BF mp_r_qq)	{ia32.r_qq=ia32_r_qq,	sse2.r_qq=sse2_r_qq,	avx.r_qq=avx_r_qq,	mp=mp_r_qq,	type=SIG_R_QQ, simd=true;}
+	void set(FP::R_RC ia32_r_rc,	FP::R_RC sse2_r_rc,	FP::R_RC avx_r_rc,	MP::FP::BF mp_r_rc)	{ia32.r_rc=ia32_r_rc,	sse2.r_rc=sse2_r_rc,	avx.r_rc=avx_r_rc,	mp=mp_r_rc,	type=SIG_R_RC,	simd=true;}
+	void set(FP::R_RQ ia32_r_rq,	FP::R_RQ sse2_r_rq,	FP::R_RQ avx_r_rq,	MP::FP::BF mp_r_rq)	{ia32.r_rq=ia32_r_rq,	sse2.r_rq=sse2_r_rq,	avx.r_rq=avx_r_rq,	mp=mp_r_rq,	type=SIG_R_RQ,	simd=true;}
+	void set(FP::R_CR ia32_r_cr,	FP::R_CR sse2_r_cr,	FP::R_CR avx_r_cr,	MP::FP::BF mp_r_cr)	{ia32.r_cr=ia32_r_cr,	sse2.r_cr=sse2_r_cr,	avx.r_cr=avx_r_cr,	mp=mp_r_cr,	type=SIG_R_CR,	simd=true;}
+	void set(FP::R_CC ia32_r_cc,	FP::R_CC sse2_r_cc,	FP::R_CC avx_r_cc,	MP::FP::BF mp_r_cc)	{ia32.r_cc=ia32_r_cc,	sse2.r_cc=sse2_r_cc,	avx.r_cc=avx_r_cc,	mp=mp_r_cc,	type=SIG_R_CC,	simd=true;}
+	void set(FP::R_CQ ia32_r_cq,	FP::R_CQ sse2_r_cq,	FP::R_CQ avx_r_cq,	MP::FP::BF mp_r_cq)	{ia32.r_cq=ia32_r_cq,	sse2.r_cq=sse2_r_cq,	avx.r_cq=avx_r_cq,	mp=mp_r_cq,	type=SIG_R_CQ,	simd=true;}
+	void set(FP::R_QR ia32_r_qr,	FP::R_QR sse2_r_qr,	FP::R_QR avx_r_qr,	MP::FP::BF mp_r_qr)	{ia32.r_qr=ia32_r_qr,	sse2.r_qr=sse2_r_qr,	avx.r_qr=avx_r_qr,	mp=mp_r_qr,	type=SIG_R_QR,	simd=true;}
+	void set(FP::R_QC ia32_r_qc,	FP::R_QC sse2_r_qc,	FP::R_QC avx_r_qc,	MP::FP::BF mp_r_qc)	{ia32.r_qc=ia32_r_qc,	sse2.r_qc=sse2_r_qc,	avx.r_qc=avx_r_qc,	mp=mp_r_qc,	type=SIG_R_QC,	simd=true;}
+	void set(FP::R_QQ ia32_r_qq,	FP::R_QQ sse2_r_qq,	FP::R_QQ avx_r_qq,	MP::FP::BF mp_r_qq)	{ia32.r_qq=ia32_r_qq,	sse2.r_qq=sse2_r_qq,	avx.r_qq=avx_r_qq,	mp=mp_r_qq,	type=SIG_R_QQ,	simd=true;}
 
-	void set(FP::C_QC ia32_c_qc,	FP::C_QC sse2_c_qc,	FP::C_QC avx_c_qc,	MP::FP::BF mp_c_qc)	{ia32.c_qc=ia32_c_qc,	sse2.c_qc=sse2_c_qc,	avx.c_qc=avx_c_qc,	mp=mp_c_qc,	type=SIG_C_QC, simd=true;}
+	void set(FP::C_QC ia32_c_qc,	FP::C_QC sse2_c_qc,	FP::C_QC avx_c_qc,	MP::FP::BF mp_c_qc)	{ia32.c_qc=ia32_c_qc,	sse2.c_qc=sse2_c_qc,	avx.c_qc=avx_c_qc,	mp=mp_c_qc,	type=SIG_C_QC,	simd=true;}
+
+	void set(FP::VAF ia32_vf,		FP::VAF sse2_vf,	FP::VAF avx_vf,		MP::FP::VAF mp_vf)	{ia32.vf=ia32_vf,		sse2.vf=sse2_vf,		avx.vf=avx_vf,		mp=mp_vf,	type=SIG_VA,	simd=true;}
 };
 namespace			MP
 {
@@ -1237,16 +1126,25 @@ namespace			MP
 		char r_ms, op1_ms, op2_ms, op3_ms;//math set: R: real, c: complex, h: quaternion
 		FP fp;
 
-		std::vector<int> args;
+		std::vector<ArgIdx> args;
 
 		bool is_binary()const{return type>=4&&type<=12||type>=17&&type<=26;}
 		bool has_nonreal_args()const{return op1_ms!='R'||is_binary()&&op2_ms!='R';}
+		
+		//user function call (SIG_CALL) or built-in variadic function (SIG_VA)
+		Instruction(char type_VA_CALL, FPSetter &fps, std::vector<ArgIdx> const &args, int result, char rms, int op1):
+			type(type_VA_CALL), fp(fps.mp), args(args), result(result), r_ms(rms), op1(op1),
+			op2(-1), op3(-1), op1_ms(0), op2_ms(0), op3_ms(0){}
 
-		Instruction(int function, std::vector<int> const &args, int n_result){type='c', op1=function, this->args=args, result=n_result;}
+	//	//call
+	//	Instruction(int function, std::vector<int> const &args, int n_result){type='c', op1=function, this->args=args, result=n_result;}
 	
-		Instruction(char type, int n_condition){this->type=type, op1=n_condition;}//branch:		'b' branch if		'B' branch if not		op1 condition, result dest
-		Instruction(){type='j';}//jump		result dest
-		Instruction(int n_result){type='r', result=n_result;}//return		result result
+		Instruction(char type, int n_condition):type(type), op1(n_condition),//branch:		'b' branch if		'B' branch if not		op1 condition, result dest
+			result(-1), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
+		Instruction():type(SIG_JUMP),//jump		result dest
+			result(-1), op1(-1), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
+		Instruction(int n_result):type(SIG_RETURN), result(n_result),//return		result result
+			op1(-1), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
 	
 		//unary function
 		Instruction(FPSetter &fps, int op1, char op1_ms, int result, char r_ms):
@@ -1310,20 +1208,25 @@ struct				Instruction
 	FP ia32, sse2, avx;//in order
 	DiscontinuityFunction d;
 	
-	std::vector<int> args;//arg positions
+	std::vector<ArgIdx> args;//arg positions & mathSets
 
 	bool is_binary()const{return type>=4&&type<=12||type>=17&&type<=26;}
 	bool has_nonreal_args()const{return op1_ms!='R'||is_binary()&&op2_ms!='R';}
 
-	//call
-	Instruction(int function, std::vector<int> const &args, int n_result):type('c'), op1(function), args(args), result(n_result), simd(false),
-		cl_idx(0), cl_disc_idx(0), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
+	//user function call (SIG_CALL) or built-in variadic function (SIG_VA)
+	Instruction(char type_VA_CALL, FPSetter &fps, std::vector<ArgIdx> const &args, int result, char rms, int cl_idx, int cl_disc_idx, int op1):
+		type(type_VA_CALL), ia32(fps.ia32), sse2(fps.sse2), avx(fps.avx), args(args), result(result), r_ms(rms), simd(fps.simd), cl_idx(cl_idx), cl_disc_idx(cl_disc_idx), op1(op1),
+		op2(-1), op3(-1), op1_ms(0), op2_ms(0), op3_ms(0){}
+
+//	//call
+//	Instruction(int function, std::vector<int> const &args, int n_result):type(SIG_CALL), op1(function), args(args), result(n_result), simd(false),
+//		cl_idx(0), cl_disc_idx(0), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
 	
 	Instruction(char type, int n_condition):type(type), op1(n_condition), simd(false),//branch:		'b' branch if		'B' branch if not		op1 condition, result dest
 		cl_idx(0), cl_disc_idx(0), result(0), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
-	Instruction():type('j'), simd(false),//jump		result dest
+	Instruction():type(SIG_JUMP), simd(false),//jump		result dest
 		cl_idx(0), cl_disc_idx(0), result(0), op1(-1), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
-	Instruction(int n_result):type('r'), result(n_result), simd(false),//return		result result
+	Instruction(int n_result):type(SIG_RETURN), result(n_result), simd(false),//return		result result
 		cl_idx(0), cl_disc_idx(0), op1(-1), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
 	
 	//unary function
@@ -1337,6 +1240,11 @@ struct				Instruction
 	//inline if
 	Instruction(int op1, char op1_ms, int op2, char op2_ms, int op3, char op3_ms, int result, char r_ms, DiscontinuityFunction &d, int cl_idx, int cl_disc_idx):
 		d(d), type(SIG_INLINE_IF), simd(true), op1(op1), op1_ms(op1_ms), op2(op2), op2_ms(op2_ms), op3(op3), op3_ms(op3_ms), result(result), r_ms(r_ms), cl_idx(cl_idx), cl_disc_idx(cl_disc_idx){}
+	
+//	//built-in variadic function
+//	Instruction(FPSetter &fps, std::vector<int> const &args, int n_result, int cl_idx, int cl_disc_idx):
+//		type(SIG_VA), ia32(fps.ia32), sse2(fps.sse2), avx(fps.avx), args(args), result(n_result), simd(fps.simd), cl_idx(cl_idx), cl_disc_idx(cl_disc_idx),
+//		op1(-1), op2(-1), op3(-1), r_ms(0), op1_ms(0), op2_ms(0), op3_ms(0){}
 };
 struct				Variable
 {
@@ -1370,11 +1278,9 @@ struct				UFVariableName
 };
 struct				Term
 {
-	bool constant;
-	char mathSet;//'R' real, 'c' complex, 'h' quaternion	larger value = superset	//'C'==67, 'H'==72, ['R'==82, 'c'==99, 'h'==104], 'r'==114
-	int varNo;
+	//mathSet: 'R' real, 'c' complex, 'h' quaternion	larger value = superset	//'C'==67, 'H'==72, ['R'==82, 'c'==99, 'h'==104], 'r'==114
+	TERM_CONTENTS
 
-	AVector_v4d r, i, j, k;
 	void assign(int position, Value const &v, char mathSet)
 	{
 		r[position]=v.r;

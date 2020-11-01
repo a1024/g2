@@ -720,9 +720,129 @@ int lineChangeStart=-1, lineRemoveEnd=-1, lineInsertEnd=-1, nLines=1;
 int boundChangeStart=-1, boundRemoveEnd=-1, boundInsertEnd=-1;
 int exprChangeStart=-1, exprRemoveEnd=-1, exprInsertEnd=-1;
 int functionChangeStart=-1, functionRemoveEnd=-1, functionInsertEnd=-1;
-std::vector<std::pair<int, char>> bounds(1, std::pair<int, char>(0, 'c'));//e expression, f function, c clear/empty
+typedef std::pair<int, char> Bound;
+std::vector<Bound> bounds(1, Bound(0, 'c'));//e expression, f function, c clear/empty
 //std::vector<std::pair<int, char>> bounds(1, std::pair<int, char>(0, 'e'));
-std::vector<std::pair<int, int>> allComments;
+typedef std::pair<int, int> CommentBound;
+std::vector<CommentBound> allComments;
+struct BoundCounter
+{
+	int idx,
+		kc,//next comment
+		start, end;
+	BoundCounter(int idx, int kc, int textlen):idx(idx), kc(kc), start(kc?allComments[kc-1].second:0), end(kc<(int)allComments.size()?allComments[kc].first:textlen){}
+	void skip_comments(int textlen)
+	{
+		if(idx>=end&&kc<(int)allComments.size())//jump forward over comment kc
+		{
+			start=idx=allComments[kc].second;//end of next comment
+			++kc;
+			if(kc<(int)allComments.size())
+				end=allComments[kc].first;//start of after-next comment
+			else
+				end=textlen;
+		}
+	}
+	void rskip_comments()
+	{
+		if(idx<start&&kc>0)//kc>0 implies there are comments		jump backwards over comment kc-1
+		{
+			--kc;
+			end=allComments[kc].first;//start of next comment
+			idx=end-1;
+			if(kc>0)
+				start=allComments[kc-1].second;//end of previous comment
+			else
+				start=0;
+		}
+	}
+	void inc(int textlen)//don't use inc() or dec() when skipping identifier
+	{
+		++idx;
+		skip_comments(textlen);
+	}
+	void dec()
+	{
+		--idx;
+		rskip_comments();
+	}
+};
+char skip_whitespace(const char *text, BoundCounter &k, int textlen)
+{
+	for(;k.idx<textlen&&text[k.idx]==' '||text[k.idx]=='\t'||text[k.idx]=='\r'||text[k.idx]=='\n';k.inc(textlen));
+	return k.idx>=textlen;
+}
+char skip_char_ifmatch(const char *text, BoundCounter &k, int textlen, char c)
+{
+	char match=text[k.idx]==c;
+	k.idx+=match;
+	k.skip_comments(textlen);
+	return match<<1|(k.idx>=textlen);//on match: k points after c or OOB
+}
+char skip_char_ifmatch(const char *text, BoundCounter &k, int textlen, const char *cs, char *c_matched_ret=nullptr)
+{
+	char match=false;
+	for(int k2=0;cs[k2];++k2)
+	{
+		if(text[k.idx]==cs[k2])
+		{
+			match=true;
+			if(c_matched_ret)
+				*c_matched_ret=cs[k2];
+			break;
+		}
+	}
+	k.idx+=match;
+	k.skip_comments(textlen);
+	return match<<1|(k.idx>=textlen);//on match: k points after c or OOB
+}
+char skip_identifier_ifmatch(const char *text, BoundCounter &k, int textlen)
+{
+	if(text[k.idx]>='a'&&text[k.idx]<='z'||text[k.idx]>='A'&&text[k.idx]<='Z'||text[k.idx]=='_')
+	{
+		for(;k.idx>=0&&(text[k.idx]>='a'&&text[k.idx]<='z'||text[k.idx]>='A'&&text[k.idx]<='Z'||text[k.idx]=='_'||text[k.idx]>='0'&&text[k.idx]<='9');++k.idx);
+		return 2|int(k.idx>=textlen);
+	}
+	return k.idx>=textlen;
+}
+char rskip_whitespace(const char *text, BoundCounter &k, int textlen)
+{
+	for(;k.idx>=0&&text[k.idx]==' '||text[k.idx]=='\t'||text[k.idx]=='\r'||text[k.idx]=='\n';k.dec());
+	return k.idx<0;//k points at first non-whitespace or OOB
+}
+//enum{RSKIP_OOB_BIT=0, RSKIP_MATCH_BIT=1};
+char rskip_char_ifmatch(const char *text, BoundCounter &k, int textlen, char c)//called after rskip_whitespace
+{
+	char match=text[k.idx]==c;
+	k.idx-=match;
+	k.rskip_comments();
+	return match<<1|(k.idx<0);//on match: k points at before c or OOB
+}
+char rskip_char_ifmatch(const char *text, BoundCounter &k, int textlen, const char *cs, char *c_matched_ret=nullptr)
+{
+	char match=false;
+	for(int k2=0;cs[k2];++k2)
+	{
+		if(text[k.idx]==cs[k2])
+		{
+			match=true;
+			if(c_matched_ret)
+				*c_matched_ret=cs[k2];
+			break;
+		}
+	}
+	k.idx-=match;
+	k.rskip_comments();
+	return match<<1|(k.idx<0);//on match: k points at before matched char
+}
+char rskip_identifier(const char *text, BoundCounter &k, int textlen)
+{
+	for(;k.idx>=0&&(text[k.idx]>='a'&&text[k.idx]<='z'||text[k.idx]>='A'&&text[k.idx]<='Z'||text[k.idx]>='0'&&text[k.idx]<='9'||text[k.idx]=='_');--k.idx);
+	int idx2=k.idx+(k.idx+1<textlen);//idx2 points at start of identifier
+	char match=text[idx2]>='a'&&text[idx2]<='z'||text[idx2]>='A'&&text[idx2]<='Z';
+	k.rskip_comments();
+	return match<<1|(k.idx<0);
+}
 
 struct		Performance
 {
@@ -1812,6 +1932,48 @@ void			InputTextBox::replaceText_update(int i, int fr, int fi)
 	{
 		nLines=1;
 		allComments.clear();
+		for(int k=0;;)//A: comments
+		{
+			{//skip till comment
+				for(;k+1<textlen&&(text[k]!='/'||text[k+1]!='/'&&text[k+1]!='*');++k);
+				char k1_oob=k+1>=textlen;
+				k+=k1_oob;//k points at comment start or OOB
+				if(k1_oob)//no comments left
+					break;
+			}
+			int start=k;//comment found
+			k+=2;
+			char isend=0;
+			if(text[k-1]=='/')//skip line comment
+			{
+				for(;k<textlen&&(k>0&&text[k-1]=='\\'||text[k]!='\r');++k);
+				isend=k>=textlen;
+			}
+			else if(text[k-1]=='*')//skip block comment
+			{
+				if(nestedComments)
+				{
+					int level=1;
+					for(;k+1<textlen;++k)
+					{
+						char open=text[k]=='/'&&text[k+1]=='*', close=text[k]=='*'&&text[k+1]=='/';
+						level+=open-close;
+						if(!level)
+							break;
+						k+=open|close;
+					}
+				}
+				else
+					for(;k+1<textlen&&(text[k]!='*'||text[k+1]!='/');++k);
+				char k1_oob=k+1>=textlen;
+				k+=1+!k1_oob;//k points at end of comment or OOB
+				isend=k1_oob;
+			}
+			allComments.push_back(CommentBound(start, k));
+			if(isend)
+				break;
+		}
+#if 0
 		{
 			std::stack<int> cStack;//positions of /*
 			bool cFound=false, lineComment=false;
@@ -1901,6 +2063,101 @@ void			InputTextBox::replaceText_update(int i, int fr, int fi)
 				}
 			}
 		}
+#endif
+		for(BoundCounter k(0, 0, textlen);;)//bound extractor
+		{
+			for(;k.idx<textlen&&text[k.idx]!='{'&&(k.idx&&text[k.idx-1]=='\\'||text[k.idx]!='\r');k.inc(textlen));
+			if(k.idx==textlen||text[k.idx]=='\r')
+			{
+				k.idx+=k.idx<textlen&&text[k.idx]=='\r';
+				k.idx+=k.idx<textlen&&text[k.idx]=='\n';
+			//	k.idx+=1+(k.idx+1<textlen&&text[k.idx+1]=='\n');
+				bounds.push_back(Bound(k.idx, 'e'));
+			}
+			else if(text[k.idx]=='{')
+			{
+				//parse function header in reverse
+				BoundCounter hstart=k;
+				hstart.dec();
+				char isfunction=!rskip_whitespace(text, hstart, textlen);
+				isfunction&=rskip_char_ifmatch(text, hstart, textlen, ')')==2;//match & not OOB
+				if(isfunction)
+				{
+					try//ID WS '(' [[WS T WS ID WS ',']^n WS T WS ID] WS ')' WS FBODY		<- header is parsed backwards
+					{
+						char arg_separator[]="(,";
+						char match_oob=0;//{match bit, OOB bit}
+#define					MATCH_BIT	(match_oob>>1)
+#define					OOB_BIT		(match_oob&1)
+						for(char notfirsttime=false;isfunction;notfirsttime=true)
+						{
+							if(rskip_whitespace(text, hstart, textlen))//OOB	//...){
+								throw false;
+
+							char c_matched=0;
+							arg_separator[1]=','&-notfirsttime;
+							match_oob=rskip_char_ifmatch(text, hstart, textlen, arg_separator, &c_matched);
+							if(OOB_BIT)//OOB	//...){
+								throw false;
+							char match=MATCH_BIT;
+							if(match&&c_matched=='(')//found '('
+								break;
+							if(notfirsttime&&!match)//comma must separate args
+								throw false;
+
+							if(rskip_whitespace(text, hstart, textlen))//OOB	//...){
+								throw false;
+
+							match_oob=rskip_identifier(text, hstart, textlen);//argname must be found
+							if(OOB_BIT)//OOB	//...){
+								throw false;
+							isfunction&=MATCH_BIT;
+
+							if(rskip_whitespace(text, hstart, textlen))//OOB	//...){
+								throw false;
+
+							match_oob=rskip_char_ifmatch(text, hstart, textlen, "rRcCqQhH");//optional
+							if(OOB_BIT)//OOB	//...){
+								throw false;
+						}
+
+						if(rskip_whitespace(text, hstart, textlen))//OOB	//(...){
+							throw false;
+						match_oob=rskip_identifier(text, hstart, textlen);//funcname must be found
+						isfunction&=MATCH_BIT;
+#undef					MATCH_BIT
+#undef					OOB_BIT
+					}
+					catch(bool f)
+					{
+						isfunction=f;
+					}
+				}
+				//match curly brace
+				k.inc(textlen);//k points at '{'
+				int level=1;
+				for(;k.idx<textlen&&level;k.inc(textlen))
+				{
+					char c=text[k.idx];
+					level+=(c=='{')-(c=='}');
+				}
+				skip_whitespace(text, k, textlen);
+				isfunction&=!level;//k points at after '}'
+
+				if(isfunction)//hstart is before the start or OOB
+				{
+					hstart.inc(textlen);
+					for(;bounds.size()&&hstart.idx<bounds.rbegin()->first;)//pop possible thought to be expression bounds
+						bounds.pop_back();
+					bounds.push_back(Bound(k.idx, 'f'));
+				}
+				else
+					bounds.push_back(Bound(k.idx, 'c'));
+			}
+			if(k.idx>=textlen)
+				break;
+		}
+#if 0
 		const char *rHeaderTable[]=//C: extend functions
 		{
 		//allow newlines in header		args with mathset specifier
@@ -2154,6 +2411,7 @@ void			InputTextBox::replaceText_update(int i, int fr, int fi)
 				}
 			}
 		}
+#endif
 	}
 	for(int b=0, bEnd=bounds.size(), e=0, func=0;b<bEnd;++b)//D: find change extent
 	{
@@ -2684,7 +2942,7 @@ int				InputTextBox::inputKeyDown(int wParam, int lParam)
 		default:						return 0;
 		}
 	}
-	else
+	else//ctrl is up
 	{
 		char character=caps_lock!=kb[VK_SHIFT];
 	//	char character=-(caps_lock!=kb[VK_SHIFT]);
@@ -5775,6 +6033,526 @@ namespace	G2
 	void  r_r_assign				(VectP &r, VectP const &x)					{r=x;}
 	void  c_c_assign				(CompP &r, CompP const &x)					{r=(Comp1d)x;}
 	void  q_q_assign				(QuatP &r, QuatP const &x)					{r=(Quat1d)x;}
+
+	//variadic functions
+	inline Quat1d load1(Term &n, int idx, char ms)
+	{
+		double r, i, j, k;
+		r=n.r[idx];
+		//i=n.i.p?n.i.p[idx]:0;
+		//j=n.j.p?n.j.p[idx]:0;
+		//k=n.k.p?n.k.p[idx]:0;
+		i=ms>='c'?n.i[idx]:0;
+		if(ms=='h')
+		{
+			j=n.j[idx];
+			k=n.k[idx];
+		}
+		else
+		{
+			j=0;
+			k=0;
+		}
+		return Quat1d(r, i, j, k);
+	}
+	inline void store1(Term &n, int idx, char ms, Quat1d const &v)
+	{
+		n.r[idx]=v.R_component_1();
+		if(ms>='c')
+			n.i[idx]=v.R_component_2();
+		if(ms=='h')
+		{
+			n.j[idx]=v.R_component_3();
+			n.k[idx]=v.R_component_4();
+		}
+	}
+	inline double clampd(double const &lo, double const &x, double const &hi)
+	{
+		if(x<lo)
+			return lo;
+		if(x>hi)
+			return hi;
+		return x;
+	}
+	inline void clamp(Quat1d const &lo, Quat1d &x, Quat1d const &hi)
+	{
+		x=Quat1d
+		(
+			clampd(lo.R_component_1(), x.R_component_1(), hi.R_component_1()),
+			clampd(lo.R_component_2(), x.R_component_2(), hi.R_component_2()),
+			clampd(lo.R_component_3(), x.R_component_3(), hi.R_component_3()),
+			clampd(lo.R_component_4(), x.R_component_4(), hi.R_component_4())
+		);
+	}
+	void va_clamp					(void *pn, void *pdata, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+	{
+		if(pdata)
+		{
+			auto &data=*(std::vector<Value>*)pdata;
+			switch(args.size())
+			{
+			case 1:
+				{
+					Quat1d
+						lo,
+						x =data[args[0].idx],
+						hi(1, 1, 1, 1);
+					clamp(lo, x, hi);
+					data[result.idx]=x;
+				}
+				break;
+			case 2:
+				{
+					Quat1d
+						lo,
+						x =data[args[0].idx],
+						hi=data[args[1].idx];
+					clamp(lo, x, hi);
+					data[result.idx]=x;
+				}
+				break;
+			case 3:
+				{
+					Quat1d
+						lo=data[args[0].idx],
+						x =data[args[1].idx],
+						hi=data[args[2].idx];
+					clamp(lo, x, hi);
+					data[result.idx]=x;
+				}
+				break;
+			}
+		}
+		else if(pn)
+		{
+			auto &n=*(std::vector<Term>*)pn;
+			switch(args.size())
+			{
+			case 1:
+				{
+					Quat1d
+						lo,
+						x =load1(n[args[0].idx], idx, args[0].mathSet),
+						hi(1, 1, 1, 1);
+					clamp(lo, x, hi);
+					store1(n[result.idx], idx, result.mathSet, x);
+				}
+				break;
+			case 2:
+				{
+					Quat1d
+						lo,
+						x =load1(n[args[0].idx], idx, args[0].mathSet),
+						hi=load1(n[args[1].idx], idx, args[1].mathSet);
+					clamp(lo, x, hi);
+					store1(n[result.idx], idx, result.mathSet, x);
+				}
+				break;
+			case 3:
+				{
+					Quat1d
+						lo=load1(n[args[0].idx], idx, (char)args[0].mathSet),
+						x =load1(n[args[1].idx], idx, (char)args[1].mathSet),
+						hi=load1(n[args[2].idx], idx, (char)args[2].mathSet);
+					clamp(lo, x, hi);
+					store1(n[result.idx], idx, result.mathSet, x);
+				}
+				break;
+			}
+		}
+	}
+	void va_min						(void *pn, void *pdata, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+	{
+		if(pdata)
+		{
+			auto &data=*(std::vector<Value>*)pdata;
+			int kn=args[0].idx;
+			Quat1d ret=data[kn];
+			for(int k=1;k<(int)args.size();++k)
+			{
+				kn=args[k].idx;
+				Quat1d vk=data[kn];
+				ret=Quat1d
+				(
+					min(ret.R_component_1(), vk.R_component_1()),
+					min(ret.R_component_2(), vk.R_component_2()),
+					min(ret.R_component_3(), vk.R_component_3()),
+					min(ret.R_component_4(), vk.R_component_4())
+				);
+			}
+			int res=result.idx;
+			data[res]=ret;
+		}
+		else if(pn)
+		{
+			auto &n=*(std::vector<Term>*)pn;
+			int kn=args[0].idx;
+			Quat1d ret=load1(n[kn], idx, args[0].mathSet);
+			for(int k=1;k<(int)args.size();++k)
+			{
+				kn=args[k].idx;
+				Quat1d vk=load1(n[kn], idx, args[k].mathSet);
+				ret=Quat1d
+				(
+					min(ret.R_component_1(), vk.R_component_1()),
+					min(ret.R_component_2(), vk.R_component_2()),
+					min(ret.R_component_3(), vk.R_component_3()),
+					min(ret.R_component_4(), vk.R_component_4())
+				);
+			}
+			int res=result.idx;
+			auto &nr=n[res];
+			store1(nr, idx, result.mathSet, ret);
+		}
+	}
+	void va_max						(void *pn, void *pdata, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+	{
+		if(pdata)
+		{
+			auto &data=*(std::vector<Value>*)pdata;
+			int kn=args[0].idx;
+			Quat1d ret=data[kn];
+			for(int k=1;k<(int)args.size();++k)
+			{
+				kn=args[k].idx;
+				Quat1d vk=data[kn];
+				ret=Quat1d
+				(
+					max(ret.R_component_1(), vk.R_component_1()),
+					max(ret.R_component_2(), vk.R_component_2()),
+					max(ret.R_component_3(), vk.R_component_3()),
+					max(ret.R_component_4(), vk.R_component_4())
+				);
+			}
+			int res=result.idx;
+			data[res]=ret;
+		}
+		else if(pn)
+		{
+			auto &n=*(std::vector<Term>*)pn;
+			int kn=args[0].idx;
+			Quat1d ret=load1(n[kn], idx, args[0].mathSet);
+			for(int k=1;k<(int)args.size();++k)
+			{
+				kn=args[k].idx;
+				Quat1d vk=load1(n[kn], idx, args[k].mathSet);
+				ret=Quat1d
+				(
+					max(ret.R_component_1(), vk.R_component_1()),
+					max(ret.R_component_2(), vk.R_component_2()),
+					max(ret.R_component_3(), vk.R_component_3()),
+					max(ret.R_component_4(), vk.R_component_4())
+				);
+			}
+			int res=result.idx;
+			auto &nr=n[res];
+			store1(nr, idx, result.mathSet, ret);
+		}
+	}
+	void va_average					(void *pn, void *pdata, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+	{
+		if(pdata)
+		{
+			auto &data=*(std::vector<Value>*)pdata;
+			Quat1d ret;
+			for(int k=0;k<(int)args.size();++k)
+				ret+=(Quat1d)data[args[k].idx];
+			ret*=1./args.size();
+			data[result.idx]=ret;
+		}
+		else if(pn)
+		{
+			auto &n=*(std::vector<Term>*)pn;
+			Quat1d ret;
+			for(int k=0;k<(int)args.size();++k)
+				ret+=load1(n[args[k].idx], idx, args[k].mathSet);
+			ret*=1./args.size();
+			store1(n[result.idx], idx, result.mathSet, ret);
+		}
+	}
+	void va_hypot					(void *pn, void *pdata, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+	{
+		if(pdata)
+		{
+			auto &data=*(std::vector<Value>*)pdata;
+			Quat1d ret;
+			for(int k=0;k<(int)args.size();++k)
+			{
+				char ms=args[k].mathSet;
+				Quat1d term=data[args[k].idx];
+				switch(ms)
+				{
+				case 'R':
+					ret+=Quat1d(term.R_component_1()*term.R_component_1());
+					break;
+				case 'c':
+					{
+						Comp1d temp(term.R_component_1(), term.R_component_1());
+						ret+=temp*temp;
+					}
+					break;
+				case 'h':
+					ret+=term*term;
+					break;
+				}
+			}
+			char rms=result.mathSet;
+			switch(rms)
+			{
+			case 'R':
+				ret=Quat1d(::sqrt(ret.R_component_1()));
+				break;
+			case 'c':
+				ret=sqrt(Comp1d(ret.R_component_1(), ret.R_component_2()));
+				break;
+			case 'h':
+				ret=sqrt(ret);
+				break;
+			}
+			data[result.idx]=ret;
+		}
+		else if(pn)
+		{
+			auto &n=*(std::vector<Term>*)pn;
+			Quat1d ret;
+			for(int k=0;k<(int)args.size();++k)
+			{
+				char ms=args[k].mathSet;
+				Quat1d term=load1(n[args[k].idx], idx, ms);
+				switch(ms)
+				{
+				case 'R':
+					ret+=Quat1d(term.R_component_1()*term.R_component_1());
+					break;
+				case 'c':
+					{
+						Comp1d temp(term.R_component_1(), term.R_component_1());
+						ret+=temp*temp;
+					}
+					break;
+				case 'h':
+					ret+=term*term;
+					break;
+				}
+			}
+			char rms=result.mathSet;
+			switch(rms)
+			{
+			case 'R':
+				ret=Quat1d(::sqrt(ret.R_component_1()));
+				break;
+			case 'c':
+				ret=sqrt(Comp1d(ret.R_component_1(), ret.R_component_2()));
+				break;
+			case 'h':
+				ret=sqrt(ret);
+				break;
+			}
+			store1(n[result.idx], idx, rms, ret);
+		}
+	}
+	inline Quat1d pow(Quat1d const &x, double const &y){return exp(y*log(x));}//boost::math::pow(Quat1d, double->int)
+	inline Quat1d pow(Quat1d const &x, Comp1d const &y){return exp(y*log(x));}//std::pow(Quat1d, Comp1d->double)
+	inline Quat1d pow(Comp1d const &x, Quat1d const &y){return exp(y*log(x));}
+	inline void pow_ms(Quat1d &base, char base_ms, Quat1d const &p)
+	{
+		switch(base_ms)
+		{
+		case 'R':
+		case 'c':
+			base=Quat1d(std::log(base.C_component_1()));
+			break;
+		case 'h':
+			base=log(base);
+			break;
+		}
+		base*=p;
+		switch(base_ms)
+		{
+		case 'R':
+		case 'c':
+			base=Quat1d(std::exp(base.C_component_1()));
+			break;
+		case 'h':
+			base=exp(base);
+			break;
+		}
+	}
+	void va_norm					(void *pn, void *pdata, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+	{
+		if(pdata)
+		{
+			auto &data=*(std::vector<Value>*)pdata;
+			char pms=(char)args[0].mathSet;
+			int kp=args[0].idx;
+			Quat1d p=data[kp], ret;
+			switch(pms)
+			{
+			case 'R':
+				{
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=(char)args[k].mathSet;
+						Quat1d term=data[args[k].idx];
+						switch(ms)
+						{
+						case 'R':
+							ret+=pow(term.R_component_1(), p.R_component_1());
+							break;
+						case 'c':
+							{
+								Comp1d temp(term.R_component_1(), term.R_component_2());
+								ret+=pow(temp, p.R_component_1());
+							}
+							break;
+						case 'h':
+							ret+=pow(term, p.R_component_1());
+							break;
+						}
+					}
+					p=Quat1d(1/p.R_component_1());
+				}
+				break;
+			case 'c':
+				{
+					Comp1d cp=p.C_component_1();
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat1d term=data[args[k].idx];
+						switch(ms)
+						{
+						case 'R':
+							ret+=pow(term.R_component_1(), cp);
+							break;
+						case 'c':
+							ret+=pow(term.C_component_1(), cp);
+							break;
+						case 'h':
+							ret+=G2::pow(term, cp);
+							break;
+						}
+					}
+					p=inv(cp);
+				}
+				break;
+			case 'h':
+				{
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat1d term=data[args[k].idx];
+						switch(ms)
+						{
+						case 'R':
+							ret+=pow(term.R_component_1(), p);
+							break;
+						case 'c':
+							{
+								auto temp=log(term.C_component_1());
+								auto temp2=temp*p;
+							//	ret+=G2::exp(temp*p);
+							}
+						//	ret+=pow(term.C_component_1(), p);
+							break;
+						case 'h':
+							ret+=pow(term, p);
+							break;
+						}
+					}
+					p=inv(p);
+				}
+				break;
+			}
+			char rms=result.mathSet;
+			pow_ms(ret, rms, p);
+			data[result.idx]=ret;
+		}
+		else if(pn)
+		{
+			auto &n=*(std::vector<Term>*)pn;
+			char pms=args[0].mathSet;
+			int kp=args[0].idx;
+			Quat1d p=load1(n[kp], idx, pms), ret;
+			switch(pms)
+			{
+			case 'R':
+				{
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat1d term=load1(n[args[k].idx], idx, ms);
+						switch(ms)
+						{
+						case 'R':
+							ret+=pow(term.R_component_1(), p.R_component_1());
+							break;
+						case 'c':
+							{
+								Comp1d temp(term.R_component_1(), term.R_component_2());
+								ret+=pow(temp, p.R_component_1());
+							}
+							break;
+						case 'h':
+							ret+=pow(term, p.R_component_1());
+							break;
+						}
+					}
+					p=Quat1d(1/p.R_component_1());
+				}
+				break;
+			case 'c':
+				{
+					auto &np=n[kp];
+					Comp1d cp=p.C_component_1();
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat1d term=load1(n[args[k].idx], idx, ms);
+						switch(ms)
+						{
+						case 'R':
+							ret+=pow(term.R_component_1(), cp);
+							break;
+						case 'c':
+							ret+=pow(term.C_component_1(), cp);
+							break;
+						case 'h':
+							ret+=G2::pow(term, cp);
+							break;
+						}
+					}
+					p=inv(cp);
+				}
+				break;
+			case 'h':
+				{
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat1d term=load1(n[args[k].idx], idx, ms);
+						switch(ms)
+						{
+						case 'R':
+							ret+=pow(term.R_component_1(), p);
+							break;
+						case 'c':
+							ret+=G2::pow(term.C_component_1(), p);
+							break;
+						case 'h':
+							ret+=pow(term, p);
+							break;
+						}
+					}
+					p=inv(p);
+				}
+				break;
+			}
+			char rms=result.mathSet;
+			pow_ms(ret, rms, p);
+			store1(n[result.idx], idx, rms, ret);
+		}
+	}
 }
 
 bool UserFunctionsDefaultReturnZero=false;
@@ -6026,6 +6804,12 @@ typedef		const char* (*FP2STR_FN)(void *fp, bool is_binary, int &fmt);
 #endif
 void print_term(std::stringstream &LOL_1, Expression const &ex, int idx)
 {
+	if(idx>=(int)ex.n.size())
+	{
+	//	LOL_1<<'['<<idx<<"]>>OOB<<";
+		LOL_1<<'['<<idx<<"]OOB";
+		return;
+	}
 	auto &n=ex.n[idx];
 	if(n.constant)
 	{
@@ -6161,18 +6945,18 @@ void expr2str(Expression const &ex, std::string &str, bool mp_instructions=false
 //	LOL_1<<"\r\n";
 	if(mp_instructions)
 	{
-		for(int i=0, nInstr=ex.i.size();i<nInstr;++i)//print instructions
-		{
-			auto &in=ex.i[i];
-			instr2str(ex, i, in, in.ia32.r_r, LOL_1, fp2str);
-		}
-	}
-	else
-	{
 		for(int i=0, nInstr=ex.ni.size();i<nInstr;++i)
 		{
 			auto &in=ex.ni[i];
 			instr2str(ex, i, in, in.fp.uf, LOL_1, mp_fp2str);
+		}
+	}
+	else
+	{
+		for(int i=0, nInstr=ex.i.size();i<nInstr;++i)//print instructions
+		{
+			auto &in=ex.i[i];
+			instr2str(ex, i, in, in.ia32.r_r, LOL_1, fp2str);
 		}
 	}
 	str+=LOL_1.str();
@@ -6199,8 +6983,8 @@ void all_to_clipboard(bool mp_instructions=false)
 void expression_to_clipboard(Expression const &ex, bool mp_instructions=false)
 {
 	std::string str;
-	expr2str(ex, str);
-	copy_to_clipboard(str.c_str(), str.size());
+	expr2str(ex, str, mp_instructions);
+	copy_to_clipboard(str);
 }
 void func_data_to_clipboard(std::vector<Value> &fData)
 {
@@ -6210,8 +6994,98 @@ void func_data_to_clipboard(std::vector<Value> &fData)
 		auto &v=fData[k];
 		LOL_1<<k<<'\t'<<v.r<<'+'<<v.i<<"i+"<<v.j<<"j+"<<v.k<<"k\r\n";
 	}
-	auto &str=LOL_1.str();
-	copy_to_clipboard(str.c_str(), str.size());
+	copy_to_clipboard(LOL_1.str());
+}
+void map_to_clipboard(std::vector<Map> const &m)
+{
+	std::stringstream LOL_1;
+	LOL_1<<"Map:\r\n";
+	for(int k=0;k<(int)m.size();++k)
+	{
+		using namespace G2;
+		const char *a=nullptr;
+		switch(m[k]._0)
+		{
+		//label case
+#define	LC(name)	case name:a=#name;break;
+		LC(M_IGNORED)
+		LC(M_N)
+		LC(M_LPR) LC(M_RPR)
+		LC(M_COMMA)
+		LC(M_QUESTION_MARK) LC(M_COLON)
+
+			LC(M_PROCEDURAL_START)
+		LC(M_IF) LC(M_ELSE) LC(M_FOR) LC(M_DO) LC(M_WHILE)
+		LC(M_CONTINUE) LC(M_BREAK) LC(M_RETURN)
+		LC(M_LBRACE) LC(M_RBRACE)
+		LC(M_SEMICOLON)
+
+			LC(M_PROCEDURAL_ASSIGN_START)
+		LC(M_ASSIGN) LC(M_ASSIGN_MULTIPLY) LC(M_ASSIGN_DIVIDE) LC(M_ASSIGN_MOD)
+		LC(M_ASSIGN_PLUS) LC(M_ASSIGN_MINUS) LC(M_ASSIGN_LEFT) LC(M_ASSIGN_RIGHT)
+		LC(M_ASSIGN_AND) LC(M_ASSIGN_XOR) LC(M_ASSIGN_OR)
+			LC(M_PROCEDURAL_ASSIGN_END)
+
+			LC(M_PROCEDURAL_END)
+
+		LC(M_INCREMENT) LC(M_DECREMENT)
+		LC(M_FACTORIAL_LOGIC_NOT)
+		LC(M_MODULO_PERCENT)
+		LC(M_BITWISE_NOT)
+		LC(M_PENTATE)
+		LC(M_TETRATE)
+		LC(M_POWER) LC(M_POWER_REAL)
+		LC(M_MULTIPLY) LC(M_DIVIDE) LC(M_LOGIC_DIVIDES)
+		LC(M_PLUS) LC(M_MINUS)
+		LC(M_BITWISE_SHIFT_LEFT) LC(M_BITWISE_SHIFT_RIGHT)
+		LC(M_LOGIC_LESS) LC(M_LOGIC_LESS_EQUAL) LC(M_LOGIC_GREATER) LC(M_LOGIC_GREATER_EQUAL)
+		LC(M_LOGIC_EQUAL) LC(M_LOGIC_NOT_EQUAL)
+		LC(M_BITWISE_AND) LC(M_BITWISE_NAND)
+		LC(M_BITWISE_XOR) LC(M_BITWISE_XNOR)
+		LC(M_VERTICAL_BAR) LC(M_BITWISE_NOR)
+		LC(M_LOGIC_AND)
+		LC(M_LOGIC_XOR)
+		LC(M_LOGIC_OR)
+		LC(M_CONDITION_ZERO)
+
+		LC(M_S_EQUAL_ASSIGN) LC(M_S_NOT_EQUAL)
+		LC(M_S_LESS) LC(M_S_LESS_EQUAL) LC(M_S_GREATER) LC(M_S_GREATER_EQUAL)
+
+			LC(M_FSTART)
+
+		LC(M_COS) LC(M_ACOS) LC(M_COSH) LC(M_ACOSH) LC(M_COSC)
+		LC(M_SEC) LC(M_ASEC) LC(M_SECH) LC(M_ASECH)
+		LC(M_SIN) LC(M_ASIN) LC(M_SINH) LC(M_ASINH) LC(M_SINC) LC(M_SINHC)
+		LC(M_CSC) LC(M_ACSC) LC(M_CSCH) LC(M_ACSCH)
+		LC(M_TAN)			 LC(M_TANH) LC(M_ATANH) LC(M_TANC)
+		LC(M_COT) LC(M_ACOT) LC(M_COTH) LC(M_ACOTH)
+		LC(M_EXP) LC(M_LN) LC(M_SQRT) LC(M_CBRT) LC(M_INVSQRT) LC(M_SQ)
+		LC(M_GAUSS) LC(M_ERF) LC(M_FIB) LC(M_ZETA) LC(M_LNGAMMA)
+		LC(M_STEP) LC(M_SGN) LC(M_RECT) LC(M_TENT)
+		LC(M_CEIL) LC(M_FLOOR) LC(M_ROUND) LC(M_INT) LC(M_FRAC)
+		LC(M_ABS) LC(M_ARG) LC(M_REAL) LC(M_IMAG) LC(M_CONJUGATE) LC(M_POLAR) LC(M_CARTESIAN)
+		
+			LC(M_BFSTART)
+
+		LC(M_RAND)
+		LC(M_ATAN)
+		LC(M_LOG)
+		LC(M_BETA) LC(M_GAMMA) LC(M_PERMUTATION) LC(M_COMBINATION)
+		LC(M_BESSEL_J) LC(M_BESSEL_Y) LC(M_HANKEL1)
+		LC(M_SQWV) LC(M_TRWV) LC(M_SAW) LC(M_MANDELBROT)
+
+			LC(M_VFSTART)
+
+		LC(M_CLAMP)
+		LC(M_MIN) LC(M_MAX) LC(M_AV) LC(M_HYPOT) LC(M_NORM)
+
+		LC(M_USER_FUNCTION)
+#undef	EC
+		default:a="???";break;
+		}
+		LOL_1<<a<<'\t'<<m[k]._1<<"\r\n";
+	}
+	copy_to_clipboard(LOL_1.str());
 }
 struct CallInfo
 {
@@ -6236,13 +7110,13 @@ struct Solve_UserFunction
 			if(operate_on_const)
 			{
 				for(int kEnd=in.args.size();k<kEnd;++k)//copy args
-					fData[k]=expr.data[in.args[k]];
+					fData[k]=expr.data[in.args[k].idx];
 			}
 			else
 			{
 				for(int kEnd=in.args.size();k<kEnd;++k)//copy args
 				{
-					auto &n=expr.n[in.args[k]];
+					auto &n=expr.n[in.args[k].idx];
 					//if(v>=n.r.size()<<1||n.mathSet=='c'&&v>=n.i.size()<<1)//
 					//	int LOL_1=0;
 					auto &dk=fData[k];
@@ -6311,7 +7185,7 @@ struct Solve_UserFunction
 		//	func_data_to_clipboard(fData);
 			switch(in2.type)
 			{
-			case 'c'://call user function
+			case SIG_CALL://call user function
 				if(markFunctionsStuck&&userFunctionDefinitions[in2.op1].functionStuck)//return nan without call
 				{
 					fData[in2.result]=G2::_qnan;
@@ -6328,28 +7202,28 @@ struct Solve_UserFunction
 					{
 						int k=0;
 						for(int kEnd=in2.args.size();k<kEnd;++k)//copy args
-							fData[k]=cst.fData[in2.args[k]];
+							fData[k]=cst.fData[in2.args[k].idx];
 						for(int kEnd=func->data.size();k<kEnd;++k)//initialize const data
 							fData[k]=func->data[k];
 					}
 				}
 				continue;
-			case 'b'://branch if
+			case SIG_BIF://branch if
 				if(fData[in2.op1].q_isTrue())
 					i2=in2.result;
 				else
 					++i2;
 				continue;
-			case 'B'://branch if not
+			case SIG_BIN://branch if not
 				if(!fData[in2.op1].q_isTrue())
 					i2=in2.result;
 				else
 					++i2;
 				continue;
-			case 'j'://jump
+			case SIG_JUMP://jump
 				i2=in2.result;
 				continue;
-			case 'r'://return
+			case SIG_RETURN://return
 				if(callStack.size())
 				{
 					auto &cst=callStack.top();
@@ -6366,85 +7240,85 @@ struct Solve_UserFunction
 				else
 					expr.n[in.result].assign(v, fData[in2.result], func->resultMathSet);
 				break;
-			case -1:
-				fData[in2.result].setzero();
-				++i2;
-				continue;
-			case 1://r_r
+			//case -1://unused
+			//	fData[in2.result].setzero();
+			//	++i2;
+			//	continue;
+			case SIG_R_R://r_r
 				in2.ia32.r_r(VectP(&fData[in2.result].r), VectP(&fData[in2.op1].r));
 				++i2;
 				continue;
-			case 2://c_c
+			case SIG_C_C://c_c
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1];
 					in2.ia32.c_c(CompP(&res.r, &res.i), CompP(&op1.r, &op1.i));
 					++i2;
 				}
 				continue;
-			case 3://q_q
+			case SIG_Q_Q://q_q
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1];
 					in2.ia32.q_q(QuatP(&res.r, &res.i, &res.j, &res.k), QuatP(&op1.r, &op1.i, &op1.j, &op1.k));
 					++i2;
 				}
 				continue;
-			case 4://r_rr
+			case SIG_R_RR://r_rr
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_rr(VectP(&res.r), VectP(&op1.r), VectP(&op2.r));
 					++i2;
 				}
 				continue;
-			case 5://c_rc
+			case SIG_C_RC://c_rc
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.c_rc(CompP(&res.r, &res.i), VectP(&op1.r), CompP(&op2.r, &op2.i));
 					++i2;
 				}
 				continue;
-			case 6://q_rq
+			case SIG_Q_RQ://q_rq
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.q_rq(QuatP(&res.r, &res.i, &res.j, &res.k), VectP(&op1.r), QuatP(&op2.r, &op2.i, &op2.j, &op2.k));
 					++i2;
 				}
 				continue;
-			case 7://c_cr
+			case SIG_C_CR://c_cr
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.c_cr(CompP(&res.r, &res.i), CompP(&op1.r, &op1.i), VectP(&op2.r));
 					++i2;
 				}
 				continue;
-			case 8://c_cc
+			case SIG_C_CC://c_cc
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.c_cc(CompP(&res.r, &res.i), CompP(&op1.r, &op1.i), CompP(&op2.r, &op2.i));
 					++i2;
 				}
 				continue;
-			case 9://q_cq
+			case SIG_Q_CQ://q_cq
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.q_cq(QuatP(&res.r, &res.i, &res.j, &res.k), CompP(&op1.r, &op1.i), QuatP(&op2.r, &op2.i, &op2.j, &op2.k));
 					++i2;
 				}
 				continue;
-			case 10://q_qr
+			case SIG_Q_QR://q_qr
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.q_qr(QuatP(&res.r, &res.i, &res.j, &res.k), QuatP(&op1.r, &op1.i, &op1.j, &op1.k), VectP(&op2.r));
 					++i2;
 				}
 				continue;
-			case 11://q_qc
+			case SIG_Q_QC://q_qc
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.q_qc(QuatP(&res.r, &res.i, &res.j, &res.k), QuatP(&op1.r, &op1.i, &op1.j, &op1.k), CompP(&op2.r, &op2.i));
 					++i2;
 				}
 				continue;
-			case 12://q_qq
+			case SIG_Q_QQ://q_qq
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.q_qq(QuatP(&res.r, &res.i, &res.j, &res.k), QuatP(&op1.r, &op1.i, &op1.j, &op1.k), QuatP(&op2.r, &op2.i, &op2.j, &op2.k));
@@ -6452,14 +7326,14 @@ struct Solve_UserFunction
 				}
 				continue;
 
-			case 13://c_r
+			case SIG_C_R://c_r
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1];
 					in2.ia32.c_r(CompP(&res.r, &res.i), VectP(&op1.r));
 					++i2;
 				}
 				continue;
-			case 14://c_q
+			case SIG_C_Q://c_q
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1];
 					in2.ia32.c_q(CompP(&res.r, &res.i), QuatP(&op1.r, &op1.i, &op1.j, &op1.k));
@@ -6467,14 +7341,14 @@ struct Solve_UserFunction
 				}
 				continue;
 
-			case 15://r_c
+			case SIG_R_C://r_c
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1];
 					in2.ia32.r_c(VectP(&res.r), CompP(&op1.r, &op1.i));
 					++i2;
 				}
 				continue;
-			case 16://r_q
+			case SIG_R_Q://r_q
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1];
 					in2.ia32.r_q(VectP(&res.r), QuatP(&op1.r, &op1.i, &op1.j, &op1.k));
@@ -6482,7 +7356,7 @@ struct Solve_UserFunction
 				}
 				continue;
 
-			case 17://c_rr
+			case SIG_C_RR://c_rr
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.c_rr(CompP(&res.r, &res.i), VectP(&op1.r), VectP(&op2.r));
@@ -6490,56 +7364,56 @@ struct Solve_UserFunction
 				}
 				continue;
 
-			case 18://r_rc
+			case SIG_R_RC://r_rc
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_rc(VectP(&res.r), VectP(&op1.r), CompP(&op2.r, &op2.i));
 					++i2;
 				}
 				continue;
-			case 19://r_rq
+			case SIG_R_RQ://r_rq
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_rq(VectP(&res.r), VectP(&op1.r), QuatP(&op2.r, &op2.i, &op2.j, &op2.k));
 					++i2;
 				}
 				continue;
-			case 20://r_cr
+			case SIG_R_CR://r_cr
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_cr(VectP(&res.r), CompP(&op1.r, &op1.i), VectP(&op2.r));
 					++i2;
 				}
 				continue;
-			case 21://r_cc
+			case SIG_R_CC://r_cc
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_cc(VectP(&res.r), CompP(&op1.r, &op1.i), CompP(&op2.r, &op2.i));
 					++i2;
 				}
 				continue;
-			case 22://r_cq
+			case SIG_R_CQ://r_cq
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_cq(VectP(&res.r), CompP(&op1.r, &op1.i), QuatP(&op2.r, &op2.i, &op2.j, &op2.k));
 					++i2;
 				}
 				continue;
-			case 23://r_qr
+			case SIG_R_QR://r_qr
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_qr(VectP(&res.r), QuatP(&op1.r, &op1.i, &op1.j, &op1.k), &op2.r);
 					++i2;
 				}
 				continue;
-			case 24://r_qc
+			case SIG_R_QC://r_qc
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_qc(VectP(&res.r), QuatP(&op1.r, &op1.i, &op1.j, &op1.k), CompP(&op2.r, &op2.i));
 					++i2;
 				}
 				continue;
-			case 25://r_qq
+			case SIG_R_QQ://r_qq
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.r_qq(VectP(&res.r), QuatP(&op1.r, &op1.i, &op1.j, &op1.k), QuatP(&op2.r, &op2.i, &op2.j, &op2.k));
@@ -6547,7 +7421,7 @@ struct Solve_UserFunction
 				}
 				continue;
 				
-			case 26://c_qc
+			case SIG_C_QC://c_qc
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2];
 					in2.ia32.c_qc(CompP(&res.r, &res.i), QuatP(&op1.r, &op1.i, &op1.j, &op1.k), CompP(&op2.r, &op2.i));
@@ -6555,7 +7429,7 @@ struct Solve_UserFunction
 				}
 				continue;
 
-			case 27://a ? b : c
+			case SIG_INLINE_IF://a ? b : c
 				{
 					auto &res=fData[in2.result], &op1=fData[in2.op1], &op2=fData[in2.op2], &op3=fData[in2.op3];
 					char r_ms=maximum(in2.op2_ms, in2.op3_ms), op_ms=(in2.op2_ms=='c')+2*(in2.op2_ms=='h')+3*(in2.op3_ms=='c')+6*(in2.op3_ms=='h');
@@ -6574,6 +7448,11 @@ struct Solve_UserFunction
 				}
 				++i2;
 				continue;
+
+			case SIG_VA:
+				in2.ia32.vf(nullptr, &expr.n, ArgIdx(in2.result, in2.r_ms), in2.args, 0);
+				++i2;
+				break;
 			}
 			break;
 		}
@@ -6605,6 +7484,8 @@ class		Compile
 	//static void compile_instruction_select_b(int, char, char, FPSetter&, char (*&)(char, char), DiscontinuityFunction&);
 	//static void compile_instruction_select_u(int, char, char, FPSetter&, MP::FPSetter&, char (*&)(char), DiscontinuityFunction&);
 	//static void compile_instruction_select_b(int, char, char, FPSetter&, MP::FPSetter&, char (*&)(char, char), DiscontinuityFunction&);
+	//static void compile_instruction_select_t(int, char, char, char, FPSetter&, int&, DiscontinuityFunction&, int&, int&);
+	static void compile_instruction_select_v(int, FPSetter&, DiscontinuityFunction&, int&, int&);
 	static void compile_instruction_u		(int, char, int, bool=false);
 	static void compile_instruction_b		(int, int, int, bool=false);
 	static void compile_instruction_b2		(int, int, int);
@@ -6616,7 +7497,7 @@ class		Compile
 	static void compile_instruction_condition_010	(int);
 	static char compile_instruction			(int, char, int=-1, int=-1, int=-1);
 	
-	static int compile_instruction_userFunctionCall(int, std::vector<int>const&, bool=false);
+	static int compile_instruction_userFunctionCall(int, std::vector<ArgIdx>&, bool=false);
 	static int compile_instruction_branch_if		(int);
 	static int compile_instruction_branch_if_not	(int);
 	static int compile_instruction_jump				();
@@ -7769,6 +8650,56 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 		break;
 	}
 }
+//void			Compile::compile_instruction_select_t	(int f, char op1type, char op2type, char op3type, FPSetter &function, int &signature, DiscontinuityFunction &d, int &cl_idx, int &cl_disc_idx)
+//{
+//	using namespace G2;
+//	switch(f)
+//	{
+//	case M_CLAMP:
+//		function.set(
+//		signature=SIG_CLAMP;
+//		d();
+//		cl_idx=0, disc_cl_idx=0;
+//		break;
+//	}
+//}
+void			Compile::compile_instruction_select_v	(int f, FPSetter &function, DiscontinuityFunction &d, int &cl_idx, int &cl_disc_idx)
+{
+	using namespace G2;//all variadic functions so far are continuous
+	switch(f)
+	{
+	case M_CLAMP:
+		function.set(va_clamp, sse2::va_clamp, avx::va_clamp, MP::va_clamp);
+		d();
+		cl_idx=0, cl_disc_idx=0;//
+		break;
+	case M_MIN:
+		function.set(va_min, sse2::va_min, avx::va_min, MP::va_min);
+		d();
+		cl_idx=0, cl_disc_idx=0;//
+		break;
+	case M_MAX:
+		function.set(va_max, sse2::va_max, avx::va_max, MP::va_max);
+		d();
+		cl_idx=0, cl_disc_idx=0;//
+		break;
+	case M_AV:
+		function.set(va_average, sse2::va_average, avx::va_average, MP::va_average);
+		d();
+		cl_idx=0, cl_disc_idx=0;//
+		break;
+	case M_HYPOT:
+		function.set(va_hypot, sse2::va_hypot, avx::va_hypot, MP::va_hypot);
+		d();
+		cl_idx=0, cl_disc_idx=0;//
+		break;
+	case M_NORM:
+		function.set(va_norm, sse2::va_norm, avx::va_norm, MP::va_norm);
+		d();
+		cl_idx=0, cl_disc_idx=0;//
+		break;
+	}
+}
 void			Compile::compile_instruction_u			(int f, char side, int a1, bool assign)
 {
 	int result;
@@ -8112,6 +9043,7 @@ void			Compile::compile_instruction_condition_010	(int op1){expr->data[op1]=Valu
 #undef			SCALAR
 #undef			SIMD
 #undef			SIMD2
+//#undef the rest
 char			Compile::compile_instruction			(int f, char side, int a1, int a2, int a3)
 //int				Compile::compile_instruction			(int f, char side, int a1, int a2, int a3)
 {
@@ -8271,7 +9203,7 @@ char			Compile::compile_instruction			(int f, char side, int a1, int a2, int a3)
 	return 0;
 }
 
-int				Compile::compile_instruction_userFunctionCall(int function, std::vector<int> const &args, bool recursiveCall)
+int				Compile::compile_instruction_userFunctionCall(int function, std::vector<ArgIdx> &args, bool recursiveCall)
 //int				Compile::compile_instruction_userFunctionCall(int function, std::vector<int> const &args)
 //void			Compile::compile_instruction_userFunctionCall(int function, std::vector<int> const &args)
 //void			Compile::compile_instruction_userFunctionCall(int function, std::vector<int> const &args, int n_result)
@@ -8294,7 +9226,7 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 		bool t=true;
 		for(unsigned k=0;k<args.size();++k)
 		{
-			int arg=args[k];
+			int arg=args[k].idx;
 			if(!term[arg].fresh)
 			{
 				result=arg;
@@ -8315,7 +9247,7 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 		}
 		for(unsigned k=0;k<args.size();++k)
 		{
-			int arg=args[k];
+			int arg=args[k].idx;
 			if(!term[arg].constant)
 			{
 				term[result].constant=false;
@@ -8325,15 +9257,30 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 	}
 	else
 	{
-		result=args[0];
+		result=args[0].idx;
 		for(int k=1, kEnd=args.size();k<kEnd;++k)
-			if(result>args[k])
-				result=args[k];
+			if(result>args[k].idx)
+				result=args[k].idx;
 	}
 	//	result=args[0];
 	
 //	char resultMathSet=userFunctionDefinitions[function].resultMathSet;
-	char resultMathSet=recursiveCall?predictedMathSet:userFunctionDefinitions[function].resultMathSet;
+	char resultMathSet;
+	FPSetter fpsetter;
+	DiscontinuityFunction d;//all built-in variadic functions are continuous so far
+	int cl_idx=0, disc_cl_idx=0;
+	for(int k=0, kEnd=args.size();k<kEnd;++k)
+		args[k].mathSet=term[args[k].idx].mathSet;
+	if(function>0)//user function
+		resultMathSet=recursiveCall?predictedMathSet:userFunctionDefinitions[function].resultMathSet;
+	else//built-in variadic function
+	{
+		compile_instruction_select_v(-function, fpsetter, d, cl_idx, disc_cl_idx);
+		resultMathSet='R';//=max(all mathsets)
+		for(int k=0, kEnd=args.size();k<kEnd;++k)
+			if(resultMathSet<args[k].mathSet)
+				resultMathSet=args[k].mathSet;
+	}
 	if(!procedural||!term[result].fresh||!term[result].constant&&term[result].mathSet>resultMathSet)//'R' < 'c'
 		term[result].mathSet=resultMathSet;
 	expr->resultTerm=result;
@@ -8344,14 +9291,18 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 	bool result_constant=true;
 	for(unsigned k=0;k<args.size();++k)
 	{
-		int arg=args[k];
+		int arg=args[k].idx;
 		if(!term[arg].constant)
 		{
 			result_constant=false;
 			break;
 		}
 	}
-	Instruction in(function, args, result);
+	char type=function<0?SIG_VA:SIG_CALL;
+	Instruction in(type, fpsetter, args, result, resultMathSet, cl_idx, disc_cl_idx, function);
+//	Instruction in(function, args, result);
+	MP::Instruction mp_in(type, fpsetter, args, result, resultMathSet, function);
+//	expr->ni.push_back(MP::Instruction(function, args, result));
 	if(result_constant)
 	{
 		if(recursiveCall)
@@ -8359,12 +9310,15 @@ int				Compile::compile_instruction_userFunctionCall(int function, std::vector<i
 			expr->i.push_back(in);
 			term[result].constant=false;
 		}
+		else if(function<0)
+			mp_in.fp.vf(expr->data, ArgIdx(result, resultMathSet), args);
+		//	in.ia32.vf(nullptr, expr->data, result, args, 0);
 		else
 			Solve_UserFunction(*expr, in, true)(0);
 	}
 	else
 		expr->i.push_back(in);
-	expr->ni.push_back(MP::Instruction(function, args, result));
+	expr->ni.push_back(mp_in);
 /*	if(result_constant)
 		Solve_UserFunction(*expr, in)();
 	else
@@ -8949,7 +9903,7 @@ void Compile::compile_expression_local(int _i, int _f)
 				}
 				if(d_match!=-1)
 				{
-					std::vector<int> args(exprNArgs);
+					std::vector<ArgIdx> args(exprNArgs);
 					if(notVoidCall)//compile args
 					{
 						int start=i;
@@ -8957,11 +9911,11 @@ void Compile::compile_expression_local(int _i, int _f)
 						{
 							expr->m[commas[k3]]._0=M_IGNORED;//before compile in case start==commas[k3]
 							compile_assignment(start, commas[k3]);
-							args[k3]=expr->m[start]._1, expr->m[start]._0=M_IGNORED;
+							args[k3].idx=expr->m[start]._1, expr->m[start]._0=M_IGNORED;
 							start=commas[k3]+1;
 						}
 						compile_assignment(start, f);
-						args[exprNArgs-1]=expr->m[start]._1, expr->m[start]._0=M_IGNORED;
+						args[exprNArgs-1].idx=expr->m[start]._1, expr->m[start]._0=M_IGNORED;
 					}
 					bool recursiveCall=&userFunctionDefinitions[d_match]==expr;
 					recursiveFunction|=recursiveCall;
@@ -9640,8 +10594,12 @@ int Compile::default_overload(int S)//each bit marks correponding overload
 	using namespace G2;
 	if(S>M_FSTART&&S<M_BFSTART)//unary function
 		return 0x02;//B0010		only 1 arg overload (no 0 arg overload)
-	if(S<M_USER_FUNCTION)
+	if(S<M_VFSTART)
 		return 0x06;//B0110		1 arg & 2 arg overloads
+	//if(S<M_VFSTART)
+	//	return 0x0E;//B1110		1, 2 or 3 args
+	if(S<M_USER_FUNCTION)
+		return -1;//all bits set: variadic
 	return 0;
 }
 void Compile::compile_expression_global(Expression &expr)
@@ -9702,7 +10660,8 @@ void Compile::compile_expression_global(Expression &expr)
 		for(int k=i;k<f;++k)//parse lazy calls
 		{
 			auto &S=expr.m[k]._0;				//sys 20150525 overloads and redefinitions
-			if(S==M_USER_FUNCTION)//user function lazy call
+			if(S>M_BFSTART)
+		//	if(S==M_USER_FUNCTION)//user function lazy call
 			{
 				std::vector<int> commas;
 				int k2=k+1;
@@ -9711,31 +10670,53 @@ void Compile::compile_expression_global(Expression &expr)
 						commas.push_back(k2);
 				if(commas.size())//lazy call
 				{
-					int name_id=expr.m[k]._1, d_match=-1, exprNArgs=commas.size()+1;
-					for(int d=0, dEnd=userFunctionDefinitions.size(), max_nArgs=-1;d<dEnd&&expr.lineNo>userFunctionDefinitions[d].lineNo;++d)//linearly through all user definitions
+					int name_id=expr.m[k]._1, d_match=-1, exprNArgs=commas.size()+1, overloads=0;
+					if(S==M_USER_FUNCTION)
 					{
-						auto &definition=userFunctionDefinitions[d];
-						if(definition.valid&&name_id==definition.name_id&&exprNArgs>=definition.nArgs&&max_nArgs<=definition.nArgs)
-							d_match=d, max_nArgs=definition.nArgs;
+						for(int d=0, dEnd=userFunctionDefinitions.size(), max_nArgs=-1;d<dEnd&&expr.lineNo>userFunctionDefinitions[d].lineNo;++d)//linearly through all user definitions
+						{
+							auto &definition=userFunctionDefinitions[d];
+							if(definition.valid&&name_id==definition.name_id&&exprNArgs>=definition.nArgs&&max_nArgs<=definition.nArgs)
+								d_match=d, max_nArgs=definition.nArgs;
+						}
+						if(callLevel&&exprNArgs!=userFunctionDefinitions[d_match].nArgs)
+							d_match=-1;
 					}
-					if(d_match!=-1&&(!callLevel||exprNArgs==userFunctionDefinitions[d_match].nArgs))
-				//	if(d_match!=-1)
+					else//built-in function
 					{
-						std::vector<int> args(commas.size()+1);
+						overloads=default_overload(S);
+						d_match=-!(overloads==-1||exprNArgs<32&&overloads&1<<exprNArgs);
+					}
+				//	if(S<M_USER_FUNCTION||d_match!=-1&&(!callLevel||exprNArgs==userFunctionDefinitions[d_match].nArgs))
+					if(d_match!=-1)
+					{
+						std::vector<ArgIdx> args(exprNArgs);
 						{
 							int start=k;
 							for(int k3=0, k3End=exprNArgs-1;k3<k3End;++k3)
 							{
 								expr.m[commas[k3]]._0=M_IGNORED;
-								compile_assignment(start, commas[k3]);
-								args[k3]=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
+								compile_inline_if(start, commas[k3], 0);
+								args[k3].idx=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
 								start=commas[k3]+1;
 							}
-							compile_assignment(start, f);
-							args[exprNArgs-1]=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
+							compile_inline_if(start, f, 1);
+							args[exprNArgs-1].idx=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
 						}
-						int result=compile_instruction_userFunctionCall(d_match, args);
-						S=M_N, expr.m[k]._1=result;
+						if(S==M_USER_FUNCTION)
+						{
+							int result=compile_instruction_userFunctionCall(d_match, args);
+							S=M_N, expr.m[k]._1=result;
+						}
+						else if(S>M_VFSTART)//built-in variadic
+						{
+							int result=compile_instruction_userFunctionCall(-S, args);
+							S=M_N, expr.m[k]._1=result;
+						}
+						else//built-in binary or triary
+						{
+							compile_instruction(k, '<', k+1, commas[0]+1, commas.size()>1?commas[1]+1:-1);
+						}
 					}
 					else//syntax error, no such overload
 					{
@@ -9748,6 +10729,7 @@ void Compile::compile_expression_global(Expression &expr)
 					}
 				}
 			}
+#if 0
 		//	else if(S>M_BINARY_FUNCTION_START)
 			else if(S>M_BFSTART)//default binary function lazy call
 			{
@@ -9756,11 +10738,15 @@ void Compile::compile_expression_global(Expression &expr)
 				for(;k2<f&&expr.m[k2]._0<M_FSTART;++k2)
 					if(expr.m[k2]._0==M_COMMA)
 						commas.push_back(k2);
+			//	int overloads=default_overload(S), exprNArgs=commas.size()+1;
+			//	if(overloads==-1||exprNArgs<32&&overloads&1<<exprNArgs)//variadic or overload found
+			//	{
+			//	}
 				if(commas.size())
 				{
 					if(callLevel||commas.size()==1)
 					{
-						compile_inline_if(k+1, *commas.begin(), 0);
+						compile_inline_if(k+1, *commas.data(), 0);
 						int a2_start=commas[0]+1, a2_end=commas.size()>1?commas[1]:f;
 						if(a2_start==a2_end)
 							compile_instruction(k, '<', k+1);
@@ -9768,7 +10754,7 @@ void Compile::compile_expression_global(Expression &expr)
 						{
 							compile_inline_if(a2_start, a2_end, 3);
 						//	compile_inline_if(commas[0]+1, commas.size()>1?commas[1]:f, 3);
-						//	compile_inline_if(k+1, *commas.begin(), 0, true);
+						//	compile_inline_if(k+1, *commas.data(), 0, true);
 						//	compile_inline_if(commas[0]+1, commas.size()>1?commas[1]:f, 3, true);
 							compile_instruction(k, '<', k+1, commas[0]+1);
 						}
@@ -9790,6 +10776,7 @@ void Compile::compile_expression_global(Expression &expr)
 					return;
 				}
 			}
+#endif
 		}
 		if(callLevel)
 	//	if(topLevel>0&&i-2>=0&&expr.m[i-2]._0>M_FSTART)
@@ -9805,6 +10792,7 @@ void Compile::compile_expression_global(Expression &expr)
 				notVoidCall|=S2!=M_IGNORED;
 			}
 			int exprNArgs=commas.size()+notVoidCall;
+#if 0
 			if(S<M_USER_FUNCTION)//default function call level
 			{
 				int signature=default_overload(S);
@@ -9839,32 +10827,54 @@ void Compile::compile_expression_global(Expression &expr)
 				}
 			}
 			else//user function call level
+#endif
 			{
-				int name_id=expr.m[i-2]._1, d_match=-1;
-				for(int d=0, dEnd=userFunctionDefinitions.size();d<dEnd&&expr.lineNo>userFunctionDefinitions[d].lineNo;++d)//linearly through all user definitions
+				int name_id=expr.m[i-2]._1, d_match=-1, overloads=0;
+				if(S==M_USER_FUNCTION)
 				{
-					auto &definition=userFunctionDefinitions[d];
-					if(definition.valid&&name_id==definition.name_id&&exprNArgs==definition.nArgs)//find overload instance		sorted by lineNo
-						d_match=d;
+					for(int d=0, dEnd=userFunctionDefinitions.size();d<dEnd&&expr.lineNo>userFunctionDefinitions[d].lineNo;++d)//linearly through all user definitions
+					{
+						auto &definition=userFunctionDefinitions[d];
+						if(definition.valid&&name_id==definition.name_id&&exprNArgs==definition.nArgs)//find overload instance		sorted by lineNo
+							d_match=d;
+					}
+				}
+				else//built-in function
+				{
+					overloads=default_overload(S);
+					d_match=-!(overloads==-1||exprNArgs<32&&overloads&1<<exprNArgs);
 				}
 				if(d_match!=-1)
 				{
-					std::vector<int> args(exprNArgs);
+					std::vector<ArgIdx> args(exprNArgs);
 					if(notVoidCall)//compile args
 					{
 						int start=i;
 						for(int k3=0, k3End=exprNArgs-1;k3<k3End;++k3)
 						{
 							expr.m[commas[k3]]._0=M_IGNORED;
-							compile_assignment(start, commas[k3]);
-							args[k3]=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
+							compile_inline_if(start, commas[k3], 0);
+							args[k3].idx=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
 							start=commas[k3]+1;
 						}
-						compile_assignment(start, f);
-						args[exprNArgs-1]=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
+						compile_inline_if(start, f, 0);
+						args[exprNArgs-1].idx=expr.m[start]._1, expr.m[start]._0=M_IGNORED;
 					}
-					int result=compile_instruction_userFunctionCall(d_match, args);
-					S=M_N, expr.m[i-2]._1=result;
+					int k=i-2;
+					if(S==M_USER_FUNCTION)
+					{
+						int result=compile_instruction_userFunctionCall(d_match, args);
+						S=M_N, expr.m[k]._1=result;
+					}
+					else if(S>M_VFSTART)//built-in variadic
+					{
+						int result=compile_instruction_userFunctionCall(-S, args);
+						S=M_N, expr.m[k]._1=result;
+					}
+					else//built-in binary or triary
+					{
+						compile_instruction(k, '<', k+1, commas[0]+1, commas.size()>1?commas[1]+1:-1);
+					}
 				}
 				else//syntax error, no such overload
 				{
@@ -10456,7 +11466,7 @@ void solve(Expression &ex, int offset, int x1, int x2, int y1, int y2, int z1, i
 			{
 				switch(in.type)
 				{
-				case 'c':Solve_UserFunction(ex, in, false)(k2);break;
+				case SIG_CALL:Solve_UserFunction(ex, in, false)(k2);break;
 				case SIG_R_R:	(&in.ia32)[logstep]. r_r(VectP(NPO(res.r, mrr)),													VectP(NPO(op1.r, m1r)));													break;//r_r
 				case SIG_C_C:	(&in.ia32)[logstep]. c_c(CompP(NPO(res.r, mrr), NPO(res.i, mri)),									CompP(NPO(op1.r, m1r), NPO(op1.i, m1i)));									break;//c_c
 				case SIG_Q_Q:	(&in.ia32)[logstep]. q_q(QuatP(NPO(res.r, mrr), NPO(res.i, mri), NPO(res.j, mrj), NPO(res.k, mrk)),	QuatP(NPO(op1.r, m1r), NPO(op1.i, m1i), NPO(op1.j, m1j), NPO(op1.k, m1k)));	break;//q_q
@@ -10532,6 +11542,9 @@ void solve(Expression &ex, int offset, int x1, int x2, int y1, int y2, int z1, i
 								QuatP(op3.r.p, op3.i.p, op3.j.p, op3.k.p), k2, in.op1_ms, op_ms);
 					}
 					break;
+				case SIG_VA:
+					(&in.ia32)[logstep].vf(&ex.n, nullptr, ArgIdx(in.result, in.r_ms), in.args, k2);
+					break;
 				}
 				//if(simd_method==2)
 				//	_mm256_zeroupper();
@@ -10605,7 +11618,7 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 #endif
 		switch(in.type)
 		{
-		case 'c':
+		case SIG_CALL:
 			{
 				Solve_UserFunction uf(ex, in, false);
 			//	Concurrency::parallel_for(0, workSize, [&](int k)
@@ -10620,6 +11633,18 @@ void solve_disc(Expression &ex, int offset, int x1, int x2, int y1, int y2, int 
 					//}
 					//	int LOL_1=0;
 					uf(idx);
+				}//);
+			}
+			break;
+		case SIG_VA:
+			{
+			//	Concurrency::parallel_for(0, workSize_n, [&](int k)
+				for(int k=0;k<workSize_n;++k)
+				{
+					int ka=k<<logstep;
+					int x=x1+ka%dx, y=y1+(ka/dx)%dy, z=z1+ka/(dy*dx), idx=offset+Xplaces*(Yplaces*z+y)+x;
+					for(int k2=idx, increment=1<<(logstep&-(int)in.simd), k2End=idx+(1<<logstep);k2<k2End;k2+=increment)
+						(&in.ia32)[logstep].vf(&ex.n, nullptr, ArgIdx(in.result, in.r_ms), in.args, k2);
 				}//);
 			}
 			break;
@@ -14233,7 +15258,7 @@ namespace	modes
 		{
 			int k=0;
 			for(int kEnd=in.args.size();k<kEnd;++k)//copy args
-				fData[k]=ndata[in.args[k]];
+				fData[k]=ndata[in.args[k].idx];
 			for(int kEnd=func->data.size();k<kEnd;++k)//initialize const data
 				fData[k]=func->data[k];
 		}
@@ -14257,25 +15282,25 @@ namespace	modes
 				ndata[in.result].setzero();
 				break;
 			}
-			if(clock()+offset>expiryTime)
-			{
-				func->functionStuck=true;//mark function
-
-				//return nan
-				if(callStack.size())
-				{
-					auto &cst=callStack.top();
-					func=cst.func;
-					i2=cst.i, nInstr=func->i.size();
-					cst.fData[func->i[i2].result].setnan();
-					std::swap(cst.fData, fData);
-					callStack.pop();
-					++i2;
-					continue;
-				}
-				ndata[in.result].setnan();
-				break;
-			}
+			//if(clock()+offset>expiryTime)
+			//{
+			//	func->functionStuck=true;//mark function
+			//
+			//	//return nan
+			//	if(callStack.size())
+			//	{
+			//		auto &cst=callStack.top();
+			//		func=cst.func;
+			//		i2=cst.i, nInstr=func->i.size();
+			//		cst.fData[func->i[i2].result].setnan();
+			//		std::swap(cst.fData, fData);
+			//		callStack.pop();
+			//		++i2;
+			//		continue;
+			//	}
+			//	ndata[in.result].setnan();
+			//	break;
+			//}
 			auto &in2=func->ni[i2];
 		//	func_data_to_clipboard(fData);//
 			switch(in2.type)
@@ -14297,7 +15322,7 @@ namespace	modes
 					{
 						int k=0;
 						for(int kEnd=in2.args.size();k<kEnd;++k)//copy args
-							fData[k]=cst.fData[in2.args[k]];
+							fData[k]=cst.fData[in2.args[k].idx];
 						//	fData[k]=cst.func->data[in2.args[k]];
 						for(int kEnd=func->data.size();k<kEnd;++k)//initialize const data
 							fData[k]=func->data[k];
@@ -14378,6 +15403,10 @@ namespace	modes
 				fData[in2.result]=fData[in2.op1].q_isTrue()?fData[in2.op2]:fData[in2.op3];
 				++i2;
 				continue;
+			case SIG_VA:
+				in2.fp.vf(fData, ArgIdx(in2.result, in2.r_ms), in2.args);
+				++i2;
+				break;
 			}
 			break;
 		}
@@ -14404,7 +15433,7 @@ namespace	modes
 			//	auto &res=ndata[in.result], &op1=ndata[in.op1], &op2=ndata[in.is_binary()?in.op2:in.op1];
 				switch(in.type)
 				{
-				case 'c':
+				case SIG_CALL:
 					mp_solve_userfunction(ndata, in);
 					break;
 #ifdef MP_PURE_QUAT
@@ -14511,6 +15540,9 @@ namespace	modes
 #endif
 				case SIG_INLINE_IF:
 					ndata[in.result]=ndata[in.op1].q_isTrue()?ndata[in.op2]:ndata[in.op3];
+					break;
+				case SIG_VA:
+					in.fp.vf(ndata, ArgIdx(in.result, in.r_ms), in.args);
 					break;
 				}
 			}
@@ -18856,7 +19888,7 @@ namespace	modes
 				"E: reset scale",
 				"R: reset scale & view",
 				"C: toggle clear screen",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 218);
@@ -19742,7 +20774,7 @@ namespace	modes
 				"6: HPF",
 				"0: reset operations",
 				"`: contour",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 265);
@@ -21051,7 +22083,7 @@ namespace	modes
 				"6: HPF",
 				"0: reset operations",
 				"`: contour",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 294);
@@ -21806,7 +22838,7 @@ namespace	modes
 				"6: HPF",
 				"0: reset operations",
 				"`: contour",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 270);
@@ -23827,7 +24859,7 @@ namespace	modes
 				"8: HPF",
 				"0: reset operations",
 				"`: contour",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 330);
@@ -24923,7 +25955,7 @@ namespace	modes
 				"J: Inverse HT",
 				"0: reset operations",
 				"`: contour",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 270);
@@ -25409,7 +26441,7 @@ namespace	modes
 				"E: reset scale",
 				"R: reset scale & view",
 				"C: toggle clear screen",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 270);
@@ -26342,7 +27374,7 @@ namespace	modes
 				"C: toggle clear screen",
 				"F6: change camera settings",
 				"`: contour",
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 330);
@@ -32061,7 +33093,7 @@ namespace	modes
 				"`: contour",
 				"F3: toggle contour method",
 				"F : toggle contour wireframe",//
-				"Tab: toggle OpenGL",
+				"Tab/Shift Tab: switch renderer",
 				"Esc: back to text editor"
 			};
 			print_contextHelp(help, sizeof(help)>>2, 330);
@@ -34543,7 +35575,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 		//	if(action==2&&(exprChangeStart<exprInsertEnd||functionChangeStart<functionInsertEnd))
 			if(action==2&&boundChangeStart<boundInsertEnd)//new expressions/functions were inserted
 			{
-				char const			// 0				   1				   2				   3				   4				   5				   6				   7				   8				   9				   10				   11				   12
+				static char const	// 0				   1				   2				   3				   4				   5				   6				   7				   8				   9				   10				   11				   12
 									// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
 									//																   s ! " # $ % & ' ( ) * + , - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ ` a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ~ del
 					*isAlphanumeric	="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\1\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0",
@@ -34555,7 +35587,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 				bool prec_changed=false;
 
 				int kStart=boundChangeStart==0?0:bounds[boundChangeStart-1].first;
-				int comment=0;
+				int comment=0;//next comment
 /*nobreak?*/	for(;comment!=allComments.size()&&allComments[comment].first<kStart;++comment);
 				int lineNo=lineChangeStart=itb.getLineNo(0, 0, kStart);
 
@@ -34581,7 +35613,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 						it->free();
 						puis.clear();
 					}
-					else
+					else//user-defined function
 					{
 						it=&userFunctionDefinitions[function];
 						*it=Expression();
@@ -34590,9 +35622,89 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 
 						//parse function header		correct header syntax checked by profiler
 						bool unnamed=true;
-						char state='f', mathSet='R';//'f' looking for function name, 'a' reading arg names, 's' arg mathSet specifier
+						BoundCounter k(kStart, comment, itb.textlen);
+						char match_oob=0;
+#define					OOB_BIT		(match_oob&1)
+#define					MATCH_BIT	(match_oob>>1)
+						skip_whitespace(text, k, itb.textlen);//function header lexer
+						int start=k.idx;
+						match_oob=skip_identifier_ifmatch(text, k, itb.textlen);
+						int end=k.idx;
+						k.skip_comments(itb.textlen);//skip_identifier_ifmatch doesn't skip comments
+						if(MATCH_BIT)
+						{
+							it->name_id=userFunctionNames.addName(text, start, end)->name_id;
+							unnamed=false;
+						}
+						//TODO: else log error quiet (no messagebox)
+						skip_whitespace(text, k, itb.textlen);
+						match_oob=skip_char_ifmatch(text, k, itb.textlen, '(');
+						//TODO: !match: quiet error
+						char arg_separators[]="),";
+						for(char notfirsttime=false;;notfirsttime=true)
+						{
+							if(skip_whitespace(text, k, itb.textlen))
+								break;//unreachable
+
+							char c_matched=0;
+							arg_separators[1]=','&-notfirsttime;
+							match_oob=skip_char_ifmatch(text, k, itb.textlen, arg_separators, &c_matched);//look for ',' or ')'
+							char match=MATCH_BIT;
+							if(match&&c_matched==')'||k.idx<itb.textlen&&text[k.idx]=='{')//end of function header
+								break;
+							//TODO: notfirsttime&&!match: quiet error
+
+							if(skip_whitespace(text, k, itb.textlen))
+								break;//unreachable
+
+							int start1=k.idx;
+							match_oob=skip_identifier_ifmatch(text, k, itb.textlen);//can be optional mathset indicator or obligatory argname
+							int end1=k.idx;
+							k.skip_comments(itb.textlen);
+
+							if(skip_whitespace(text, k, itb.textlen))
+								break;//unreachable
+
+							int start2=k.idx;
+							match_oob=skip_identifier_ifmatch(text, k, itb.textlen);
+							int end2=k.idx;
+							k.skip_comments(itb.textlen);
+							if(MATCH_BIT)//mathset indicator & argname
+							{
+								char mathSet='R';
+								switch(text[start1])
+								{
+								case 'r':case 'R':mathSet='R';break;
+								case 'c':case 'C':mathSet='c';break;
+								case 'h':case 'H':
+								case 'q':case 'Q':mathSet='h';break;
+								}
+								ufVarNames.push_back(UFVariableName(text+start2, end2-start2, 0, it->data.size()));
+								it->insertFVar(mathSet, ufVarNames.rbegin()->name);
+								++it->nArgs;
+							}
+							else//just argname
+							{
+								ufVarNames.push_back(UFVariableName(text+start1, end1-start1, 0, it->data.size()));
+								it->insertFVar('R', ufVarNames.rbegin()->name);
+								++it->nArgs;
+							}
+						}
+						skip_whitespace(text, k, itb.textlen);//k should now point at '{'
+						kStart=k.idx;
+#undef					OOB_BIT
+#undef					MATCH_BIT
+						comment=k.kc;
+#if 0
+						enum
+						{
+							HPS_LOOKING_FOR_FUNC_NAME='f',
+							HPS_READING_ARG_NAMES='a',
+							HPS_ARG_MATHSET='s',
+						};
+						char state=HPS_LOOKING_FOR_FUNC_NAME, mathSet='R';//'f' looking for function name, 'a' reading arg names, 's' arg mathSet specifier
 						int i=-1, f=-1;
-						for(int k=kStart, kcEnd=comment!=allComments.size()?allComments[comment].first:kEnd;k<kEnd;++k)
+						for(int k=kStart, kcEnd=comment!=allComments.size()?allComments[comment].first:kEnd;k<kEnd;++k)//function header lexer
 						{
 							if(k>=kcEnd)//skip comments
 							{
@@ -34608,15 +35720,15 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								{
 									if(!isAlphanumeric[text[k2]])
 									{
-										if(state=='f')
+										if(state==HPS_LOOKING_FOR_FUNC_NAME)
 										{
 											it->name_id=userFunctionNames.addName(text, i, k2)->name_id;
 											unnamed=false;
 										}
-										else if(state=='a'||state=='s')
+										else if(state==HPS_READING_ARG_NAMES||state==HPS_ARG_MATHSET)
 										{
 											f=k2;
-											if(state!='s'&&k2-i==1&&(text[i]=='r'||text[i]=='R'||text[i]=='c'||text[i]=='C'||text[i]=='h'||text[i]=='H'||text[i]=='q'||text[i]=='Q'))
+											if(state!=HPS_ARG_MATHSET&&k2-i==1&&(text[i]=='r'||text[i]=='R'||text[i]=='c'||text[i]=='C'||text[i]=='h'||text[i]=='H'||text[i]=='q'||text[i]=='Q'))
 											{
 												switch(text[i])
 												{
@@ -34625,7 +35737,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 												case 'h':case 'H':
 												case 'q':case 'Q':mathSet='h';break;
 												}
-												state='s';
+												state=HPS_ARG_MATHSET;
 											}
 											else
 											{
@@ -34633,7 +35745,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 												it->insertFVar(mathSet, ufVarNames.rbegin()->name);
 											//	it->insertData(mathSet, Value());
 												++it->nArgs;
-												state='a', mathSet='R';
+												state=HPS_READING_ARG_NAMES, mathSet='R';
 											}
 										}
 										k=k2-1;
@@ -34642,19 +35754,19 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								}
 							}
 							else if(text[k]=='(')
-								state='a';
+								state=HPS_READING_ARG_NAMES;
 							else if(text[k]==',')
 							{
-								if(state=='a')
+								if(state==HPS_READING_ARG_NAMES)
 									continue;
-								else if(state=='s')//not a specifier but a variable
+								else if(state==HPS_ARG_MATHSET)//not a specifier but a variable
 								{
 									ufVarNames.push_back(UFVariableName(text+i, f-i, 0, it->data.size()));
 									it->insertFVar(mathSet, ufVarNames.rbegin()->name);
 								//	it->insertData(mathSet, 0);
 									continue;
 								}
-								else if(state=='f')//unreachable
+								else if(state==HPS_LOOKING_FOR_FUNC_NAME)//unreachable
 									break;
 							}
 							else if(text[k]==')')//header end
@@ -34675,10 +35787,11 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 							}
 							else if(text[k]!=' '&&text[k]!='\t')//unreachable
 								break;
-						}
+						}//function header lexer
+#endif
 						if(unnamed)
 							it->name_id=-1;
-					}
+					}//end else
 					it->lineNo=lineNo, it->boundNo=bound;
 					bool notForLoopHeaderScope=true;
 					for(int k=kStart, kcEnd=comment!=allComments.size()?allComments[comment].first:kEnd;k<kEnd;++k)//lexer loop
@@ -35275,7 +36388,8 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ASIN					);	k+=3;	continue;}	  }}}}
 										else if(text[k+1]=='t'||text[k+1]=='T'){		 if(text[k+2]=='a'||text[k+2]=='A'){		 if(text[k+3]=='n'||text[k+3]=='N'){		 if(text[k+4]=='h'||text[k+4]=='H'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ATANH					);	k+=4;	continue;}	  }
 																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ATAN					);	k+=3;	continue;}	  }}}
-																					else if(text[k+2]=='h'||text[k+2]=='H'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ATANH					);	k+=2;	continue;}	    }}	break;
+																					else if(text[k+2]=='h'||text[k+2]=='H'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ATANH					);	k+=2;	continue;}	    }}
+										else if(text[k+1]=='v'||text[k+1]=='V'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_AV						);	++k;	continue;}		 }	break;
 						case 'b':			 if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='s'||text[k+3]=='S'){		 if(text[k+4]=='e'||text[k+4]=='E'){		 if(text[k+5]=='l'||text[k+5]=='L'){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_BESSEL_J				);	k+=5;	continue;}	 }}}}
 																						 if(text[k+2]=='t'||text[k+2]=='T'){		 if(text[k+3]=='a'||text[k+3]=='A'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_BETA					);	k+=3;	continue;}	   }}}
 										else if(text[k+1]=='r'				  ){		 if(text[k+2]=='e'				  ){		 if(text[k+3]=='a'				  ){		 if(text[k+4]=='k'&&!exprBound	  ){																																																																														it->insertMap		(k, 5, M_BREAK					);	k+=4;	continue;	  }}}}
@@ -35469,6 +36583,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 										else if(text[k+1]=='b'||text[k+1]=='B'){		 if(text[k+2]=='r'||text[k+2]=='R'){		 if(text[k+3]=='t'||text[k+3]=='T'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CBRT					);	k+=3;	continue;}	   }}}
 										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='i'||text[k+2]=='I'){		 if(text[k+3]=='l'||text[k+3]=='L'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CEIL					);	k+=3;	continue;}	   }}}
 										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_COSH					);	++k;	continue;}	     }
+										else if((text[k+1]=='l'||text[k+1]=='L')		 &&(text[k+2]=='a'||text[k+2]=='A')			 &&(text[k+3]=='m'||text[k+3]=='M')			 &&(text[k+4]=='p'||text[k+4]=='P')){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_CLAMP					);	k+=4;	continue;}		 }
 										else if(text[k+1]=='o'				  ){		 if(text[k+2]=='m'||text[k+2]=='M'){		 if(text[k+3]=='b'||text[k+3]=='B'){		 if(text[k+4]=='i'||text[k+4]=='I'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='i'||text[k+8]=='I'){		 if(text[k+9]=='o'||text[k+9]=='O'){		 if(text[k+10]=='n'||text[k+10]=='N'){	if(exprBound||!isAlphanumeric[text[k+11]]){	it->insertMap		(k, 11, M_COMBINATION			);	k+=10;	continue;}}}}}}}}}}
 																					else if(text[k+2]=='n'				  ){		 if(text[k+3]=='j'||text[k+3]=='J'){		 if(text[k+4]=='u'||text[k+4]=='U'){		 if(text[k+5]=='g'||text[k+5]=='G'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='e'||text[k+8]=='E'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CONJUGATE				);	k+=8;	continue;} }}}}}}
 																																else if(text[k+3]=='t'							 &&text[k+4]=='i'							 &&text[k+5]=='n'							 &&text[k+6]=='u'							 &&text[k+7]=='e'&&!exprBound	  ){																																													it->insertMap		(k, 8, M_CONTINUE				);	k+=7;	continue;     }}
@@ -35495,6 +36610,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 										else if(text[k+1]=='b'||text[k+1]=='B'){		 if(text[k+2]=='r'||text[k+2]=='R'){		 if(text[k+3]=='t'||text[k+3]=='T'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CBRT					);	k+=3;	continue;}	   }}}
 										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='i'||text[k+2]=='I'){		 if(text[k+3]=='l'||text[k+3]=='L'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CEIL					);	k+=3;	continue;}	   }}}
 										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_COSH					);	++k;	continue;}	     }
+										else if((text[k+1]=='l'||text[k+1]=='L')		 &&(text[k+2]=='a'||text[k+2]=='A')			 &&(text[k+3]=='m'||text[k+3]=='M')			 &&(text[k+4]=='p'||text[k+4]=='P')){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_CLAMP					);	k+=4;	continue;}		 }
 										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='m'||text[k+2]=='M'){		 if(text[k+3]=='b'||text[k+3]=='B'){		 if(text[k+4]=='i'||text[k+4]=='I'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='i'||text[k+8]=='I'){		 if(text[k+9]=='o'||text[k+9]=='O'){		 if(text[k+10]=='n'||text[k+10]=='N'){	if(exprBound||!isAlphanumeric[text[k+11]]){	it->insertMap		(k, 11, M_COMBINATION			);	k+=10;	continue;}}}}}}}}}}
 																					else if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='j'||text[k+3]=='J'){		 if(text[k+4]=='u'||text[k+4]=='U'){		 if(text[k+5]=='g'||text[k+5]=='G'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='e'||text[k+8]=='E'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CONJUGATE				);	k+=8;	continue;} }}}}}}}
 																					else if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COSC					);	k+=3;	continue;}	   }
@@ -35515,7 +36631,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 										else if((text[k+1]=='x'||text[k+1]=='X')		 &&(text[k+2]=='p'||text[k+2]=='P')){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_EXP					);	k+=2;	continue;}	     }
 										else								   {																																																																																																				if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMapEuler	(k, 1							);			continue;}		 }	break;
 						case 'f':			 if(text[k+1]=='i'||text[k+1]=='I'){		 if(text[k+2]=='b'||text[k+2]=='B'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_FIB					);	k+=2;	continue;}		}}
-											 if(text[k+1]=='a'&&!exprBound		){		 if(text[k+2]=='l'							 &&text[k+3]=='s'							 &&text[k+4]=='e'					)																																																																														it->insertMapData	(k, 5, 'R', 0					);	k+=4;	continue;		 }
+											 if(text[k+1]=='a'&&!exprBound		){		 if(text[k+2]=='l'							 &&text[k+3]=='s'							 &&text[k+4]=='e'					){																																																																														it->insertMapData	(k, 5, 'R', 0					);	k+=4;	continue;}		 }
 										else if(text[k+1]=='l'||text[k+1]=='L'){		 if(text[k+2]=='o'||text[k+2]=='O'){		 if(text[k+3]=='o'||text[k+3]=='O'){		 if(text[k+4]=='r'||text[k+4]=='R'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_FLOOR					);	k+=4;	continue;}	  }}}}
 										else if(text[k+1]=='o'				  ){		 if(text[k+2]=='r'&&!exprBound	  ){
 											auto &scope=scopeLevel.top();
@@ -35543,7 +36659,8 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 																					else if(text[k+2]=='x'||text[k+2]=='X'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_MAX					);	k+=2;	continue;}	    }}
 										else if((text[k+1]=='i'||text[k+1]=='I')		 &&(text[k+2]=='n'||text[k+2]=='N')){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_MIN					);	k+=2;	continue;}	     }	break;
 						case 'n':case 'N':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _qnan				);	k+=2;	continue;}	    }}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='u'||text[k+2]=='U'){		 if(text[k+3]=='m'||text[k+3]=='M'){		 if(text[k+4]=='a'||text[k+4]=='A'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='n'||text[k+6]=='N'){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_BESSEL_Y				);	k+=6;	continue;}	}}}}}}	break;
+										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='u'||text[k+2]=='U'){		 if(text[k+3]=='m'||text[k+3]=='M'){		 if(text[k+4]=='a'||text[k+4]=='A'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='n'||text[k+6]=='N'){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_BESSEL_Y				);	k+=6;	continue;}	}}}}}}
+										else if((text[k+1]=='o'||text[k+1]=='O')		 &&(text[k+2]=='r'||text[k+2]=='R')			 &&(text[k+3]=='m'||text[k+3]=='M')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_NORM					);	k+=3;	continue;}		 }	break;
 						case 'p':case 'P':	 if(text[k+1]=='e'||text[k+1]=='E'){		 if((text[k+2]=='r'||text[k+2]=='R')		 &&(text[k+3]=='m'||text[k+3]=='M')			 &&(text[k+4]=='u'||text[k+4]=='U')			 &&(text[k+5]=='t'||text[k+5]=='T')			 &&(text[k+6]=='a'||text[k+6]=='A')			 &&(text[k+7]=='t'||text[k+7]=='T')			 &&(text[k+8]=='i'||text[k+8]=='I')			 &&(text[k+9]=='o'||text[k+9]=='O')			 &&(text[k+10]=='n'||text[k+10]=='N')){	if(exprBound||!isAlphanumeric[text[k+11]]){	it->insertMap		(k, 11, M_PERMUTATION			);	k+=10;	continue;}		}}
 										else if(text[k+1]=='i'||text[k+1]=='I'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapPi		(k, 2							);	++k;	continue;}		 }
 										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='l'||text[k+2]=='L'){		 if(text[k+3]=='a'||text[k+3]=='A'){		 if(text[k+4]=='r'||text[k+4]=='R'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_POLAR					);	k+=4;	continue;}	  }}}}	break;
@@ -35853,6 +36970,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 					}
 					else//user function
 					{
+					//	map_to_clipboard(it->m);//
 						Compile::compile_function(*it);
 						it->resultMathSet=Compile::predictedMathSet;
 					//	expression_to_clipboard(*it, true);//MP instructions
@@ -36104,7 +37222,8 @@ void		render()
 		for(int bEnd=bounds.size()-1;cursorB<bEnd&&bounds[cursorB].first<=itb.cursor;++cursorB)
 			cursorEx+=bounds[cursorB].second=='e';
 
-		if(bounds[cursorB].second&1)//expression or clear
+		if(bounds[cursorB].second=='e')//exression bound
+	//	if(bounds[cursorB].second&1)//expression or clear
 		{
 			auto &ex=expr[cursorEx];
 			switch(ex.rmode[0])//current mode

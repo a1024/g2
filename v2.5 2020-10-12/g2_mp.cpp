@@ -1488,6 +1488,248 @@ namespace		MP
 	void  r_r_assign				(Quat &r, Quat const &x)				{r=x.r;}
 	void  c_c_assign				(Quat &r, Quat const &x)				{r=(Comp)x;}
 	void  q_q_assign				(Quat &r, Quat const &x)				{r=x;}
+	
+	//variadic functions	result & args: idx<<8|mathSet
+	inline Real clamp(Real const &x)
+	{
+		if(x<0)
+			return 0;
+		if(x>1)
+			return 1;
+		return x;
+	}
+	inline Real clamp(Real const &x, Real const &hi)
+	{
+		if(x<0)
+			return 0;
+		if(x>hi)
+			return hi;
+		return x;
+	}
+	inline Real clamp(Real const &lo, Real const &x, Real const &hi)
+	{
+		if(x<lo)
+			return lo;
+		if(x>hi)
+			return hi;
+		return x;
+	}
+	void va_clamp					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args)
+	{//not a true va: 1, 2 or 3 args
+		switch(args.size())
+		{
+		case 1:
+			{
+				int op1=args[0].idx, res=result.idx;
+				char ms1=args[0].mathSet, msr=result.mathSet;
+				Quat ret;
+				ret.r=clamp(data[op1].r);
+				if(msr>='c')
+				{
+					ret.i=clamp(data[op1].i);
+					if(msr=='h')
+					{
+						ret.j=clamp(data[op1].j);
+						ret.k=clamp(data[op1].k);
+					}
+				}
+				data[result.idx]=ret;
+			}
+			break;
+		case 2:
+			{
+				int op1=args[0].idx, op2=args[1].idx, res=result.idx;
+				char ms1=args[0].mathSet, ms2=args[1].mathSet, msr=result.mathSet;
+				Quat ret;
+				ret.r=clamp(data[op1].r, data[op2].r);
+				if(msr>='c')
+				{
+					ret.i=clamp(data[op1].i, data[op2].i);
+					if(msr=='h')
+					{
+						ret.j=clamp(data[op1].j, data[op2].j);
+						ret.k=clamp(data[op1].k, data[op2].k);
+					}
+				}
+				data[result.idx]=ret;
+			}
+			break;
+		case 3:
+			{
+				int op1=args[0].idx, op2=args[1].idx, op3=args[2].idx, res=result.idx;
+				char ms1=args[0].mathSet, ms2=args[1].mathSet, ms3=args[2].mathSet, msr=result.mathSet;
+				Quat ret;
+				ret.r=clamp(data[op1].r, data[op2].r, data[op3].r);
+				if(msr>='c')
+				{
+					ret.i=clamp(data[op1].i, data[op2].i, data[op3].i);
+					if(msr=='h')
+					{
+						ret.j=clamp(data[op1].j, data[op2].j, data[op3].j);
+						ret.k=clamp(data[op1].k, data[op2].k, data[op3].k);
+					}
+				}
+				data[result.idx]=ret;
+			}
+			break;
+		}
+	}
+	void va_min						(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args)
+	{
+		int k_min=args[0].idx;
+		for(int k=1;k<(int)args.size();++k)
+		{
+			int ka=args[k].idx;
+			if(data[k_min].r>data[ka].r)
+				k_min=ka;
+		}
+		data[result.idx]=data[k_min];
+	}
+	void va_max						(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args)
+	{
+		int k_max=args[0].idx;
+		for(int k=1;k<(int)args.size();++k)
+		{
+			int ka=args[k].idx;
+			if(data[k_max].r<data[ka].r)
+				k_max=ka;
+		}
+		data[result.idx]=data[k_max];
+	}
+	void va_average					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args)
+	{
+		Quat ret;
+		for(int k=0;k<(int)args.size();++k)
+		{
+			int ka=args[k].idx;
+			ret+=data[ka];
+		}
+		ret/=args.size();
+		data[result.idx]=ret;
+	}
+	void va_hypot					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args)
+	{
+		Quat ret;
+		for(int k=0;k<(int)args.size();++k)
+		{
+			int ka=args[k].idx;
+			char ms=args[k].mathSet;
+			auto &dk=data[ka];
+			switch(ms)
+			{
+			case 'R':
+				ret.r+=dk.r*dk.r;
+				break;
+			case 'c':
+				{
+					Comp temp=(Comp)dk;
+					ret+=temp*temp;
+				}
+				break;
+			case 'h':
+				ret+=dk*dk;
+				break;
+			}
+		}
+		char rms=result.mathSet;
+		switch(rms)
+		{
+		case 'R':
+			ret.r=sqrt(ret.r);
+			break;
+		case 'c':
+			ret=sqrt((Comp)ret);
+			break;
+		case 'h':
+			ret=sqrt(ret);
+			break;
+		}
+		data[result.idx]=ret;
+	}
+	void va_norm					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args)
+	{//args {n, a1, ...am}, result = (a1^n+...am^n)^(1/n)
+		Quat ret;
+		char pms=args[0].mathSet;
+		switch(pms)
+		{
+		case 'R':
+			{
+				auto p=data[args[0].idx].r;
+				for(int k=1;k<(int)args.size();++k)
+				{
+					int ka=args[k].idx;
+					char ms=args[k].mathSet;
+					auto &dk=data[ka];
+					switch(ms)
+					{
+					case 'R':
+					case 'c':
+						{
+							Comp temp=(Comp)dk;
+							ret+=temp^p;
+						}
+						break;
+					case 'h':
+						ret+=dk^p;
+						break;
+					}
+				}
+				ret^=1/p;
+			}
+			break;
+		case 'c':
+			{
+				auto p=(Comp)data[args[0].idx];
+				for(int k=1;k<(int)args.size();++k)
+				{
+					int ka=args[k].idx;
+					char ms=args[k].mathSet;
+					auto &dk=data[ka];
+					switch(ms)
+					{
+					case 'R':
+					case 'c':
+						{
+							Comp temp=(Comp)dk;
+							ret+=temp^p;
+						}
+						break;
+					case 'h':
+						ret+=dk^p;
+						break;
+					}
+				}
+				ret^=1/p;
+			}
+			break;
+		case 'h':
+			{
+				auto p=data[args[0].idx];
+				for(int k=1;k<(int)args.size();++k)
+				{
+					int ka=args[k].idx;
+					char ms=args[k].mathSet;
+					auto &dk=data[ka];
+					switch(ms)
+					{
+					case 'R':
+					case 'c':
+						{
+							Comp temp=(Comp)dk;
+							ret+=temp^p;
+						}
+						break;
+					case 'h':
+						ret+=dk^p;
+						break;
+					}
+				}
+				ret^=1/p;
+			}
+			break;
+		}
+		data[result.idx]=ret;
+	}
 #else
 	void  r_r_setzero				(Real &r, Real const&)					{r.setZero();}
 	void  c_c_setzero				(Comp &r, Comp const&)					{r.r.setZero(), r.i.setZero();}

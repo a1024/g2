@@ -383,4 +383,140 @@ struct QuatP
 //	int colorFunction(double &r, double &i);
 //	void colorFunction_cases(double r, double i, int &c);
 //}
+template<typename T, int Align>struct aligned_vector
+{
+	typedef T *iterator;
+	typedef T const *const_iterator;
+	T *p;
+	int n;
+	aligned_vector():p(0), n(0){}
+	aligned_vector(aligned_vector<T, Align> const &other)
+	{
+		if(&other!=this)
+		{
+			n=other.n;
+			if(n)
+			{
+				p=(T*)_aligned_malloc(other.n*sizeof(T), Align);
+				memcpy(p, other.p, n*sizeof(T));
+			}
+			else
+				p=0;
+		}
+	}
+	aligned_vector(aligned_vector<T, Align> &&other)
+	{
+		if(&other!=this)
+		{
+			n=other.n, p=other.p;
+			other.n=0, other.p=0;
+		}
+	}
+	aligned_vector(unsigned n, T const &e=T()):n(n), p((T*)_aligned_malloc(n*sizeof(T), Align))
+	{
+		fill(0, n, e);
+	}
+	~aligned_vector()
+	{
+		if(p)
+		{
+			_aligned_free(p);
+			p=0;
+		}
+	}
+	aligned_vector& operator=(aligned_vector const &other)
+	{
+		if(&other!=this)
+		{
+			n=other.n;
+			realloc(n);
+			for(int k=0;k<n;++k)
+				p[k]=other[k];
+		}
+		return *this;
+	}
+	aligned_vector& operator=(aligned_vector &&other)
+	{
+		if(&other!=this)
+		{
+			if(p)
+				_aligned_free(p);
+			n=other.n, p=other.p;
+			other.n=0, other.p=0;
+		}
+		return *this;
+	}
+	unsigned size()const{return n;}
+	iterator begin(){return p;}
+	iterator end(){return p+n;}
+	const_iterator begin()const{return p;}
+	const_iterator end()const{return p+n;}
+	void realloc(unsigned n)
+	{
+		if(p)
+			p=(T*)_aligned_realloc(p, n*sizeof(T), Align);
+		else
+			p=(T*)_aligned_malloc(n*sizeof(T), Align);
+	}
+	void fill(unsigned start, unsigned end, T const &e)
+	{
+		for(unsigned k=start;k<end;++k)
+			p[k]=e;
+	}
+	void resize(unsigned n, T const &e=T())
+	{
+		if(n!=this->n)//
+		{
+			realloc(n);
+			fill(this->n, n, e);
+			this->n=n;
+		}
+	}
+	T& operator[](unsigned k){return p[k];}
+	T const& operator[](unsigned k)const{return p[k];}
+	void assign(unsigned n, T const &e=T())
+	{
+		this->n=n;
+		realloc(n);
+		fill(0, n, e);
+	}
+	void push_back(T const &e)
+	{
+		++n;
+		realloc(n);
+		p[n-1]=e;
+	}
+	void pop_back()
+	{
+		--n;
+		realloc(n);
+	}
+	void insert(unsigned position, T const &e, unsigned count=1)
+	{
+		unsigned n2=n+count;
+		realloc(n2);
+		n=n2;
+		unsigned pos2=position+count;
+		for(unsigned k=n2-1;k>=pos2;--k)
+			p[k]=p[k-count];
+		fill(position, pos2, e);
+	}
+	void erase(unsigned position, unsigned count=1)
+	{
+		for(unsigned k=position, kEnd=n-count;k<kEnd;++k)
+			p[k]=p[k+count];
+		n-=count;
+		realloc(n);
+	}
+	void clear(){n=0; if(p)_aligned_free(p), p=0;}
+};
+typedef aligned_vector<double, 32> AVector_v4d;
+#define				TERM_CONTENTS	bool constant; char mathSet; int varNo; AVector_v4d r, i, j, k;
+struct				ArgIdx//for built-in variadic & user-defined functions
+{
+	short idx;
+	char mathSet;
+	ArgIdx():idx(0), mathSet(0){}
+	ArgIdx(short idx, char mathSet):idx(idx), mathSet(mathSet){}
+};
 #endif//COMMON_H

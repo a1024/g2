@@ -17,7 +17,9 @@
 
 #ifndef			MP_H
 #define			MP_H
+#include		"g2_common.h"
 #include		<mpreal.h>
+#include		<vector>
 
 	#define		DEFAULT_PREC	106//53
 	#define		MP_PURE_QUAT
@@ -222,6 +224,7 @@ namespace		MP
 			}
 		}
 		void set(double r=0, double i=0, double j=0, double k=0){this->r=r, this->i=i, this->j=j, this->k=k;}
+		void set(Real r, Real i, Real j, Real k){this->r=r, this->i=i, this->j=j, this->k=k;}
 		void setzero(){r.setZero(), i.setZero(), j.setZero(), k.setZero();}
 		void setnan(){r.setNan(), i.setZero(), j.setZero(), k.setZero();}
 		operator Real()const{return r;}
@@ -287,59 +290,108 @@ namespace		MP
 		Quat& operator^=(Quat const &b)
 		{
 			Real mag_v=i*i+j*j+k*k;
-			Real ln_mag_a=log(sqrt(r*r+mag_v));
-			mag_v=sqrt(mag_v);
-			Real v_mul=acos((r/ln_mag_a));
-			v_mul/=mag_v;
-			Quat t(ln_mag_a, i*v_mul, j*v_mul, k*v_mul);
-			t=Quat(
+			Quat t;
+			if(mag_v)
+			{
+				Real ln_mag_a=log(sqrt(r*r+mag_v));
+				mag_v=sqrt(mag_v);
+				Real v_mul=acos((r/ln_mag_a));
+				v_mul/=mag_v;
+				t.set(ln_mag_a, i*v_mul, j*v_mul, k*v_mul);
+			}
+			else//pure real
+			{
+				if(r<0)
+					r=-r, t.i=m_pi;
+				t.r=log(r);
+			}
+			t.set(
 				b.r*t.r+b.i*t.i+b.j*t.j+b.k*t.k,
 				b.r*t.i+b.i*t.r+b.j*t.k-b.k*t.j,
 				b.r*t.j-b.i*t.k+b.j*t.r+b.k*t.i,
 				b.r*t.k+b.i*t.j+b.j*t.i+b.k*t.r);
-			Real mag_u=sqrt(t.i*t.i+t.j*t.j+t.k*t.k), sin_mu, cos_mu;
-			sin_cos(sin_mu, cos_mu, mag_u);
-			Real exp_tr=exp(t.r);
-			v_mul=exp_tr*sin_mu/mag_u;
-			r=exp_tr*cos_mu, i=t.i*v_mul, j=t.j*v_mul, k=t.k*v_mul;
+			Real mag_u=t.i*t.i+t.j*t.j+t.k*t.k;
+			if(mag_u)
+			{
+				sqrt(mag_u);
+				Real sin_mu, cos_mu;
+				sin_cos(sin_mu, cos_mu, mag_u);
+				Real exp_tr=exp(t.r);
+				Real v_mul=exp_tr*sin_mu/mag_u;
+				r=exp_tr*cos_mu, i=t.i*v_mul, j=t.j*v_mul, k=t.k*v_mul;
+			}
+			else//pure real
+				r=exp(t.r);
 			return *this;
 		}
 		Quat& operator^=(Comp const &b)
 		{
 			Real mag_v=i*i+j*j+k*k;
-			Real ln_mag_a=log(sqrt(r*r+mag_v));
-			mag_v=sqrt(mag_v);
-			Real v_mul=acos((r/ln_mag_a));
-			v_mul/=mag_v;
-			Quat t(ln_mag_a, i*v_mul, j*v_mul, k*v_mul);
-			t=Quat(
+			Quat t;
+			if(mag_v)
+			{
+				Real ln_mag_a=log(sqrt(r*r+mag_v));
+				mag_v=sqrt(mag_v);
+				Real v_mul=acos((r/ln_mag_a));
+				v_mul/=mag_v;
+				t.set(ln_mag_a, i*v_mul, j*v_mul, k*v_mul);
+			}
+			else//pure real
+			{
+				if(r<0)
+					r=-r, t.i=m_pi;
+				t.r=log(r);
+			}
+			t.set(
 				b.r*t.r+b.i*t.i,
 				b.r*t.i+b.i*t.r,
 				b.r*t.j-b.i*t.k,
 				b.r*t.k+b.i*t.j);
-			Real mag_u=sqrt(t.i*t.i+t.j*t.j+t.k*t.k);
-			Real sin_mu, cos_mu;
-			sin_cos(sin_mu, cos_mu, mag_u);
-			Real exp_tr=exp(t.r);
-			v_mul=exp_tr*sin_mu/mag_u;
-			r=exp_tr*cos_mu, i=t.i*v_mul, j=t.j*v_mul, k=t.k*v_mul;
+			Real mag_u=t.i*t.i+t.j*t.j+t.k*t.k;
+			if(mag_u)
+			{
+				mag_u=sqrt(mag_u);
+				Real sin_mu, cos_mu;
+				sin_cos(sin_mu, cos_mu, mag_u);
+				Real exp_tr=exp(t.r);
+				Real v_mul=exp_tr*sin_mu/mag_u;
+				r=exp_tr*cos_mu, i=t.i*v_mul, j=t.j*v_mul, k=t.k*v_mul;
+			}
+			else//pure real
+				r=exp(t.r);
 			return *this;
 		}
 		Quat& operator^=(Real const &br)
 		{
 			Real mag_v=i*i+j*j+k*k;
-			Real ln_mag_a=log(sqrt(r*r+mag_v));
-			mag_v=sqrt(mag_v);
-			Real v_mul=acos(r/ln_mag_a);
-			v_mul/=mag_v;
-			Quat t(ln_mag_a, i*v_mul, j*v_mul, k*v_mul);
-			t=Quat(br*t.r, br*t.i, br*t.j, br*t.k);
-			Real mag_u=sqrt(t.i*t.i+t.j*t.j+t.k*t.k);
-			Real sin_mu, cos_mu;
-			sin_cos(sin_mu, cos_mu, mag_u);
-			Real exp_tr=exp(t.r);
-			v_mul=exp_tr*sin_mu/mag_u;
-			r=exp_tr*cos_mu, i=t.i*v_mul, j=t.j*v_mul, k=t.k*v_mul;
+			Quat t;
+			if(mag_v)
+			{
+				Real ln_mag_a=log(sqrt(r*r+mag_v));
+				mag_v=sqrt(mag_v);
+				Real v_mul=acos(r/ln_mag_a);
+				v_mul/=mag_v;
+				t.set(ln_mag_a, i*v_mul, j*v_mul, k*v_mul);
+			}
+			else//pure real
+			{
+				if(r<0)
+					r=-r, t.i=m_pi;
+				t.r=log(r);
+			}
+			t.set(br*t.r, br*t.i, br*t.j, br*t.k);
+			Real mag_u=t.i*t.i+t.j*t.j+t.k*t.k;
+			if(mag_u)
+			{
+				mag_u=sqrt(mag_u);
+				Real sin_mu, cos_mu;
+				sin_cos(sin_mu, cos_mu, mag_u);
+				Real exp_tr=exp(t.r);
+				Real v_mul=exp_tr*sin_mu/mag_u;
+				r=exp_tr*cos_mu, i=t.i*v_mul, j=t.j*v_mul, k=t.k*v_mul;
+			}
+			else//pure real
+				r=exp(t.r);
 			return *this;
 		}
 		template<int _size>void print(char (&a)[_size], int &o, char mathSet, int base=10)const
@@ -506,7 +558,7 @@ namespace		MP
 		Real mag_v=x.i*x.i+x.j*x.j+x.k*x.k;
 
 		if(mag_v==0)
-			return Quat(log(abs(x.r)), m_pi, 0, 0);
+			return Quat(log(abs(x.r)), x.r<0?m_pi:0, 0, 0);
 
 		Real mag_x=sqrt(x.r*x.r+mag_v);
 		mag_v=sqrt(mag_v);
@@ -1282,6 +1334,14 @@ namespace		MP
 	void  r_r_assign				(Quat &r, Quat const &x);
 	void  c_c_assign				(Quat &r, Quat const &x);
 	void  q_q_assign				(Quat &r, Quat const &x);
+	
+	//variadic functions	result & args: idx<<8|mathSet
+	void va_clamp					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);//not a true va: 1, 2 or 3 args
+	void va_min						(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
+	void va_max						(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
+	void va_average					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
+	void va_hypot					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
+	void va_norm					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
 #else
 	void  r_r_setzero				(Real &r, Real const&);
 	void  c_c_setzero				(Comp &r, Comp const&);

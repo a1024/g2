@@ -711,7 +711,15 @@ namespace	G2
 		void  r_r_assign				(VectP &r, VectP const &x);
 		void  c_c_assign				(CompP &r, CompP const &x);
 		void  q_q_assign				(QuatP &r, QuatP const &x);
-	}//namespace sse2
+
+		//variadic functions		second argument is always nullptr
+		void va_clamp					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx);
+		void va_min						(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx);
+		void va_max						(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx);
+		void va_average					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx);
+		void va_hypot					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx);
+		void va_norm					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx);
+	}//namespace avx
 }//namespace G2
 namespace	modes
 {

@@ -2512,6 +2512,314 @@ namespace	G2
 		void  r_r_assign				(VectP &r, VectP const &x)					{assign(r, Vect4d(x));VLEAVE;}
 		void  c_c_assign				(CompP &r, CompP const &x)					{assign(r, Comp4d(x));VLEAVE;}
 		void  q_q_assign				(QuatP &r, QuatP const &x)					{assign(r, Quat4d(x));VLEAVE;}
+
+		//variadic functions
+		struct Term{TERM_CONTENTS};
+		inline Quat4d load4(Term &n, int idx, char ms)
+	//	inline Quat4d load4(double *pr, double *pi, double *pj, double *pk, int idx, char ms)
+		{
+			Quat4d ret;
+			ret.r=LOAD256D(n.r.p+idx);
+			//if(n.i.p)
+			//	ret.i=LOAD256D(n.i.p+idx);
+			//else
+			//	ret.i.setzero();
+			//if(n.j.p)
+			//	ret.j=LOAD256D(n.j.p+idx);
+			//else
+			//	ret.j.setzero();
+			//if(n.k.p)
+			//	ret.k=LOAD256D(n.k.p+idx);
+			//else
+			//	ret.k.setzero();
+			if(ms>='c')
+				ret.i=LOAD256D(n.i.p+idx);
+			else
+				ret.i.setzero();
+			if(ms=='h')
+			{
+				ret.j=LOAD256D(n.j.p+idx);
+				ret.k=LOAD256D(n.k.p+idx);
+			}
+			else
+			{
+				ret.j.setzero();
+				ret.k.setzero();
+			}
+			return ret;
+		}
+		inline void store4(Term &n, int idx, char ms, Quat4d const &v)
+	//	inline void store4(double *pr, double *pi, double *pj, double *pk, int idx, char ms, Quat4d const &v)
+		{
+			STORE256D(n.r.p+idx, v.r);
+			if(ms>='c')
+				STORE256D(n.i.p+idx, v.i);
+			if(ms=='h')
+			{
+				STORE256D(n.j.p+idx, v.j);
+				STORE256D(n.k.p+idx, v.k);
+			}
+		}
+		inline void clamp(Quat4d const &lo, Quat4d &x, Quat4d const &hi)
+		{
+			x.r=_mm256_max_pd(x.r, lo.r);
+			x.i=_mm256_max_pd(x.i, lo.i);
+			x.j=_mm256_max_pd(x.j, lo.j);
+			x.k=_mm256_max_pd(x.k, lo.k);
+			x.r=_mm256_min_pd(x.r, hi.r);
+			x.i=_mm256_min_pd(x.i, hi.i);
+			x.j=_mm256_min_pd(x.j, hi.j);
+			x.k=_mm256_min_pd(x.k, hi.k);
+		}
+		void va_clamp					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+		{
+			auto &n=*(std::vector<Term>*)pv;
+			switch(args.size())
+			{
+			case 1:
+				{
+					const Vect4d one(1);
+					Quat4d
+						lo,
+						x =load4(n[args[0].idx], idx, args[0].mathSet),
+						hi(one, one, one, one);
+					lo.setzero();
+					clamp(lo, x, hi);
+					store4(n[result.idx], idx, result.mathSet, x);
+				}
+				break;
+			case 2:
+				{
+					Quat4d
+						lo,
+						x =load4(n[args[0].idx], idx, args[0].mathSet),
+						hi=load4(n[args[1].idx], idx, args[1].mathSet);
+					lo.setzero();
+					clamp(lo, x, hi);
+					store4(n[result.idx], idx, (char)result.mathSet, x);
+				}
+				break;
+			case 3:
+				{
+					Quat4d
+						lo=load4(n[args[0].idx], idx, args[0].mathSet),
+						x =load4(n[args[1].idx], idx, args[1].mathSet),
+						hi=load4(n[args[2].idx], idx, args[2].mathSet);
+					clamp(lo, x, hi);
+					store4(n[result.idx], idx, result.mathSet, x);
+				}
+				break;
+			}
+			VLEAVE;
+		}
+		void va_min						(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+		{
+			auto &n=*(std::vector<Term>*)pv;
+			int kn=args[0].idx;
+			auto &n0=n[kn];
+			Quat4d ret=load4(n0, idx, args[0].mathSet);
+			for(int k=1;k<(int)args.size();++k)
+			{
+				kn=args[k].idx;
+				auto &nk=n[kn];
+				Quat4d vk=load4(nk, idx, args[k].mathSet);
+				ret.r=_mm256_min_pd(ret.r, vk.r);
+				ret.i=_mm256_min_pd(ret.i, vk.r);
+				ret.j=_mm256_min_pd(ret.j, vk.r);
+				ret.k=_mm256_min_pd(ret.k, vk.r);
+			}
+			int res=result.idx;
+			auto &nr=n[res];
+			store4(nr, idx, result.mathSet, ret);
+			VLEAVE;
+		}
+		void va_max						(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+		{
+			auto &n=*(std::vector<Term>*)pv;
+			int kn=args[0].idx;
+			auto &n0=n[kn];
+			Quat4d ret=load4(n0, idx, args[0].mathSet);
+			for(int k=1;k<(int)args.size();++k)
+			{
+				kn=args[k].idx;
+				auto &nk=n[kn];
+				Quat4d vk=load4(nk, idx, args[k].mathSet);
+				ret.r=_mm256_max_pd(ret.r, vk.r);
+				ret.i=_mm256_max_pd(ret.i, vk.r);
+				ret.j=_mm256_max_pd(ret.j, vk.r);
+				ret.k=_mm256_max_pd(ret.k, vk.r);
+			}
+			int res=result.idx;
+			auto &nr=n[res];
+			store4(nr, idx, result.mathSet, ret);
+			VLEAVE;
+		}
+		void va_average					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+		{
+			auto &n=*(std::vector<Term>*)pv;
+			Quat4d ret;
+			ret.setzero();
+			for(int k=0;k<(int)args.size();++k)
+				ret+=load4(n[args[k].idx], idx, args[k].mathSet);
+			ret*=1./args.size();
+			store4(n[result.idx], idx, result.mathSet, ret);
+			VLEAVE;
+		}
+		void va_hypot					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+		{
+			auto &n=*(std::vector<Term>*)pv;
+			Quat4d ret;
+			ret.setzero();
+			for(int k=0;k<(int)args.size();++k)
+			{
+				char ms=args[k].mathSet;
+				Quat4d term=load4(n[args[k].idx], idx, ms);
+				switch(ms)
+				{
+				case 'R':
+					ret.r+=term.r*term.r;
+					break;
+				case 'c':
+					{
+						Comp4d temp(term.r, term.i);
+						ret+=temp*temp;
+					}
+					break;
+				case 'h':
+					ret+=term*term;
+					break;
+				}
+			}
+			char rms=result.mathSet;
+			switch(rms)
+			{
+			case 'R':
+				ret.r=sqrt(ret.r);
+				break;
+			case 'c':
+				ret=sqrt(Comp4d(ret.r, ret.i));
+				break;
+			case 'h':
+				ret=sqrt(ret);
+				break;
+			}
+			store4(n[result.idx], idx, rms, ret);
+			VLEAVE;
+		}
+		void va_norm					(void *pv, void*, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+		{
+			auto &n=*(std::vector<Term>*)pv;
+			char pms=args[0].mathSet;
+			int kp=args[0].idx;
+			Quat4d p=load4(n[kp], idx, pms), ret;
+			ret.setzero();
+			switch(pms)
+			{
+			case 'R':
+				{
+				//	Vect4d p=LOAD256D(n[kp].r.p+idx);
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat4d term=load4(n[args[k].idx], idx, ms);
+						switch(ms)
+						{
+						case 'R':
+							ret.r+=pow(term.r, p.r);
+							break;
+						case 'c':
+							{
+								Comp4d temp(term.r, term.i);
+								ret+=temp^p.r;
+							}
+							break;
+						case 'h':
+							ret+=term^p.r;
+							break;
+						}
+					}
+					p.r=m_one/p.r;
+				}
+				break;
+			case 'c':
+				{
+					auto &np=n[kp];
+					Comp4d cp(p.r, p.i);
+				//	Comp4d p(LOAD256D(np.r.p+idx), LOAD256D(np.i.p+idx));
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat4d term=load4(n[args[k].idx], idx, ms);
+						switch(ms)
+						{
+						case 'R':
+							ret+=term.r^cp;
+							break;
+						case 'c':
+							{
+								Comp4d temp(term.r, term.i);
+								ret+=temp^cp;
+							}
+							break;
+						case 'h':
+							ret+=term^cp;
+							break;
+						}
+					}
+					p=m_one/cp;
+				}
+				break;
+			case 'h':
+				{
+					for(int k=1;k<(int)args.size();++k)
+					{
+						char ms=args[k].mathSet;
+						Quat4d term=load4(n[args[k].idx], idx, ms);
+						switch(ms)
+						{
+						case 'R':
+							ret+=term.r^p;
+							break;
+						case 'c':
+							{
+								Comp4d temp(term.r, term.i);
+								ret+=temp^p;
+							}
+							break;
+						case 'h':
+							ret+=term^p;
+							break;
+						}
+					}
+					p=m_one/p;
+				}
+				break;
+			}
+			char rms=result.mathSet;
+			switch(rms)//ret^p = exp(p*ln(ret))
+			{
+			case 'R':
+			case 'c':
+				ret=::log(Comp4d(ret.r, ret.i));
+				break;
+			case 'h':
+				ret=::log(ret);
+				break;
+			}
+			ret*=p;
+			switch(rms)
+			{
+			case 'R':
+			case 'c':
+				ret=::exp(Comp4d(ret.r, ret.i));
+				break;
+			case 'h':
+				ret=::exp(ret);
+				break;
+			}
+			store4(n[result.idx], idx, rms, ret);
+			VLEAVE;
+		}
 	}//namespace sse2
 }//namespace G2
 namespace	modes
