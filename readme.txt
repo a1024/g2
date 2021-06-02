@@ -123,11 +123,12 @@ Operators:
 
 
 Functions - 1 argument:
-	cos, acos, cosh, acosh, cosc,
-	sec, asec, sech, asech,
-	sin, asin, sinh, asinh, sinc, sinhc
-	tan, atan, tanh, atanh, tanc,
-	cot, acot, coth, acoth,
+	cos, acos, cosd, acosd, cosh, acosh, cosc,
+	sec, asec, secd, asecd, sech, asech,
+	sin, asin, sind, asind, sinh, asinh, sinc, sinhc,
+	csc, acsc, cscd, acscd, csch, acsch,
+	tan, atan, tand, atand, tanh, atanh, tanc,
+	cot, acot, cotd, acotd, coth, acoth,
 	exp, ln, log, sqrt, cbrt, invsqrt, sq,
 	gauss, erf, fib, zeta, lngamma,
 	step, sgn, rect, tent,
