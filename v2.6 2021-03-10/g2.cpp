@@ -615,17 +615,24 @@ public:
 	}
 	NameTreeNode* addName		(char *text, int i, int f)
 	{
-		if(		text[0]=='b'&&text[1]=='r'&&text[2]=='e'&&text[3]=='a'&&text[4]=='k'
-			||	text[0]=='c'&&text[1]=='o'&&text[2]=='n'&&text[3]=='t'&&text[4]=='i'&&text[5]=='n'&&text[6]=='u'&&text[7]=='e'
-			||	text[0]=='d'&&text[1]=='o'
-			||	text[0]=='e'&&text[1]=='l'&&text[2]=='s'&&text[3]=='e'
-			||	text[0]=='f'&&text[1]=='o'&&text[2]=='r'
-			||	text[0]=='g'&&text[1]=='o'&&text[2]=='t'&&text[3]=='o'
-			||	text[0]=='i'&&text[1]=='f'
-			||	text[0]=='r'&&text[1]=='e'&&text[2]=='t'&&text[3]=='u'&&text[4]=='r'&&text[5]=='n'
-			||	text[0]=='s'&&text[1]=='w'&&text[2]=='i'&&text[3]=='t'&&text[4]=='c'&&text[5]=='h'
-			||	text[0]=='w'&&text[1]=='h'&&text[2]=='i'&&text[3]=='l'&&text[4]=='e')
-			return nullptr;
+		int len=f-i;
+		const char *keywords[]={"break", "continue", "do", "else", "for", "goto", "if", "return", "switch", "while"};//exact match
+		const int nkw=sizeof(keywords)/sizeof(*keywords);
+		for(int k=0;k<nkw;++k)
+			if(!strcmp(text+i, keywords[k]))
+				return nullptr;
+		//if(		text[i+0]=='b'&&text[i+1]=='r'&&text[i+2]=='e'&&text[i+3]=='a'&&text[i+4]=='k'//X  what if function mane starts with 'if'?
+		//	||	text[i+0]=='c'&&text[i+1]=='o'&&text[i+2]=='n'&&text[i+3]=='t'&&text[i+4]=='i'&&text[i+5]=='n'&&text[i+6]=='u'&&text[i+7]=='e'
+		//	||	text[i+0]=='d'&&text[i+1]=='o'
+		//	||	text[i+0]=='e'&&text[i+1]=='l'&&text[i+2]=='s'&&text[i+3]=='e'
+		//	||	text[i+0]=='f'&&text[i+1]=='o'&&text[i+2]=='r'
+		//	||	text[i+0]=='g'&&text[i+1]=='o'&&text[i+2]=='t'&&text[i+3]=='o'
+		//	||	text[i+0]=='i'&&text[i+1]=='f'
+		//	||	text[i+0]=='r'&&text[i+1]=='e'&&text[i+2]=='t'&&text[i+3]=='u'&&text[i+4]=='r'&&text[i+5]=='n'
+		//	||	text[i+0]=='s'&&text[i+1]=='w'&&text[i+2]=='i'&&text[i+3]=='t'&&text[i+4]=='c'&&text[i+5]=='h'
+		//	||	text[i+0]=='w'&&text[i+1]=='h'&&text[i+2]=='i'&&text[i+3]=='l'&&text[i+4]=='e')
+		//	return nullptr;
+
 		auto node=&userFunctionNamesRoot;
 		for(int k2=i;;++k2)
 		{
@@ -2180,7 +2187,11 @@ void			InputTextBox::replaceText_update(int i, int fr, int fi)
 				//	bounds.push_back(Bound(k.idx, 'c'));
 			}
 			if(k.idx>=textlen)
+			{
+				if(text[k.idx-1]=='\n')
+					bounds.push_back(Bound(k.idx, 'e'));
 				break;
+			}
 		}
 #if 0
 		const char *rHeaderTable[]=//C: extend functions
@@ -3522,7 +3533,8 @@ void			InputTextBox::draw()
 }
 void			InputTextBox::draw_color(const int *modes, int nmodes)
 {
-	int xc, yc;
+	int xc=0xCCCCCCCC, yc=0xCCCCCCCC;
+	//int xc, yc;
 	rgn.use();
 //	useRegion();
 //	SelectClipRgn(ghMemDC, hRgn);
@@ -3696,6 +3708,8 @@ void			InputTextBox::draw_color(const int *modes, int nmodes)
 	}//*/
 	setBkMode(bkMode), setBkColor(bkColor), setTextColor(txtColor);
 //	SetBkMode(ghMemDC, bkMode), SetBkColor(ghMemDC, bkColor), SetTextColor(ghMemDC, txtColor);
+	//if(xc==0xCCCCCCCC)
+	//	return;
 	if(active)
 		::line(bpx+xc-tpx, bpy+yc-tpy, bpx+xc-tpx, bpy+yc-tpy+fontH);
 	if(tw>bw&&th>bh)
@@ -5354,8 +5368,10 @@ namespace	G2
 	void  q_q_acos					(QuatP &r, QuatP const &x)					{r=acos(x);}
 	bool disc_c_acos_i				(Value const &x0, Value const &x1)
 	{
-		if(x0.i==x0.i)	return false;
-		if(x0.r==x0.r)	return (x0.i<=0?x1.i>0:x1.i<=0)&&(x0.r<-1||x0.r>1);
+		if(x0.i==x1.i)	return false;//x0.i is not nan vs. x0.i==x1.i ?
+		if(x0.r==x1.r)	return (x0.i<=0?x1.i>0:x1.i<=0)&&(x0.r<-1||x0.r>1);
+		//if(x0.i==x0.i)	return false;
+		//if(x0.r==x0.r)	return (x0.i<=0?x1.i>0:x1.i<=0)&&(x0.r<-1||x0.r>1);
 		if(x0.i<=0&&x1.i>0||x1.i<=0&&x0.i>0)
 		{
 			double t=_1d_zero_crossing(x0.r, x0.i, x1.r, x1.i);
@@ -5364,6 +5380,16 @@ namespace	G2
 		return false;
 	}
 	bool disc_q_acos_i				(Value const &x0, Value const &x1){return false;}//
+	
+	const double d_inv180=1./180, d_torad=_pi*d_inv180, d_todeg=180/_pi;
+	void  r_r_cosd					(VectP &r, VectP const &x)					{r=::cos(x*d_torad);}
+	void  c_c_cosd					(CompP &r, CompP const &x)					{Comp1d x2(*x.r*d_torad, *x.i); r=cos(x2);}//TODO: investigate: is there a c_c_cosd?
+	void  q_q_cosd					(QuatP &r, QuatP const &x)					{Quat1d x2(*x.r*d_torad, *x.i, *x.j, *x.k); r=cos(x2);}
+
+	void  c_c_acosd					(CompP &r, CompP const &x)					{Comp1d r2=acos(x); r=Comp1d(r2.real()*d_todeg, r2.imag());}
+	void  q_q_acosd					(QuatP &r, QuatP const &x)					{Quat1d r2=acos(x); r=Quat1d(r2.real()*d_todeg, r2.R_component_2(), r2.R_component_3(), r2.R_component_4());}
+	auto disc_c_acosd_i				=disc_c_acos_i;
+	auto disc_q_acosd_i				=disc_q_acos_i;
 
 	inline Comp1d cosh(Comp1d const &x){return (exp(x)+exp(-x))*0.5;}
 	inline Quat1d cosh(Quat1d const &x){return (exp(x)+exp(-x))*0.5;}
@@ -5413,6 +5439,38 @@ namespace	G2
 	void  q_q_asec					(QuatP &r, QuatP const &x)					{r=acos(inv((Quat1d)x));}
 	auto disc_c_asec_i				=disc_c_divide_i;
 	auto disc_q_asec_i				=disc_q_divide_i;
+
+	void  r_r_secd					(VectP &r, VectP const &x)					{r=1/::cos(x*d_torad);}
+	void  c_c_secd					(CompP &r, CompP const &x)					{Comp1d x2(*x.r*d_torad, *x.i); r=inv(cos(x2));}
+	void  q_q_secd					(QuatP &r, QuatP const &x)					{Quat1d x2(*x.r*d_torad, *x.i, *x.j, *x.k); r=inv(cos(x2));}
+	bool disc_r_secd_i				(Value const &x0, Value const &x1)
+	{
+		if(std::abs(x1.r-x0.r)>180)
+			return true;
+		return _1d_int_in_range(x0.r*d_inv180-.5, x1.r*d_inv180-.5);
+	}
+	bool disc_c_secd_i				(Value const &x0, Value const &x1)
+	{
+		if(x0.r==x1.r)
+		{
+			if(x0.i==x1.i)	return false;
+			double t=x0.r*d_inv180-.5;
+			return t==std::floor(t);
+		}
+		if(x0.i==x1.i)	return x0.i==0&&_1d_int_in_range(x0.r*d_inv180-.5, x1.r*d_inv180-.5);
+		if(std::signbit(x0.i)!=std::signbit(x1.i))
+		{
+			double t=_1d_zero_crossing(x0.r*d_inv180, x0.i, x1.r*d_inv180, x0.i)-.5;
+			return t==std::floor(t);
+		}
+		return false;
+	}
+	bool disc_q_secd_i				(Value const &x0, Value const &x1){return false;}//
+
+	void  c_c_asecd					(CompP &r, CompP const &x)					{Comp1d x2=std::acos(inv((Comp1d)x)); r=Comp1d(x2.real()*d_todeg, x2.imag());}
+	void  q_q_asecd					(QuatP &r, QuatP const &x)					{Quat1d x2=acos(inv((Quat1d)x)); r=Quat1d(x2.R_component_1()*d_todeg, x2.R_component_2(), x2.R_component_3(), x2.R_component_4());}
+	auto disc_c_asecd_i				=disc_c_divide_i;
+	auto disc_q_asecd_i				=disc_q_divide_i;
 
 	void  r_r_sech					(VectP &r, VectP const &x)					{r=1/::cosh(x);}
 	void  c_c_sech					(CompP &r, CompP const &x)					{r=inv(cosh((Comp1d)x));}
@@ -5464,6 +5522,15 @@ namespace	G2
 	void  q_q_asin					(QuatP &r, QuatP const &x)					{r=asin((Quat1d)x);}
 	auto disc_c_asin_i				=disc_c_acos_i;
 	auto disc_q_asin_i				=disc_q_acos_i;
+
+	void  r_r_sind					(VectP &r, VectP const &x)					{r=::sin(x*d_torad);}
+	void  c_c_sind					(CompP &r, CompP const &x)					{Comp1d x2(*x.r*d_torad, *x.i); r=sin(x2);}
+	void  q_q_sind					(QuatP &r, QuatP const &x)					{Quat1d x2(*x.r*d_torad, *x.i, *x.j, *x.k); r=sin(x2);}
+
+	void  c_c_asind					(CompP &r, CompP const &x)					{Comp1d r2=std::asin((Comp1d)x); r=Comp1d(r2.real()*d_todeg, r2.imag());}
+	void  q_q_asind					(QuatP &r, QuatP const &x)					{Quat1d r2=asin((Quat1d)x); r=Quat1d(r2.R_component_1()*d_todeg, r2.R_component_2(), r2.R_component_3(), r2.R_component_4());}
+	auto disc_c_asind_i				=disc_c_acos_i;
+	auto disc_q_asind_i				=disc_q_acos_i;
 
 	inline Comp1d sinh(Comp1d const &x){return (exp(x)-exp(-x))*0.5;}
 	inline Quat1d sinh(Quat1d const &x){return (exp(x)-exp(-x))*0.5;}
@@ -5525,6 +5592,42 @@ namespace	G2
 	}
 	bool disc_q_acsc_i				(Value const &x0, Value const &x1){return false;}//
 
+	void  r_r_cscd					(VectP &r, VectP const &x)					{r=1/::sin(x*d_torad);}
+	void  c_c_cscd					(CompP &r, CompP const &x)					{Comp1d x2(*x.r*d_torad, *x.i); r=inv(sin(x2));}
+	void  q_q_cscd					(QuatP &r, QuatP const &x)					{Quat1d x2(*x.r*d_torad, *x.i, *x.j, *x.k); r=inv(sin(x2));}
+	bool disc_r_cscd_i				(Value const &x0, Value const &x1)
+	{
+		if(std::abs(x1.r-x0.r)>180)	return true;
+		return _1d_int_in_range(x0.r*d_inv180, x1.r*d_inv180);
+	}
+	bool disc_c_cscd_i				(Value const &x0, Value const &x1)
+	{
+		if(x0.r==x1.r)	return true;
+		if(x0.i==x1.i)	return x0.i==0&&_1d_int_in_range(x0.r*d_inv180, x1.r*d_inv180);
+		if(std::signbit(x0.i)!=std::signbit(x1.i))
+		{
+			double t=_1d_zero_crossing(x0.r, x0.i, x1.r, x0.i)*d_inv180;
+			return t==std::floor(t);
+		}
+		return false;
+	}
+	bool disc_q_cscd_i				(Value const &x0, Value const &x1){return false;}
+
+	void  c_c_acscd					(CompP &r, CompP const &x)					{Comp1d r2=std::asin(inv((Comp1d)x)); r=Comp1d(r2.real()*d_todeg, r2.imag());}
+	void  q_q_acscd					(QuatP &r, QuatP const &x)					{Quat1d r2=asin(inv((Quat1d)x)); r=Quat1d(r2.R_component_1()*d_todeg, r2.R_component_2(), r2.R_component_3(), r2.R_component_4());}
+	bool disc_c_acscd_i				(Value const &x0, Value const &x1)
+	{
+		if(x0.i==x1.i)	return x0.i==0&&(x0.r<0?x1.r>=0:x0.r>0?x1.r<=0:x1.r!=0);//x1.r<0||x1.r>0);
+		if(x0.r==x1.r)
+		{
+			if(x0.r<0)	return x0.r>-1&&(x0.i<=0?x1.i>0:x1.i<=0);
+			if(x0.r==0)	return x0.i<0?x1.i>=0:x0.i==0?x1.i<0||x1.i>0:x1.i<=0;
+						return x0.r<1&&(x0.i<0?x1.i>=0:x1.i<0);
+		}
+		return false;
+	}
+	bool disc_q_acscd_i				(Value const &x0, Value const &x1){return false;}//
+
 	void  r_r_csch					(VectP &r, VectP const &x)					{r=1/::sinh(x);}
 	void  c_c_csch					(CompP &r, CompP const &x)					{r=inv(sinh((Comp1d)x));}
 	void  q_q_csch					(QuatP &r, QuatP const &x)					{r=inv(sinh((Quat1d)x));}
@@ -5571,7 +5674,7 @@ namespace	G2
 	void  r_r_atan					(VectP &r, VectP const &x)					{r=::atan(x);}
 	void  c_c_atan					(CompP &r, CompP const &x)					{r=atan(x);}
 	void  q_q_atan					(QuatP &r, QuatP const &x)					{r=atan(x);}
-	void r_rr_atan					(VectP &r, VectP const &x, VectP const &y)	{r=::atan2(x, y);}		//TODO: fix atan addition
+	void r_rr_atan					(VectP &r, VectP const &x, VectP const &y)	{r=::atan2(x, y);}		//TODO: fix atan addition		what?
 	void c_rc_atan					(CompP &r, VectP const &x, CompP const &y)
 	{
 		double rx=x;
@@ -5692,6 +5795,145 @@ namespace	G2
 	bool disc_qc_atan_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 	bool disc_qq_atan_i				(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
 
+	void  r_r_tand					(VectP &r, VectP const &x)					{r=::tan(x*d_torad);}
+	void  c_c_tand					(CompP &r, CompP const &x)					{Comp1d x2(*x.r*d_torad, *x.i); r=tan(x2);}
+	void  q_q_tand					(QuatP &r, QuatP const &x)					{Quat1d x2(*x.r*d_torad, *x.i, *x.j, *x.k); r=tan(x2);}
+	auto disc_r_tand_i				=disc_r_sec_i;
+	auto disc_c_tand_i				=disc_c_sec_i;
+	auto disc_q_tand_i				=disc_q_sec_i;
+
+	void  r_r_atand					(VectP &r, VectP const &x)					{r=::atan(x)*d_todeg;}
+	void  c_c_atand					(CompP &r, CompP const &x)					{Comp1d r2=atan(x); r=Comp1d(r2.real()*d_todeg, r2.imag());}
+	void  q_q_atand					(QuatP &r, QuatP const &x)					{Quat1d r2=atan(x); r=Quat1d(r2.real()*d_todeg, r2.R_component_2(), r2.R_component_3(), r2.R_component_4());}
+	void r_rr_atand					(VectP &r, VectP const &x, VectP const &y)	{r=::atan2(x, y)*d_todeg;}
+	void c_rc_atand					(CompP &r, VectP const &x, CompP const &y)
+	{
+		double rx=x;
+		Comp1d t=std::atan(rx/(Comp1d)y);
+		t.real(t.real()*d_todeg);
+		r=rx<0?*y.r<0?t-180.:t+180.:t;
+	}
+	void q_rq_atand					(QuatP &r, VectP const &x, QuatP const &y)
+	{
+		double rx=x;
+		Quat1d t=atan(rx/(Quat1d)y);
+		t=Quat1d(t.R_component_1()*d_todeg, t.R_component_2(), t.R_component_3(), t.R_component_4());
+		r=rx<0?*y.r<0?t-180.:t+180.:t;
+	}
+	void c_cr_atand					(CompP &r, CompP const &x, VectP const &y)
+	{
+		double ry=y;
+		Comp1d t=std::atan((Comp1d)x/ry);
+		t.real(t.real()*d_todeg);
+		r=*x.r<0?ry<0?t-180.:t+180.:t;
+	}
+	void c_cc_atand					(CompP &r, CompP const &x, CompP const &y)
+	{
+		Comp1d t=std::atan((Comp1d)x/(Comp1d)y);
+		t.real(t.real()*d_todeg);
+		r=*x.r<0?*y.r<0?t-180.:t+180.:t;
+	}
+	void q_cq_atand					(QuatP &r, CompP const &x, QuatP const &y)
+	{
+		Quat1d t=atan((Comp1d)x/(Quat1d)y);
+		t=Quat1d(t.R_component_1()*d_todeg, t.R_component_2(), t.R_component_3(), t.R_component_4());
+		r=*x.r<0?*y.r<0?t-180.:t+180.:t;
+	}
+	void q_qr_atand					(QuatP &r, QuatP const &x, VectP const &y)
+	{
+		double ry=y;
+		Quat1d t=atan((Quat1d)x/ry);
+		t=Quat1d(t.R_component_1()*d_todeg, t.R_component_2(), t.R_component_3(), t.R_component_4());
+		r=*x.r<0?ry<0?t-180.:t+180.:t;
+	}
+	void q_qc_atand					(QuatP &r, QuatP const &x, CompP const &y)
+	{
+		Quat1d t=atan((Quat1d)x/(Comp1d)y);
+		t=Quat1d(t.R_component_1()*d_todeg, t.R_component_2(), t.R_component_3(), t.R_component_4());
+		r=*x.r<0?*y.r<0?t-180.:t+180.:t;
+	}
+	void q_qq_atand					(QuatP &r, QuatP const &y, QuatP const &x)
+	{
+		Quat1d t=atan((Quat1d)x/(Quat1d)y);
+		t=Quat1d(t.R_component_1()*d_todeg, t.R_component_2(), t.R_component_3(), t.R_component_4());
+		r=*x.r<0?*y.r<0?t-180.:t+180.:t;
+	}
+	bool disc_c_atand_i				(Value const &x0, Value const &x1)
+	{
+		Value _x0(x0.i, x0.r), _x1(x1.i, x1.r);
+		return disc_c_acosd_i(_x0, _x1);
+	}
+	bool disc_q_atand_i				(Value const &x0, Value const &x1){return false;}//
+	bool disc_rr_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1)
+	{
+		if(y0.r<0)
+		{
+			if(x0.r<0)
+			{
+				if(y1.r<0)	return x1.r>=0;
+				if(y1.r>0)	return x1.r>0&&y0.r+(0-x0.r)*(y1.r-y0.r)/(x1.r-x0.r)<=0;
+							return x1.r>=0;
+			}
+			else if(x0.r>0)
+			{
+				if(y1.r<0)	return x1.r<0;
+				if(y1.r>0)	return x1.r<0&&y0.r+(0-y0.r)*(y1.r-y0.r)/(x1.r-x1.r)<=0;
+							return x1.r<=0;
+			}
+			else
+			{
+				if(y1.r<0)	return x1.r<0;
+				if(y1.r>0)	return x1.r<=0;
+							return x1.r<=0;
+			}
+		}
+		else if(y0.r>0)
+		{
+			if(x0.r<0)
+			{
+				if(y1.r<0)	return x1.r>=0&&(x1.r==0||y0.r+(0-y0.r)*(y1.r-y0.r)/(x1.r-x1.r)<=0);
+				if(y1.r>0)	return false;
+							return x1.r==0;
+			}
+			else if(x0.r>0)
+			{
+				if(y1.r<0)	return x1.r<0&&y0.r+(0-y0.r)*(y1.r-y0.r)/(x1.r-x1.r)<=0;
+				if(y1.r>0)	return false;
+							return x1.r==0;
+			}
+			else
+			{
+				if(y1.r<0)	return x1.r==0;
+				if(y1.r>0)	return false;
+							return x1.r==0;
+			}
+		}
+		else
+		{
+			if(x0.r<0)
+			{
+				if(y1.r<0)	return x1.r>=0;
+				if(y1.r>0)	return false;
+							return x1.r>=0;
+			}
+			else if(x0.r>0)
+			{
+				if(y1.r<0)	return x1.r<0;
+				if(y1.r>0)	return false;
+							return x1.r<=0;
+			}
+							return true;
+		}
+	}
+	bool disc_rc_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_rq_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_cr_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_cc_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_cq_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_qr_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_qc_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+	bool disc_qq_atand_i			(Value const &x0, Value const &y0, Value const &x1, Value const &y1){return false;}//
+
 	inline Comp1d tanh(Comp1d const &x){Comp1d e2x=exp(x+x); return (e2x-1.)/(e2x+1.);}
 	inline Quat1d tanh(Quat1d const &x){Quat1d e2x=exp(x+x); return (e2x-1.)/(e2x+1.);}
 	void  r_r_tanh					(VectP &r, VectP const &x)					{r=::tanh(x);}
@@ -5728,6 +5970,20 @@ namespace	G2
 	bool disc_r_acot_i				(Value const &x0, Value const &x1){return x0.r<0?x1.r>=0:x1.r<0;}
 	auto disc_c_acot_i				=disc_c_acsch_i;
 	auto disc_q_acot_i				=disc_q_acsch_i;
+
+	void  r_r_cotd					(VectP &r, VectP const &x)					{r=1/::tan(x*d_torad);}
+	void  c_c_cotd					(CompP &r, CompP const &x)					{Comp1d x2(*x.r*d_torad, *x.i); r=inv(tan(x2));}
+	void  q_q_cotd					(QuatP &r, QuatP const &x)					{Quat1d x2(*x.r*d_torad, *x.i, *x.j, *x.k); r=inv(tan(x2));}
+	auto disc_r_cotd_i				=disc_r_cscd_i;
+	auto disc_c_cotd_i				=disc_c_cscd_i;
+	auto disc_q_cotd_i				=disc_q_cscd_i;
+
+	void  r_r_acotd					(VectP &r, VectP const &x)					{r=*x.r?::atan(1/ *x.r)*d_todeg:90;}
+	void  c_c_acotd					(CompP &r, CompP const &x)					{Comp1d r2=std::atan(inv((Comp1d)x)); r=Comp1d(r2.real()*d_todeg, r2.imag());}
+	void  q_q_acotd					(QuatP &r, QuatP const &x)					{Quat1d r2=atan(inv((Quat1d)x)); r=Quat1d(r2.real()*d_todeg, r2.R_component_2(), r2.R_component_3(), r2.R_component_4());}
+	bool disc_r_acotd_i				(Value const &x0, Value const &x1){return x0.r<0?x1.r>=0:x1.r<0;}
+	auto disc_c_acotd_i				=disc_c_acsch_i;
+	auto disc_q_acotd_i				=disc_q_acsch_i;
 
 	void  r_r_coth					(VectP &r, VectP const &x)					{r=1/::tanh(x);}
 	void  c_c_coth					(CompP &r, CompP const &x)					{r=inv(tanh(x));}
@@ -7294,12 +7550,12 @@ void map_to_clipboard(std::vector<Map> const &m)
 
 			LC(M_FSTART)
 
-		LC(M_COS) LC(M_ACOS) LC(M_COSH) LC(M_ACOSH) LC(M_COSC)
-		LC(M_SEC) LC(M_ASEC) LC(M_SECH) LC(M_ASECH)
-		LC(M_SIN) LC(M_ASIN) LC(M_SINH) LC(M_ASINH) LC(M_SINC) LC(M_SINHC)
-		LC(M_CSC) LC(M_ACSC) LC(M_CSCH) LC(M_ACSCH)
-		LC(M_TAN)			 LC(M_TANH) LC(M_ATANH) LC(M_TANC)
-		LC(M_COT) LC(M_ACOT) LC(M_COTH) LC(M_ACOTH)
+		LC(M_COS) LC(M_ACOS) LC(M_COSD) LC(M_ACOSD) LC(M_COSH) LC(M_ACOSH) LC(M_COSC)
+		LC(M_SEC) LC(M_ASEC) LC(M_SECD) LC(M_ASECD) LC(M_SECH) LC(M_ASECH)
+		LC(M_SIN) LC(M_ASIN) LC(M_SIND) LC(M_ASIND) LC(M_SINH) LC(M_ASINH) LC(M_SINC) LC(M_SINHC)
+		LC(M_CSC) LC(M_ACSC) LC(M_CSCD) LC(M_ACSCD) LC(M_CSCH) LC(M_ACSCH)
+		LC(M_TAN)			 LC(M_TAND)				LC(M_TANH) LC(M_ATANH) LC(M_TANC)
+		LC(M_COT) LC(M_ACOT) LC(M_COTD) LC(M_ACOTD) LC(M_COTH) LC(M_ACOTH)
 		LC(M_EXP) LC(M_LN) LC(M_SQRT) LC(M_CBRT) LC(M_INVSQRT) LC(M_SQ)
 		LC(M_GAUSS) LC(M_ERF) LC(M_FIB) LC(M_ZETA) LC(M_LNGAMMA)
 		LC(M_STEP) LC(M_SGN) LC(M_RECT) LC(M_TENT)
@@ -7309,7 +7565,7 @@ void map_to_clipboard(std::vector<Map> const &m)
 			LC(M_BFSTART)
 
 		LC(M_RAND)
-		LC(M_ATAN)
+		LC(M_ATAN) LC(M_ATAND)
 		LC(M_LOG)
 		LC(M_BETA) LC(M_GAMMA) LC(M_PERMUTATION) LC(M_COMBINATION)
 		LC(M_BESSEL_J) LC(M_BESSEL_Y) LC(M_HANKEL1)
@@ -7922,29 +8178,40 @@ void			Compile::compile_instruction_f_def		(int f)
 	case M_IMAG:		r_c_imag(r, c);		complex=true;	break;
 	case M_COS:			r_r_cos(r, r);						break;
 	case M_ACOS:		c_c_acos(c, c);		complex=true;	break;
+	case M_COSD:		r_r_cosd(r, r);						break;
+	case M_ACOSD:		c_c_acosd(c, c);	complex=true;	break;
 	case M_COSH:		r_r_cosh(r, r);						break;
 	case M_ACOSH:		c_c_acosh(c, c);	complex=true;	break;
 	case M_COSC:		x.r=_HUGE;							break;//potential divide by zero
 	case M_SEC:			r_r_sec(r, r);						break;
 	case M_ASEC:		c_c_asec(c, c);		complex=true;	break;
+	case M_SECD:		r_r_secd(r, r);						break;
+	case M_ASECD:		c_c_asecd(c, c);	complex=true;	break;
 	case M_SECH:		r_r_sech(r, r);						break;
 	case M_ASECH:		c_c_asech(c, c);	complex=true;	break;
 	case M_SIN:			r_r_sin(r, r);						break;
 	case M_ASIN:		c_c_asin(c, c);		complex=true;	break;
+	case M_SIND:		r_r_sind(r, r);						break;
+	case M_ASIND:		c_c_asind(c, c);	complex=true;	break;
 	case M_SINH:		r_r_sinh(r, r);						break;
 	case M_ASINH:		r_r_asinh(r, r);					break;
 	case M_SINC:		r_r_sinc(r, r);						break;
 	case M_SINHC:		r_r_sinhc(r, r);					break;
 	case M_CSC:			r_r_csc(r, r);						break;
 	case M_ACSC:		c_c_acsc(c, c);		complex=true;	break;
+	case M_CSCD:		r_r_cscd(r, r);						break;
+	case M_ACSCD:		c_c_acscd(c, c);	complex=true;	break;
 	case M_CSCH:		r_r_csch(r, r);						break;
 	case M_ACSCH:		r_r_acsch(r, r);					break;
 	case M_TAN:			r_r_tan(r, r);						break;
+	case M_TAND:		r_r_tand(r, r);						break;
 	case M_TANH:		r_r_tanh(r, r);						break;
 	case M_ATANH:		c_c_atanh(c, c);	complex=true;	break;
 	case M_TANC:		r_r_tanc(r, r);						break;
 	case M_COT:			r_r_cot(r, r);						break;
 	case M_ACOT:		r_r_acot(r, r);						break;
+	case M_COTD:		r_r_cotd(r, r);						break;
+	case M_ACOTD:		r_r_acotd(r, r);					break;
 	case M_COTH:		r_r_coth(r, r);						break;
 	case M_ACOTH:		c_c_acoth(c, c);	complex=true;	break;
 	case M_EXP:			r_r_exp(r, r);						break;
@@ -7969,6 +8236,7 @@ void			Compile::compile_instruction_f_def		(int f)
 	case M_ARG:			r_r_arg(r, r);						break;
 	case M_RAND:		r_r_random(r, r);					break;
 	case M_ATAN:		r_r_atan(r, r);						break;
+	case M_ATAND:		r_r_atand(r, r);					break;
 	case M_LOG:			c_c_log(c, c);		complex=true;	break;
 	case M_BETA:		r_r_beta(r, r);						break;
 	case M_GAMMA:		r_r_tgamma(r, r);					break;
@@ -8091,30 +8359,42 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		CASE(R_R, BITWISE_NOR,		bitwise_nor,			O,	SCALAR)
 		CASE(R_R, COS,				cos,					C,	SIMD)
 		CASE(C_C, ACOS,				acos,					I,	SIMD)
+		CASE(R_R, COSD,				cosd,					C,	SIMD)
+		CASE(C_C, ACOSD,			acosd,					I,	SIMD)
 		CASE(R_R, COSH,				cosh,					C,	SIMD)
 		CASE(C_C, ACOSH,			acosh,					C,	SIMD)
 		CASE(R_R, COSC,				cosc,					I,	SIMD)
 		CASE(R_R, SEC,				sec,					I,	SIMD)
 		CASE(C_C, ASEC,				asec,					I,	SIMD)
+		CASE(R_R, SECD,				secd,					I,	SIMD)
+		CASE(C_C, ASECD,			asecd,					I,	SIMD)
 		CASE(R_R, SECH,				sech,					C,	SIMD)
 		CASE(C_C, ASECH,			asech,					I,	SIMD)
 		CASE(R_R, SIN,				sin,					C,	SIMD)
 		CASE(C_C, ASIN,				asin,					I,	SIMD)
+		CASE(R_R, SIND,				sind,					C,	SIMD)
+		CASE(C_C, ASIND,			asind,					I,	SIMD)
 		CASE(R_R, SINH,				sinh,					C,	SIMD)
 		CASE(R_R, ASINH,			asinh,					C,	SIMD)
 		CASE(R_R, SINC,				sinc,					C,	SIMD)
 		CASE(R_R, SINHC,			sinhc,					C,	SIMD)
 		CASE(R_R, CSC,				csc,					I,	SIMD)
 		CASE(C_C, ACSC,				acsc,					I,	SIMD)
+		CASE(R_R, CSCD,				cscd,					I,	SIMD)
+		CASE(C_C, ACSCD,			acscd,					I,	SIMD)
 		CASE(R_R, CSCH,				csch,					I,	SIMD)
 		CASE(R_R, ACSCH,			acsch,					I,	SIMD)
 		CASE(R_R, TAN,				tan,					I,	SIMD)
 		CASE(R_R, ATAN,				atan,					C,	SIMD)
+		CASE(R_R, TAND,				tand,					I,	SIMD)
+		CASE(R_R, ATAND,			atand,					C,	SIMD)
 		CASE(R_R, TANH,				tanh,					C,	SIMD)
 		CASE(C_C, ATANH,			atanh,					I,	SIMD)
 		CASE(R_R, TANC,				tanc,					I,	SIMD)
 		CASE(R_R, COT,				cot,					I,	SIMD)
 		CASE(R_R, ACOT,				acot,					I,	SIMD)
+		CASE(R_R, COTD,				cotd,					I,	SIMD)
+		CASE(R_R, ACOTD,			acotd,					I,	SIMD)
 		CASE(R_R, COTH,				coth,					I,	SIMD)
 		CASE(C_C, ACOTH,			acoth,					I,	SIMD)
 		CASE(R_R, EXP,				exp,					C,	SIMD)
@@ -8197,30 +8477,42 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		CASE(C_C, BITWISE_NOR,		bitwise_nor,		O,	SCALAR)
 		CASE(C_C, COS,				cos,				C,	SIMD)
 		CASE(C_C, ACOS,				acos,				I,	SIMD)
+		CASE(C_C, COSD,				cosd,				C,	SIMD)
+		CASE(C_C, ACOSD,			acosd,				I,	SIMD)
 		CASE(C_C, COSH,				cosh,				C,	SIMD)
 		CASE(C_C, ACOSH,			acosh,				C,	SIMD)
 		CASE(C_C, COSC,				cosc,				I,	SIMD)
 		CASE(C_C, SEC,				sec,				I,	SIMD)
 		CASE(C_C, ASEC,				asec,				I,	SIMD)
+		CASE(C_C, SECD,				secd,				I,	SIMD)
+		CASE(C_C, ASECD,			asecd,				I,	SIMD)
 		CASE(C_C, SECH,				sech,				I,	SIMD)
 		CASE(C_C, ASECH,			asech,				I,	SIMD)
 		CASE(C_C, SIN,				sin,				C,	SIMD)
 		CASE(C_C, ASIN,				asin,				I,	SIMD)
+		CASE(C_C, SIND,				sind,				C,	SIMD)
+		CASE(C_C, ASIND,			asind,				I,	SIMD)
 		CASE(C_C, SINH,				sinh,				C,	SIMD)
 		CASE(C_C, ASINH,			asinh,				I,	SIMD)
 		CASE(C_C, SINC,				sinc,				C,	SIMD)
 		CASE(C_C, SINHC,			sinhc,				C,	SIMD)
 		CASE(C_C, CSC,				csc,				I,	SIMD)
 		CASE(C_C, ACSC,				acsc,				I,	SIMD)
+		CASE(C_C, CSCD,				cscd,				I,	SIMD)
+		CASE(C_C, ACSCD,			acscd,				I,	SIMD)
 		CASE(C_C, CSCH,				csch,				I,	SIMD)
 		CASE(C_C, ACSCH,			acsch,				I,	SIMD)
 		CASE(C_C, TAN,				tan,				I,	SIMD)
 		CASE(C_C, ATAN,				atan,				I,	SIMD)
+		CASE(C_C, TAND,				tand,				I,	SIMD)
+		CASE(C_C, ATAND,			atand,				I,	SIMD)
 		CASE(C_C, TANH,				tanh,				C,	SIMD)
 		CASE(C_C, ATANH,			atanh,				I,	SIMD)
 		CASE(C_C, TANC,				tanc,				I,	SIMD)
 		CASE(C_C, COT,				cot,				I,	SIMD)
 		CASE(C_C, ACOT,				acot,				I,	SIMD)
+		CASE(C_C, COTD,				cotd,				I,	SIMD)
+		CASE(C_C, ACOTD,			acotd,				I,	SIMD)
 		CASE(C_C, COTH,				coth,				I,	SIMD)
 		CASE(C_C, ACOTH,			acoth,				I,	SIMD)
 		CASE(C_C, EXP,				exp,				C,	SIMD)
@@ -8300,30 +8592,42 @@ void			Compile::compile_instruction_select_u	(int f, char side, char op1type, FP
 		CASE(Q_Q, BITWISE_NOR,		bitwise_nor,		O,	SCALAR)
 		CASE(Q_Q, COS,				cos,				C,	SIMD)
 		CASE(Q_Q, ACOS,				acos,				I,	SIMD)
+		CASE(Q_Q, COSD,				cosd,				C,	SIMD)
+		CASE(Q_Q, ACOSD,			acosd,				I,	SIMD)
 		CASE(Q_Q, COSH,				cosh,				C,	SIMD)
 		CASE(Q_Q, ACOSH,			acosh,				C,	SIMD)
 		CASE(Q_Q, COSC,				cosc,				I,	SIMD)
 		CASE(Q_Q, SEC,				sec,				I,	SIMD)
 		CASE(Q_Q, ASEC,				asec,				I,	SIMD)
+		CASE(Q_Q, SECD,				secd,				I,	SIMD)
+		CASE(Q_Q, ASECD,			asecd,				I,	SIMD)
 		CASE(Q_Q, SECH,				sech,				I,	SIMD)
 		CASE(Q_Q, ASECH,			asech,				I,	SIMD)
 		CASE(Q_Q, SIN,				sin,				C,	SIMD)
 		CASE(Q_Q, ASIN,				asin,				I,	SIMD)
+		CASE(Q_Q, SIND,				sind,				C,	SIMD)
+		CASE(Q_Q, ASIND,			asind,				I,	SIMD)
 		CASE(Q_Q, SINH,				sinh,				C,	SIMD)
 		CASE(Q_Q, ASINH,			asinh,				I,	SIMD)
 		CASE(Q_Q, SINC,				sinc,				C,	SIMD)
 		CASE(Q_Q, SINHC,			sinhc,				C,	SIMD)
 		CASE(Q_Q, CSC,				csc,				I,	SIMD)
 		CASE(Q_Q, ACSC,				acsc,				I,	SIMD)
+		CASE(Q_Q, CSCD,				cscd,				I,	SIMD)
+		CASE(Q_Q, ACSCD,			acscd,				I,	SIMD)
 		CASE(Q_Q, CSCH,				csch,				I,	SIMD)
 		CASE(Q_Q, ACSCH,			acsch,				I,	SIMD)
 		CASE(Q_Q, TAN,				tan,				I,	SIMD)
 		CASE(Q_Q, ATAN,				atan,				I,	SIMD)
+		CASE(Q_Q, TAND,				tand,				I,	SIMD)
+		CASE(Q_Q, ATAND,			atand,				I,	SIMD)
 		CASE(Q_Q, TANH,				tanh,				C,	SIMD)
 		CASE(Q_Q, ATANH,			atanh,				I,	SIMD)
 		CASE(Q_Q, TANC,				tanc,				I,	SIMD)
 		CASE(Q_Q, COT,				cot,				I,	SIMD)
 		CASE(Q_Q, ACOT,				acot,				I,	SIMD)
+		CASE(Q_Q, COTD,				cotd,				I,	SIMD)
+		CASE(Q_Q, ACOTD,			acotd,				I,	SIMD)
 		CASE(Q_Q, COTH,				coth,				I,	SIMD)
 		CASE(Q_Q, ACOTH,			acoth,				I,	SIMD)
 		CASE(Q_Q, EXP,				exp,				C,	SIMD)
@@ -8419,6 +8723,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE(C_CR, LOG,					log,				I,	SIMD)
 			CASE_R_RR(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(R_RR, ATAN,				atan,				I,	SIMD)
+			CASE(R_RR, ATAND,				atand,				I,	SIMD)
 			CASE(R_RR, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_RR, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_RR, SAW,					saw,				I,	SIMD2)
@@ -8482,6 +8787,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE_C_CC(RAND,					random, RANDOM,		O,	SCALAR)
 		//	CASE_C_RC(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(C_RC, ATAN,				atan,				I,	SIMD)
+			CASE(C_RC, ATAND,				atand,				I,	SIMD)
 			CASE(R_RC, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_RC, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_RC, SAW,					saw,				I,	SIMD2)
@@ -8539,12 +8845,13 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE(Q_RQ, BITWISE_XOR,			bitwise_xor,		O,	SCALAR)
 			CASE(Q_RQ, BITWISE_XNOR,		bitwise_xnor,		O,	SCALAR)
 			case M_ASSIGN_OR:
-			CASE_Q_RQ(VERTICAL_BAR,			bitwise_or, BITWISE_OR, O,	SCALAR)
+			CASE_Q_RQ(VERTICAL_BAR,			bitwise_or, BITWISE_OR, O, SCALAR)
 			CASE(Q_RQ, BITWISE_NOR,			bitwise_nor,		O,	SCALAR)
 			CASE(Q_CQ, LOG,					log,				I,	SIMD)
 			CASE_Q_QQ(RAND,					random, RANDOM,		O,	SCALAR)
 		//	CASE_Q_RQ(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(Q_RQ, ATAN,				atan,				I,	SIMD)
+			CASE(Q_RQ, ATAND,				atand,				I,	SIMD)
 			CASE(R_RQ, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_RQ, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_RQ, SAW,					saw,				I,	SIMD2)
@@ -8608,11 +8915,12 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE(C_CR, BITWISE_XOR,			bitwise_xor,		O,	SCALAR)
 			CASE(C_CR, BITWISE_XNOR,		bitwise_xnor,		O,	SCALAR)
 			case M_ASSIGN_OR:
-			CASE_C_CR(VERTICAL_BAR,			bitwise_or, BITWISE_OR, O,	SCALAR)
+			CASE_C_CR(VERTICAL_BAR,			bitwise_or, BITWISE_OR, O, SCALAR)
 			CASE(C_CR, BITWISE_NOR,			bitwise_nor,		O,	SCALAR)
 			CASE(C_CR, LOG,					log,				I,	SIMD)
 			CASE_C_CR(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(C_CR, ATAN,				atan,				I,	SIMD)
+			CASE(C_CR, ATAND,				atand,				I,	SIMD)
 			CASE(R_CR, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_CR, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_CR, SAW,					saw,				I,	SIMD2)
@@ -8671,7 +8979,8 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE(C_CC, BITWISE_NOR,			bitwise_nor,		O,	SCALAR)
 			CASE(C_CC, LOG,					log,				I,	SIMD)
 			CASE_C_CC(RAND,					random, RANDOM,		O,	SCALAR)
-			CASE(C_CC, ATAN,				atan,				I,	SCALAR)
+			CASE(C_CC, ATAN,				atan,				I,	SIMD)
+			CASE(C_CC, ATAND,				atand,				I,	SIMD)
 			CASE(R_CC, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_CC, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_CC, SAW,					saw,				I,	SIMD2)
@@ -8731,6 +9040,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE_Q_QQ(RAND,					random, RANDOM,		O,	SCALAR)
 		//	CASE_Q_CQ(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(Q_CQ, ATAN,				atan,				I,	SIMD)
+			CASE(Q_CQ, ATAND,				atand,				I,	SIMD)
 			CASE(R_CQ, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_CQ, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_CQ, SAW,					saw,				I,	SIMD2)
@@ -8799,6 +9109,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE_Q_QQ(RAND,					random, RANDOM,		O,	SCALAR)
 		//	CASE_Q_QR(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(Q_QR, ATAN,				atan,				I,	SIMD)
+			CASE(Q_QR, ATAND,				atand,				I,	SIMD)
 			CASE(R_QR, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_QR, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_QR, SAW,					saw,				I,	SIMD2)
@@ -8862,6 +9173,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE_Q_QQ(RAND,					random, RANDOM,		O,	SCALAR)
 		//	CASE_Q_QC(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(Q_QC, ATAN,				atan,				I,	SIMD)
+			CASE(Q_QC, ATAND,				atand,				I,	SIMD)
 			CASE(R_QC, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_QC, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_QC, SAW,					saw,				I,	SIMD2)
@@ -8924,6 +9236,7 @@ void			Compile::compile_instruction_select_b	(int f, char op1type, char op2type,
 			CASE(Q_QQ, LOG,					log,				I,	SIMD)
 			CASE_Q_QQ(RAND,					random, RANDOM,		O,	SCALAR)
 			CASE(Q_QQ, ATAN,				atan,				I,	SIMD)
+			CASE(Q_QQ, ATAND,				atand,				I,	SIMD)
 			CASE(R_QQ, SQWV,				sqwv,				O,	SIMD2)
 			CASE(R_QQ, TRWV,				trwv,				C,	SIMD2)
 			CASE(R_QQ, SAW,					saw,				I,	SIMD2)
@@ -35567,6 +35880,69 @@ void var_ui_keyDown(int wParam, int lParam)
 }
 #endif
 
+static const char	  // 0				   1				   2				   3				   4				   5				   6				   7				   8				   9				   10				   11				   12
+					  // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
+					  //                                                                 s ! " # $ % & ' ( ) * + , - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ ` a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ~ del
+	isAlphanumeric	[]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\1\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0",
+	isLetter		[]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\1\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0",
+	isHexadecimal	[]="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0\0\0\1\1\1\1\1\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+const char	*keywords[]=
+{
+#define	TOKEN(STRING, LABEL)	STRING
+#include"g2_keywords.h"
+#undef	TOKEN
+};
+enum		ConstantLabels
+{
+#define	TOKEN(STRING, LABEL)	LABEL
+#include"g2_keywords2.h"
+#undef	TOKEN
+};
+const char	*kw2[]=
+{
+#define	TOKEN(STRING, LABEL)	STRING
+#include"g2_keywords2.h"
+#undef	TOKEN
+};
+inline char	tolower(char c)
+{
+	return c+(('a'-'A')&-((c>='A')&(c<='Z')));
+}
+int			strcmp_advance_ci(const char *s1, const char *label, int *advance)//returns zero if label matches
+{
+	if(advance)
+	{
+		*advance=0;
+		for(;*s1&&*label&&tolower(*s1)==tolower(*label);++s1, ++label, ++*advance);
+	}
+	else
+		for(;*s1&&*label&&tolower(*s1)==tolower(*label);++s1, ++label);
+	return *label!=0;
+//	return (*s1>*label)-(*s1<*label);
+}
+int			strcmp_advance(const char *s1, const char *label, int *advance)//returns zero if label matches
+{
+	if(advance)
+	{
+		*advance=0;
+		for(;*s1&&*label&&*s1==*label;++s1, ++label, ++*advance);
+	}
+	else
+		for(;*s1&&*label&&*s1==*label;++s1, ++label);
+	return *label!=0;
+//	return (*s1>*label)-(*s1<*label);
+}
+inline int	match_kw(const char *text, const char *kw, int exprBound, int *advance)
+{
+	int condition=!strcmp_advance_ci(text, kw, advance)&&(exprBound||!isAlphanumeric[text[*advance]]);
+	return condition;
+}
+inline int	match_uf(const char *text, const char *kw, int *advance)//case-sensitive
+{
+	int condition=!(strcmp_advance(text, kw, advance)||isAlphanumeric[text[*advance]]);
+	//int condition=!strcmp_advance(text, kw, advance)&&!isAlphanumeric[text[*advance]];
+	return condition;
+}
 long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lParam)
 {
 	switch(message)
@@ -36001,12 +36377,6 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 		//	if(action==2&&(exprChangeStart<exprInsertEnd||functionChangeStart<functionInsertEnd))
 			if(action==2&&boundChangeStart<boundInsertEnd)//new expressions/functions were inserted
 			{
-				static char const	// 0				   1				   2				   3				   4				   5				   6				   7				   8				   9				   10				   11				   12
-									// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
-									//																   s ! " # $ % & ' ( ) * + , - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ ` a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ~ del
-					*isAlphanumeric	="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\1\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0",
-					*isLetter		="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\1\0\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0",
-					*isHexadecimal	="\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\1\1\1\1\0\0\0\0\0\0\0\1\1\1\1\1\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1\1\1\1\1\1\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 				itb.text=(char*)realloc(itb.text, (itb.textlen+1+10)*sizeof(char));
 				memset(&itb.text[itb.textlen+1], ' ', 10*sizeof(char));
 				auto text=itb.text;
@@ -36274,6 +36644,12 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 							}
 						}
 						using namespace G2;
+#if 1
+#define	MATCH_KW(KEYWORD)				if(				match_kw(text+k+1, keywords	[KEYWORD]+1,	exprBound,	&advance)){it->insertMap	(k, sizeof(keywords	[KEYWORD]),			KEYWORD); k+=advance; continue;}
+#define	MATCH_KW_ALT(ALT, KEYWORD)		if(				match_kw(text+k+1, ALT+1,					exprBound,	&advance)){it->insertMap	(k, sizeof(ALT),						KEYWORD); k+=advance; continue;}
+#define	MATCH_CONST(KEYWORD, CONSTANT)	if(				match_kw(text+k+1, kw2		[KEYWORD]+1,	exprBound,	&advance)){it->insertMapData(k, sizeof(kw2		[KEYWORD]), 'R',	CONSTANT); k+=advance; continue;}
+#define MATCH_UF(KEYWORD)				if(!exprBound&&	match_uf(text+k+1, keywords	[KEYWORD]+1,				&advance)){it->insertMap	(k, sizeof(keywords	[KEYWORD]),			KEYWORD); k+=advance; continue;}
+						int advance=0;
 						switch(text[k])
 						{
 						case '(':
@@ -36286,7 +36662,6 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 									++forHeaderPLevel;
 							}
 							it->insertMap(k, 1, M_LPR);
-						//	it->insertMap(M_LPR);
 							continue;
 						case ')':
 							if(!exprBound)
@@ -36300,7 +36675,6 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								}
 							}
 							it->insertMap(k, 1, M_RPR);
-						//	it->insertMap(M_RPR);
 							continue;
 						case '{':
 							if(!exprBound)
@@ -36310,7 +36684,6 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								else
 									scopeLevel.top()='{';
 								it->insertMap(k, 1, M_LBRACE);
-							//	it->insertMap(M_LBRACE);
 								continue;
 							}
 							continue;//exprBound
@@ -36333,13 +36706,11 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 									}
 								}
 								it->insertMap(k, 1, M_RBRACE);
-							//	it->insertMap(M_RBRACE);
 								continue;
 							}
 							continue;//exprBound
 						case ',':
 							it->insertMap(k, 1, M_COMMA);
-						//	it->insertMap(M_COMMA);
 							continue;
 						case ';':
 							if(!exprBound)
@@ -36364,7 +36735,6 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 									}
 								}
 								it->insertMap(k, 1, M_SEMICOLON);
-							//	it->insertMap(M_SEMICOLON);
 								continue;
 							}
 							continue;//exprBound
@@ -36394,42 +36764,6 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 											text[k2]='\0';
 											MP::Real val(text+k+2, MP::bin_prec, 16);
 											text[k2]=temp;
-											//double p=1;
-											//for(int k4=k+2;k4<k2;++k4)
-											//{
-											//	if(text[k4]=='.')
-											//	{
-											//		for(int k5=k4+1;k5<k2;++k5)
-											//			if(text[k5]!='.'&&text[k5]!=',')
-											//				p/=16;
-											//		break;
-											//	}
-											//}
-											//double val=0;
-											//for(int k4=k2-1;k4>=k+2;--k4)
-											//{
-											//	switch(text[k4])
-											//	{
-											//	case '0':						break;
-											//	case '1':			val+=   p;	break;
-											//	case '2':			val+= 2*p;	break;
-											//	case '3':			val+= 3*p;	break;
-											//	case '4':			val+= 4*p;	break;
-											//	case '5':			val+= 5*p;	break;
-											//	case '6':			val+= 6*p;	break;
-											//	case '7':			val+= 7*p;	break;
-											//	case '8':			val+= 8*p;	break;
-											//	case '9':			val+= 9*p;	break;
-											//	case 'a':case 'A':	val+=10*p;	break;
-											//	case 'b':case 'B':	val+=11*p;	break;
-											//	case 'c':case 'C':	val+=12*p;	break;
-											//	case 'd':case 'D':	val+=13*p;	break;
-											//	case 'e':case 'E':	val+=14*p;	break;
-											//	case 'f':case 'F':	val+=15*p;	break;
-											//	default:						continue;
-											//	}
-											//	p*=16;
-											//}
 											if(E_notation)
 											{
 												int sign=text[k2+1]=='-'?-1:1;
@@ -36683,54 +37017,117 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								}
 							}
 							continue;
-						case '_':			 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='t'||text[k+2]=='T'){		 if(text[k+3]=='m'||text[k+3]=='M'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMapData	(k, 4, 'R', _atm				);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='b'||text[k+1]=='B'){		 if(text[k+2]=='b'||text[k+2]=='B'){		 if(text[k+3]=='r'||text[k+3]=='R'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMapData	(k, 4, 'R', _bbr				);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='c'||text[k+1]=='C'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapData	(k, 2, 'R', _c					);	++k;	continue;}	     }
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if((text[k+2]=='l'||text[k+2]=='L')		&&(text[k+3]=='e'||text[k+3]=='E')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMapData	(k, 4, 'R', _ele				);	k+=3;	continue;}	    }
-																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapEuler	(k, 2							);	++k;	continue;}	    }}
-										else if(text[k+1]=='g'				  ){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapData	(k, 2, 'R', _g					);	++k;	continue;}	     }
-										else if(text[k+1]=='G'				  ){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapData	(k, 2, 'R', _G					);	++k;	continue;}	     }
-										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapData	(k, 2, 'R', _h					);	++k;	continue;}	     }
-										else if(text[k+1]=='m'				  ){		 if(text[k+2]=='a'||text[k+2]=='A'){		 if(text[k+3]=='g'||text[k+3]=='G'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMapData	(k, 4, 'R', _mag				);	k+=3;	continue;}	   }}
-																					else if(text[k+2]=='e'||text[k+2]=='E'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _me					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='n'||text[k+2]=='N'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _mn					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='p'||text[k+2]=='P'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _mp					);	k+=2;	continue;}	    }}
-										else if(				text[k+1]=='M'){		 if(text[k+2]=='a'||text[k+2]=='A'){		 if(text[k+3]=='g'||text[k+3]=='G'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMapData	(k, 4, 'R', _mag				);	k+=3;	continue;}	   }}
-																					else if(text[k+2]=='e'||text[k+2]=='E'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _Me					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='n'||text[k+2]=='N'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _mn					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='p'||text[k+2]=='P'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _mp					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='s'||text[k+2]=='S'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _Ms					);	k+=2;	continue;}	    }}
-										else if(text[k+1]=='n'||text[k+1]=='N'){		 if(text[k+2]=='a'||text[k+2]=='A'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _Na					);	k+=2;	continue;}	    }}
-										else if(text[k+1]=='p'||text[k+1]=='P'){		 if(text[k+2]=='h'||text[k+2]=='H'){		 if(text[k+3]=='i'||text[k+3]=='I'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMapData	(k, 4, 'R', _phi				);	k+=3;	continue;}	   }}
-																					else if(text[k+2]=='i'||text[k+2]=='I'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapPi		(k, 3							);	k+=2;	continue;}	    }}
-										else if(text[k+1]=='q'||text[k+1]=='Q'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapData	(k, 2, 'R', _q					);	++k;	continue;}	     }
-										else if(text[k+1]=='r'||text[k+1]=='R'){		 if((text[k+2]=='a'||text[k+2]=='A')		&&(text[k+3]=='n'||text[k+3]=='N')			&&(text[k+4]=='d'||text[k+4]=='D')){																																																																			if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapData	(k, 2, 'R', rand()				);	++k;	continue;}	    }
-																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapData	(k, 2, 'R', _R					);	++k;	continue;}	    }}	break;
-						case 'i':			 if(text[k+1]=='f'&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_IF						);	++k;	continue;		 }
-										else if(text[k+1]=='m'||text[k+1]=='M'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_IMAG					);	++k;	continue;}		 }
-										else if(text[k+1]=='n'||text[k+1]=='N'){		 if(text[k+2]=='d'||text[k+2]=='D'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _qnan				);	k+=2;	continue;}		 }
-																					else if(text[k+2]=='f'||text[k+2]=='F'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _HUGE				);	k+=2;	continue;}		 }
-																					else if(text[k+2]=='v'||text[k+2]=='V'){		 if((text[k+3]=='s'||text[k+3]=='S')		&&(text[k+4]=='q'||text[k+4]=='Q')			&&(text[k+5]=='r'||text[k+5]=='R')			&&(text[k+6]=='t'||text[k+6]=='T')){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_INVSQRT				);	k+=6;	continue;}		}
-																																else if((text[k+3]=='m'||text[k+3]=='M')		&&(text[k+4]=='o'||text[k+4]=='O')			&&(text[k+5]=='d'||text[k+5]=='D')){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_INVMOD					);	k+=5;	continue;}		}}
-																					else if(text[k+2]=='t'||text[k+2]=='T'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_INT					);	k+=2;	continue;}		}}
-										else if((text[k+1]=='s'||text[k+1]=='S')		 &&(text[k+2]=='p'||text[k+2]=='P')			&&(text[k+3]=='r'||text[k+3]=='R')			&&(text[k+4]=='i'||text[k+4]=='I')			&&(text[k+5]=='m'||text[k+5]=='M')			&&(text[k+6]=='e'||text[k+6]=='E')){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_ISPRIME				);	k+=6;	continue;}		}
-										else								   {																																																																																																				if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMapData	(k, 1, 'c', 0, 1				);			continue;}		 }	break;
-								 case 'I':	 if(text[k+1]=='m'||text[k+1]=='M'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_IMAG					);	++k;	continue;}		 }
-										else if(text[k+1]=='n'||text[k+1]=='N'){		 if(text[k+2]=='d'||text[k+2]=='D'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _qnan				);	k+=2;	continue;}		 }
-																					else if(text[k+2]=='f'||text[k+2]=='F'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _HUGE				);	k+=2;	continue;}		 }
-																					else if(text[k+2]=='v'||text[k+2]=='V'){		 if((text[k+3]=='s'||text[k+3]=='S')		&&(text[k+4]=='q'||text[k+4]=='Q')			&&(text[k+5]=='r'||text[k+5]=='R')			&&(text[k+6]=='t'||text[k+6]=='T')){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_INVSQRT				);	k+=6;	continue;}		 }
-																																else if((text[k+3]=='m'||text[k+3]=='M')		&&(text[k+4]=='o'||text[k+4]=='O')			&&(text[k+5]=='d'||text[k+5]=='D')){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_INVMOD					);	k+=5;	continue;}		 }}}
-										else if((text[k+1]=='s'||text[k+1]=='S')		 &&(text[k+2]=='p'||text[k+2]=='P')			&&(text[k+3]=='r'||text[k+3]=='R')			&&(text[k+4]=='i'||text[k+4]=='I')			&&(text[k+5]=='m'||text[k+5]=='M')			&&(text[k+6]=='e'||text[k+6]=='E')){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_ISPRIME				);	k+=6;	continue;}		  }	break;
-						case 'j':																																																																																																																if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMapData	(k, 1, 'h', 0, 0, 1				);			continue;}			break;
-								 case 'J':																																																																																																														if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMap		(k, 1, M_BESSEL_J				);			continue;}			break;
-						case 'k':																																																																																																																if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMapData	(k, 1, 'h', 0, 0, 0, 1			);			continue;}
-						case 'x':			 if(exprBound)						{																																																																																																															it->insertRVar		(k, 1, &text[k], 's'			);			continue;		  }	break;
-						case 'y':			 if(exprBound)						{																																																																																																															it->insertRVar		(k, 1, &text[k], 's'			);			continue;		  }	break;
-						case 'Y':																																																																																																																if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMap		(k, 1, M_BESSEL_Y				);}			continue;
-						case 'z':			 if((text[k+1]=='e'||text[k+1]=='E')		&&(text[k+2]=='t'||text[k+2]=='T')			&&(text[k+3]=='a'||text[k+3]=='A')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ZETA					);	k+=3;	continue;}		  }
-										else if(exprBound)					   {																																																																																																															it->insertRVar		(k, 1, &text[k], 's'			);			continue;		  }	break;
-						case 'Z':			 if((text[k+1]=='e'||text[k+1]=='E')		&&(text[k+2]=='t'||text[k+2]=='T')			&&(text[k+3]=='a'||text[k+3]=='A')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ZETA					);	k+=3;	continue;}		  }
-										else if(exprBound)					   {																																																																																																															it->insertCVar		(k, 1, &text[k]					);			continue;		  }	break;
+						case '_':
+								 MATCH_CONST(L_ATM, _atm)
+							else MATCH_CONST(L_BBR, _bbr)
+							else MATCH_CONST(L_C, _c)
+							else MATCH_CONST(L_ELE, _ele)
+							else if(match_kw(text+k+1, kw2[L_E]+1, exprBound, &advance))
+							{
+								it->insertMapEuler(k, sizeof(kw2[L_E]));
+								k+=advance;
+								continue;
+							}
+							else MATCH_CONST(L_g, _g)
+							else MATCH_CONST(L_G, _G)
+							else MATCH_CONST(L_H, _h)
+							else MATCH_CONST(L_MAG, _mag)
+							else MATCH_CONST(L_ME, _Me)
+							else MATCH_CONST(L_me, _me)
+							else MATCH_CONST(L_MN, _mn)
+							else MATCH_CONST(L_MP, _mp)
+							else MATCH_CONST(L_MS, _Ms)
+							else MATCH_CONST(L_NA, _Na)
+							else MATCH_CONST(L_PHI, _phi)
+							else MATCH_CONST(L_PI, _pi)
+							else MATCH_CONST(L_Q, _q)
+							else MATCH_CONST(L_RAND, (double)rand()/RAND_MAX)
+							else MATCH_CONST(L_R, _R)
+							break;
+						case 'i':
+							if(!exprBound&&match_uf(text+k+1, keywords[M_IF]+1, &advance))
+							{
+								it->insertMap(k, sizeof(keywords[M_IF]), M_IF);
+								k+=advance;
+								continue;
+							}
+							else MATCH_KW(M_IMAG)
+							else MATCH_CONST(L_IND, _qnan)
+							else MATCH_CONST(L_INF, _HUGE)
+							else MATCH_KW(M_INVMOD)
+							else MATCH_KW(M_INVSQRT)
+							else MATCH_KW(M_ISPRIME)
+							else if(match_kw(text+k+1, kw2[L_I]+1, exprBound, &advance))
+							{
+								it->insertMapData(k, sizeof(kw2[L_I]), 'c', 0, 1);
+								k+=advance;
+								continue;
+							}
+							break;
+						case 'I':
+								 MATCH_KW(M_IMAG)
+							else MATCH_CONST(L_IND, _qnan)
+							else MATCH_CONST(L_INF, _HUGE)
+							else MATCH_KW(M_INVMOD)
+							else MATCH_KW(M_INVSQRT)
+							else MATCH_KW(M_ISPRIME)
+							else if(match_kw(text+k+1, kw2[L_I]+1, exprBound, &advance))
+							{
+								it->insertMapData(k, sizeof(kw2[L_I]), 'c', 0, 1);
+								k+=advance;
+								continue;
+							}
+							break;
+						case 'j':
+							if(exprBound||!isAlphanumeric[text[k+1]])
+							{
+								it->insertMapData(k, 1, 'h', 0, 0, 1);
+								continue;
+							}
+							break;
+						case 'J':
+							MATCH_KW(M_BESSEL_J)
+							break;
+						case 'k':
+							if(exprBound||!isAlphanumeric[text[k+1]])
+							{
+								it->insertMapData(k, 1, 'h', 0, 0, 0, 1);
+								continue;
+							}
+							break;
+						case 'x':
+							if(exprBound)
+							{
+								it->insertRVar(k, 1, &text[k], 's');
+								continue;
+							}
+							break;
+						case 'y':
+							if(exprBound)
+							{
+								it->insertRVar(k, 1, &text[k], 's');
+								continue;
+							}
+							break;
+						case 'Y':
+							MATCH_KW(M_BESSEL_Y)
+							break;
+						case 'z':
+								 MATCH_KW(M_ZETA)
+							else if(exprBound)
+							{
+								it->insertRVar(k, 1, &text[k], 's');
+								continue;
+							}
+							break;
+						case 'Z':
+								 MATCH_KW(M_ZETA)
+							else if(exprBound)
+							{
+								it->insertCVar(k, 1, &text[k]);
+								continue;
+							}
+							break;
 						case '\'':
 							if(exprBound)
 							{
@@ -36750,79 +37147,129 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 									continue;
 							}
 							break;
-						case 'Q':			 if(exprBound)						{																																																																																																															it->insertHVar		(k, 1, &text[k]					);			continue;		 }	break;
-						case '+':			 if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 1, M_ASSIGN_PLUS			);	++k;	continue;		 }
-										else if(text[k+1]=='+'&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_INCREMENT				);	++k;	continue;		 }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_PLUS					);			continue;		 }	break;
-						case '-':			 if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_ASSIGN_MINUS			);	++k;	continue;		 }
-										else if(text[k+1]=='-'&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_DECREMENT				);	++k;	continue;		 }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_MINUS					);			continue;		 }	break;
-						case '*':			 if(text[k+1]=='*'				  ){																																																																																																															it->insertMap		(k, 2, M_POWER_REAL				);	++k;	continue;		 }
-										else if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_ASSIGN_MULTIPLY		);	++k;	continue;		 }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_MULTIPLY				);			continue;		 }	break;
-						case '/':			 if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_ASSIGN_DIVIDE			);	++k;	continue;		 }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_DIVIDE					);			continue;		 }	break;
-						case '%':			 if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_ASSIGN_MOD				);	++k;	continue;		 }
-										else								   {									   																																																																																																						it->insertMap		(k, 1, M_MODULO_PERCENT			);			continue;		 }	break;
-						case '@':																					   																																																																																																						it->insertMap		(k, 1, M_LOGIC_DIVIDES			);			continue;
-						case '^':			 if(text[k+1]=='^'				  ){		 if(text[k+2]=='^'				  ){																																																																																																				it->insertMap		(k, 3, M_PENTATE				);	k+=2;	continue;	    }
-																					else								   {																																																																																																				it->insertMap		(k, 2, M_TETRATE				);	++k;	continue;	    }}
-										else if(text[k+1]=='~'				  ){																																																																																																															it->insertMap		(k, 2, M_BITWISE_XNOR			);	++k;	continue;	     }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_POWER					);			continue;	     }	break;
-						case '!':			 if(text[k+1]=='='				  ){																																																																																																															it->insertMap		(k, 2, M_LOGIC_NOT_EQUAL		);	++k;	continue;		 }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_FACTORIAL_LOGIC_NOT	);			continue;		 }	break;
-						case '~':			 if(text[k+1]=='&'				  ){																																																																																																															it->insertMap		(k, 2, M_BITWISE_NAND			);	++k;	continue;		 }
-										else if(text[k+1]=='#'				  ){																																																																																																															it->insertMap		(k, 2, M_BITWISE_XNOR			);	++k;	continue;		 }
-										else if(text[k+1]=='|'				  ){																																																																																																															it->insertMap		(k, 2, M_BITWISE_NOR			);	++k;	continue;		 }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_BITWISE_NOT			);			continue;		 }	break;
-						case '&':			 if(text[k+1]=='&'				  ){																																																																																																															it->insertMap		(k, 2, M_LOGIC_AND				);	++k;	continue;	     }
-										else if(text[k+1]=='~'				  ){																																																																																																															it->insertMap		(k, 2, M_BITWISE_NOR			);	++k;	continue;	     }
-										else if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_ASSIGN_AND				);	++k;	continue;	     }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_BITWISE_AND			);			continue;		 }	break;
-						case '#':			 if(text[k+1]=='#'				  ){																																																																																																															it->insertMap		(k, 2, M_LOGIC_XOR				);	++k;	continue;	     }
-										else if(text[k+1]=='~'				  ){																																																																																																															it->insertMap		(k, 2, M_BITWISE_XNOR			);	++k;	continue;	     }
-										else if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_ASSIGN_XOR				);	++k;	continue;	     }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_BITWISE_XOR			);			continue;		 }	break;
-						case '|':			 if(text[k+1]=='|'				  ){																																																																																																															it->insertMap		(k, 2, M_LOGIC_OR				);	++k;	continue;	     }
-										else if(text[k+1]=='~'				  ){																																																																																																															it->insertMap		(k, 2, M_BITWISE_NAND			);	++k;	continue;	     }
-										else if(text[k+1]=='='&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_ASSIGN_OR				);	++k;	continue;	     }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_VERTICAL_BAR			);			continue;	     }	break;
-						case '<':			 if(text[k+1]=='<'				  ){		 if(text[k+2]=='='&&!exprBound	  ){																																																																																																				it->insertMap		(k, 3, M_ASSIGN_LEFT			);	k+=2;	continue;		}
-																					else								   {																																																																																																				it->insertMap		(k, 2, M_BITWISE_SHIFT_LEFT		);	++k;	continue;	    }}
-										else if(text[k+1]=='='				  ){																																																																																																															it->insertMap		(k, 2, M_LOGIC_LESS_EQUAL		);	++k;	continue;	     }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_LOGIC_LESS				);			continue;	     }	break;
-						case '>':			 if(text[k+1]=='>'				  ){		 if(text[k+2]=='='&&!exprBound	  ){																																																																																																				it->insertMap		(k, 3, M_ASSIGN_RIGHT			);	k+=2;	continue;		}
-																					else								   {																																																																																																				it->insertMap		(k, 2, M_BITWISE_SHIFT_RIGHT	);	++k;	continue;	    }}
-										else if(text[k+1]=='='				  ){																																																																																																															it->insertMap		(k, 2, M_LOGIC_GREATER_EQUAL	);	++k;	continue;	     }
-										else								   {																																																																																																															it->insertMap		(k, 1, M_LOGIC_GREATER			);			continue;	     }	break;
-						case '=':			 if(text[k+1]=='='				  ){																																																																																																															it->insertMap		(k, 2, M_LOGIC_EQUAL			);	++k;	continue;	     }
-										else if(!exprBound					  ){																																																																																																															it->insertMap		(k, 1, M_ASSIGN					);			continue;		 }	break;
-						case '?':			 if(text[k+1]=='?'				  ){																																																																																																															it->insertMap		(k, 2, M_CONDITION_ZERO			);	++k;	continue;		 }
-										else																																																																																																																								it->insertMap		(k, 1, M_QUESTION_MARK			);			continue;			break;
-						case ':':																																																																																																																											it->insertMap		(k, 1, M_COLON					);			continue;
-						case 'a':case 'A':	 if(text[k+1]=='b'||text[k+1]=='B'){		 if(text[k+2]=='s'||text[k+2]=='S'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ABS					);	k+=2;	continue;}		}}
-										else if(text[k+1]=='c'||text[k+1]=='C'){		 if(text[k+2]=='h'||text[k+2]=='H'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ACOSH					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='o'||text[k+2]=='O'){		 if(text[k+3]=='s'||text[k+3]=='S'){		 if(text[k+4]=='e'||text[k+4]=='E'){		 if(text[k+5]=='c'||text[k+5]=='C'){		 if(text[k+6]=='h'||text[k+6]=='H'){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_ACSCH					);	k+=6;	continue;}	}
-																																																																	else								   {																																													if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_ACSC					);	k+=5;	continue;}	}}}
-																																											else if(text[k+4]=='h'||text[k+4]=='H'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ACOSH					);	k+=4;	continue;}	  }
-																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ACOS					);	k+=3;	continue;}	  }}
-																																	 if(text[k+3]=='t'||text[k+3]=='T'){		 if(text[k+4]=='h'||text[k+4]=='H'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ACOTH					);	k+=4;	continue;}	  }
-																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ACOT					);	k+=3;	continue;}	  }}}
-																					else if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='c'||text[k+3]=='C'){		 if(text[k+4]=='h'||text[k+4]=='H'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ACSCH					);	k+=4;	continue;}	  }
-																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ACSC					);	k+=3;	continue;}	  }}}}
-										else if(text[k+1]=='r'||text[k+1]=='R'){		 if(text[k+2]=='g'||text[k+2]=='G'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ARG					);	k+=2;	continue;}	    }}
-										else if(text[k+1]=='s'||text[k+1]=='S'){		 if(text[k+2]=='e'||text[k+2]=='E'){		 if(text[k+3]=='c'||text[k+3]=='C'){		 if(text[k+4]=='h'||text[k+4]=='H'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ASECH					);	k+=4;	continue;}	  }
-																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ASEC					);	k+=3;	continue;}	  }}}
-																					else if(text[k+2]=='h'||text[k+2]=='H'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ASINH					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='i'||text[k+2]=='I'){		 if(text[k+3]=='n'||text[k+3]=='N'){		 if(text[k+4]=='h'||text[k+4]=='H'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ASINH					);	k+=4;	continue;}	  }
-																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ASIN					);	k+=3;	continue;}	  }}}}
-										else if(text[k+1]=='t'||text[k+1]=='T'){		 if(text[k+2]=='a'||text[k+2]=='A'){		 if(text[k+3]=='n'||text[k+3]=='N'){		 if(text[k+4]=='h'||text[k+4]=='H'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ATANH					);	k+=4;	continue;}	  }
-																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_ATAN					);	k+=3;	continue;}	  }}}
-																					else if(text[k+2]=='h'||text[k+2]=='H'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ATANH					);	k+=2;	continue;}	    }}
-										else if(text[k+1]=='v'||text[k+1]=='V'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_AV						);	++k;	continue;}		 }	break;
-						case 'b':			 if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='s'||text[k+3]=='S'){		 if(text[k+4]=='e'||text[k+4]=='E'){		 if(text[k+5]=='l'||text[k+5]=='L'){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_BESSEL_J				);	k+=5;	continue;}	 }}}}
-																						 if(text[k+2]=='t'||text[k+2]=='T'){		 if(text[k+3]=='a'||text[k+3]=='A'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_BETA					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='r'				  ){		 if(text[k+2]=='e'				  ){		 if(text[k+3]=='a'				  ){		 if(text[k+4]=='k'&&!exprBound	  ){																																																																														it->insertMap		(k, 5, M_BREAK					);	k+=4;	continue;	  }}}}
+						case 'Q':
+							if(exprBound)
+							{
+								it->insertHVar(k, 1, &text[k]);
+								continue;
+							}
+							break;
+						case '+':
+								 MATCH_UF(M_ASSIGN_PLUS)//uf
+							else MATCH_UF(M_INCREMENT)//uf
+							else MATCH_KW(M_PLUS)
+							break;
+						case '-':
+								 MATCH_UF(M_ASSIGN_MINUS)//uf
+							else MATCH_UF(M_DECREMENT)//uf
+							else MATCH_KW(M_MINUS)
+							break;
+						case '*':
+								 MATCH_KW(M_POWER_REAL)
+							else MATCH_UF(M_ASSIGN_MULTIPLY)//uf
+							else MATCH_KW(M_MULTIPLY)
+							break;
+						case '/':
+								 MATCH_UF(M_ASSIGN_DIVIDE)//uf
+							else MATCH_KW(M_DIVIDE)
+							break;
+						case '%':
+								 MATCH_UF(M_ASSIGN_MOD)//uf
+							else MATCH_KW(M_MODULO_PERCENT)
+							break;
+						case '@':
+							MATCH_KW(M_LOGIC_DIVIDES);
+							break;
+						case '^':
+								 MATCH_KW(M_PENTATE)
+							else MATCH_KW(M_TETRATE)
+							else MATCH_KW(M_BITWISE_XNOR)
+							else MATCH_KW(M_POWER)
+							break;
+						case '!':
+								 MATCH_KW(M_LOGIC_NOT_EQUAL)
+							else MATCH_KW(M_FACTORIAL_LOGIC_NOT)
+							break;
+						case '~':
+								 MATCH_KW(M_BITWISE_NAND)
+							else MATCH_KW(M_BITWISE_XNOR)
+							else MATCH_KW(M_BITWISE_NOR)
+							else MATCH_KW(M_BITWISE_NOT)
+							break;
+						case '&':
+								 MATCH_KW(M_LOGIC_AND)
+							else MATCH_KW(M_BITWISE_NOR)
+							else MATCH_KW(M_ASSIGN_AND)
+							else MATCH_KW(M_BITWISE_AND)
+							break;
+						case '#':
+								 MATCH_KW(M_LOGIC_XOR)
+							else MATCH_KW(M_BITWISE_XNOR)
+							else MATCH_KW(M_ASSIGN_XOR)
+							else MATCH_KW(M_BITWISE_XOR)
+							break;
+						case '|':
+								 MATCH_KW(M_LOGIC_OR)
+							else MATCH_KW(M_BITWISE_NAND)
+							else MATCH_KW(M_ASSIGN_OR)
+							else MATCH_KW(M_VERTICAL_BAR)
+							break;
+						case '<':
+								 MATCH_KW(M_ASSIGN_LEFT)
+							else MATCH_KW(M_BITWISE_SHIFT_LEFT)
+							else MATCH_KW(M_LOGIC_LESS_EQUAL)
+							else MATCH_KW(M_LOGIC_LESS)
+							break;
+						case '>':
+								 MATCH_KW(M_ASSIGN_RIGHT)
+							else MATCH_KW(M_BITWISE_SHIFT_RIGHT)
+							else MATCH_KW(M_LOGIC_GREATER_EQUAL)
+							else MATCH_KW(M_LOGIC_GREATER)
+							break;
+						case '=':
+								 MATCH_KW(M_ASSIGN_RIGHT)
+							else MATCH_KW(M_BITWISE_SHIFT_RIGHT)
+							else MATCH_KW(M_LOGIC_GREATER_EQUAL)
+							else MATCH_KW(M_LOGIC_GREATER)
+							break;
+						case '?':
+								 MATCH_KW(M_CONDITION_ZERO)
+							else MATCH_KW(M_QUESTION_MARK)
+							break;
+						case ':':
+							MATCH_KW(M_COLON)
+							break;
+						case 'a':case 'A':
+								 MATCH_KW(M_ABS)
+							else MATCH_KW_ALT("ach", M_ACOSH)
+							else MATCH_KW_ALT("acosecd", M_ACSCD)
+							else MATCH_KW_ALT("acosech", M_ACSCH)
+							else MATCH_KW_ALT("acosec", M_ACSC)
+							else MATCH_KW(M_ACOSD)
+							else MATCH_KW(M_ACOSH)
+							else MATCH_KW(M_ACOS)
+							else MATCH_KW(M_ACOTD)
+							else MATCH_KW(M_ACOTH)
+							else MATCH_KW(M_ACOT)
+							else MATCH_KW(M_ACSCH)
+							else MATCH_KW(M_ACSC)
+							else MATCH_KW(M_ARG)
+							else MATCH_KW(M_ASECH)
+							else MATCH_KW(M_ASEC)
+							else MATCH_KW_ALT("ash", M_ASEC)
+							else MATCH_KW(M_ASIND)
+							else MATCH_KW(M_ASINH)
+							else MATCH_KW(M_ASIN)
+							else MATCH_KW(M_ATAND)
+							else MATCH_KW(M_ATANH)
+							else MATCH_KW(M_ATAN)
+							else MATCH_KW_ALT("ath", M_ATANH)
+							else MATCH_KW(M_AV)
+							break;
+						case 'b':
+								 MATCH_KW_ALT("bessel", M_BESSEL_J)
+							else MATCH_KW(M_BETA)
+							else MATCH_UF(M_BREAK)
 							else if(text[k+1]=='0'||text[k+1]=='1'||text[k+1]=='.')//binary
 							{
 								bool number=false;
@@ -36915,8 +37362,10 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								continue;
 							}
 							break;
-								 case 'B':	 if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='s'||text[k+3]=='S'){		 if(text[k+4]=='e'||text[k+4]=='E'){		 if(text[k+5]=='l'||text[k+5]=='L'){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_BESSEL_J				);	k+=5;	continue;}	 }}}}
-																						 if(text[k+2]=='t'||text[k+2]=='T'){		 if(text[k+3]=='a'||text[k+3]=='A'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_BETA					);	k+=3;	continue;}	   }}}
+						case 'B':
+								 MATCH_KW_ALT("bessel", M_BESSEL_J)
+							else MATCH_KW(M_BETA)
+							else MATCH_UF(M_BREAK)
 							else if(text[k+1]=='0'||text[k+1]=='1'||text[k+1]=='.')//binary
 							{
 								bool number=false;
@@ -37009,144 +37458,184 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 								continue;
 							}
 							break;
-						case 'c':			 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='r'||text[k+2]=='R'){		 if(text[k+3]=='t'||text[k+3]=='T'){		 if(text[k+4]=='e'||text[k+4]=='E'){		 if(text[k+5]=='s'||text[k+5]=='S'){		 if(text[k+6]=='i'||text[k+6]=='I'){		 if(text[k+7]=='a'||text[k+7]=='A'){		 if(text[k+8]=='n'||text[k+8]=='N'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CARTESIAN				);	k+=8;	continue;} }}}}}}}}
-										else if(text[k+1]=='b'||text[k+1]=='B'){		 if(text[k+2]=='r'||text[k+2]=='R'){		 if(text[k+3]=='t'||text[k+3]=='T'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CBRT					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='i'||text[k+2]=='I'){		 if(text[k+3]=='l'||text[k+3]=='L'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CEIL					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_COSH					);	++k;	continue;}	     }
-										else if((text[k+1]=='l'||text[k+1]=='L')		 &&(text[k+2]=='a'||text[k+2]=='A')			 &&(text[k+3]=='m'||text[k+3]=='M')			 &&(text[k+4]=='p'||text[k+4]=='P')){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_CLAMP					);	k+=4;	continue;}		 }
-										else if(text[k+1]=='o'				  ){		 if(text[k+2]=='m'||text[k+2]=='M'){		 if(text[k+3]=='b'||text[k+3]=='B'){		 if(text[k+4]=='i'||text[k+4]=='I'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='i'||text[k+8]=='I'){		 if(text[k+9]=='o'||text[k+9]=='O'){		 if(text[k+10]=='n'||text[k+10]=='N'){	if(exprBound||!isAlphanumeric[text[k+11]]){	it->insertMap		(k, 11, M_COMBINATION			);	k+=10;	continue;}}}}}}}}}}
-																					else if(text[k+2]=='n'				  ){		 if(text[k+3]=='j'||text[k+3]=='J'){		 if(text[k+4]=='u'||text[k+4]=='U'){		 if(text[k+5]=='g'||text[k+5]=='G'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='e'||text[k+8]=='E'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CONJUGATE				);	k+=8;	continue;} }}}}}}
-																																else if(text[k+3]=='t'							 &&text[k+4]=='i'							 &&text[k+5]=='n'							 &&text[k+6]=='u'							 &&text[k+7]=='e'&&!exprBound	  ){																																													it->insertMap		(k, 8, M_CONTINUE				);	k+=7;	continue;     }}
-																					else if(				text[k+2]=='N'){		 if(text[k+3]=='j'||text[k+3]=='J'){		 if(text[k+4]=='u'||text[k+4]=='U'){		 if(text[k+5]=='g'||text[k+5]=='G'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='e'||text[k+8]=='E'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CONJUGATE				);	k+=8;	continue;} }}}}}}}
-																					else if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COSC					);	k+=3;	continue;}	   }
-																																else if(text[k+3]=='e'||text[k+3]=='E'){		 if(text[k+4]=='c'||text[k+4]=='C'){		 if(text[k+5]=='h'||text[k+5]=='H'){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_CSCH					);	k+=5;	continue;}	 }
-																																																						else								   {																																																								if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_CSC					);	k+=4;	continue;}	 }}}
-																																else if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COSH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_COS					);	k+=2;	continue;}	   }}
-																					else if(text[k+2]=='t'||text[k+2]=='T'){		 if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COTH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_COT					);	k+=2;	continue;}	   }}}
-										else if(				text[k+1]=='O'){		 if(text[k+2]=='m'||text[k+2]=='M'){		 if(text[k+3]=='b'||text[k+3]=='B'){		 if(text[k+4]=='i'||text[k+4]=='I'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='i'||text[k+8]=='I'){		 if(text[k+9]=='o'||text[k+9]=='O'){		 if(text[k+10]=='n'||text[k+10]=='N'){	if(exprBound||!isAlphanumeric[text[k+11]]){	it->insertMap		(k, 11, M_COMBINATION			);	k+=10;	continue;}}}}}}}}}}
-																					else if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='j'||text[k+3]=='J'){		 if(text[k+4]=='u'||text[k+4]=='U'){		 if(text[k+5]=='g'||text[k+5]=='G'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='e'||text[k+8]=='E'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CONJUGATE				);	k+=8;	continue;} }}}}}}}
-																					else if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COSC					);	k+=3;	continue;}	   }
-																																else if(text[k+3]=='e'||text[k+3]=='E'){		 if(text[k+4]=='c'||text[k+4]=='C'){		 if(text[k+5]=='h'||text[k+5]=='H'){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_CSCH					);	k+=5;	continue;}	 }
-																																																						else								   {																																																								if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_CSC					);	k+=4;	continue;}	 }}}
-																																else if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COSH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_COS					);	k+=2;	continue;}	   }}
-																					else if(text[k+2]=='t'||text[k+2]=='T'){		 if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COTH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_COT					);	k+=2;	continue;}	   }}}
-										else if(text[k+1]=='s'||text[k+1]=='S'){		 if(text[k+2]=='c'||text[k+2]=='C'){		 if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CSCH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_CSC					);	k+=2;	continue;}	   }}}	break;
-								 case 'C':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='r'||text[k+2]=='R'){		 if(text[k+3]=='t'||text[k+3]=='T'){		 if(text[k+4]=='e'||text[k+4]=='E'){		 if(text[k+5]=='s'||text[k+5]=='S'){		 if(text[k+6]=='i'||text[k+6]=='I'){		 if(text[k+7]=='a'||text[k+7]=='A'){		 if(text[k+8]=='n'||text[k+8]=='N'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CARTESIAN				);	k+=8;	continue;} }}}}}}}}
-										else if(text[k+1]=='b'||text[k+1]=='B'){		 if(text[k+2]=='r'||text[k+2]=='R'){		 if(text[k+3]=='t'||text[k+3]=='T'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CBRT					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='i'||text[k+2]=='I'){		 if(text[k+3]=='l'||text[k+3]=='L'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CEIL					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_COSH					);	++k;	continue;}	     }
-										else if((text[k+1]=='l'||text[k+1]=='L')		 &&(text[k+2]=='a'||text[k+2]=='A')			 &&(text[k+3]=='m'||text[k+3]=='M')			 &&(text[k+4]=='p'||text[k+4]=='P')){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_CLAMP					);	k+=4;	continue;}		 }
-										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='m'||text[k+2]=='M'){		 if(text[k+3]=='b'||text[k+3]=='B'){		 if(text[k+4]=='i'||text[k+4]=='I'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='i'||text[k+8]=='I'){		 if(text[k+9]=='o'||text[k+9]=='O'){		 if(text[k+10]=='n'||text[k+10]=='N'){	if(exprBound||!isAlphanumeric[text[k+11]]){	it->insertMap		(k, 11, M_COMBINATION			);	k+=10;	continue;}}}}}}}}}}
-																					else if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='j'||text[k+3]=='J'){		 if(text[k+4]=='u'||text[k+4]=='U'){		 if(text[k+5]=='g'||text[k+5]=='G'){		 if(text[k+6]=='a'||text[k+6]=='A'){		 if(text[k+7]=='t'||text[k+7]=='T'){		 if(text[k+8]=='e'||text[k+8]=='E'){																							if(exprBound||!isAlphanumeric[text[k+9]]){	it->insertMap		(k, 9, M_CONJUGATE				);	k+=8;	continue;} }}}}}}}
-																					else if(text[k+2]=='s'||text[k+2]=='S'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COSC					);	k+=3;	continue;}	   }
-																																else if(text[k+3]=='e'||text[k+3]=='E'){		 if(text[k+4]=='c'||text[k+4]=='C'){		 if(text[k+5]=='h'||text[k+5]=='H'){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_CSCH					);	k+=5;	continue;}	 }
-																																																						else								   {																																																								if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_CSC					);	k+=4;	continue;}	 }}}
-																																else if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COSH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_COS					);	k+=2;	continue;}	   }}
-																					else if(text[k+2]=='t'||text[k+2]=='T'){		 if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_COTH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_COT					);	k+=2;	continue;}	   }}}
-										else if(text[k+1]=='s'||text[k+1]=='S'){		 if(text[k+2]=='c'||text[k+2]=='C'){		 if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_CSCH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_CSC					);	k+=2;	continue;}	   }}}	break;
-						case 'd':			 if(text[k+1]=='o'&&!exprBound	  ){																																																																																																															it->insertMap		(k, 2, M_DO						);	++k;	continue;		 }	break;
-						case 'e':			 if(text[k+1]=='l'				  ){		 if(text[k+2]=='s'							 &&text[k+3]=='e'&&!exprBound){																																																																																											it->insertMap		(k, 4, M_ELSE					);	k+=3;	continue;	    }}
-										else if(text[k+1]=='r'||text[k+1]=='R'){		 if(text[k+2]=='f'||text[k+2]=='F'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ERF					);	k+=2;	continue;}	    }}
-										else if((text[k+1]=='x'||text[k+1]=='X')		 &&(text[k+2]=='p'||text[k+2]=='P')){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_EXP					);	k+=2;	continue;}	     }
-										else								   {																																																																																																				if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMapEuler	(k, 1							);			continue;}		 }	break;
-						case 'E':			 if(text[k+1]=='r'||text[k+1]=='R'){		 if(text[k+2]=='f'||text[k+2]=='F'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ERF					);	k+=2;	continue;}	    }}
-										else if((text[k+1]=='x'||text[k+1]=='X')		 &&(text[k+2]=='p'||text[k+2]=='P')){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_EXP					);	k+=2;	continue;}	     }
-										else								   {																																																																																																				if(exprBound||!isAlphanumeric[text[k+1]]){	it->insertMapEuler	(k, 1							);			continue;}		 }	break;
-						case 'f':			 if(text[k+1]=='i'||text[k+1]=='I'){		 if(text[k+2]=='b'||text[k+2]=='B'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_FIB					);	k+=2;	continue;}		}}
-											 if(text[k+1]=='a'&&!exprBound		){		 if(text[k+2]=='l'							 &&text[k+3]=='s'							 &&text[k+4]=='e'					){																																																																														it->insertMapData	(k, 5, 'R', 0					);	k+=4;	continue;}		 }
-										else if(text[k+1]=='l'||text[k+1]=='L'){		 if(text[k+2]=='o'||text[k+2]=='O'){		 if(text[k+3]=='o'||text[k+3]=='O'){		 if(text[k+4]=='r'||text[k+4]=='R'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_FLOOR					);	k+=4;	continue;}	  }}}}
-										else if(text[k+1]=='o'				  ){		 if(text[k+2]=='r'&&!exprBound	  ){
-											auto &scope=scopeLevel.top();
-											if(scope=='{'||scope==')')
-												scopeLevel.push('f');
-											it->insertMap(k, 3, M_FOR);
-										//	it->insertMap(M_FOR);
-											k+=2;
-											continue;
-										}}
-										else if((text[k+1]=='r'||text[k+1]=='R')		&&(text[k+2]=='a'||text[k+2]=='A')		&&(text[k+3]=='c'||text[k+3]=='C')){																																																																															if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_FRAC					);	k+=3;	continue;}		 }
-										break;
-								 case 'F':	 if(text[k+1]=='i'||text[k+1]=='I'){		 if(text[k+2]=='b'||text[k+2]=='B'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_FIB					);	k+=2;	continue;}		}}
-										else if(text[k+1]=='l'||text[k+1]=='L'){		 if(text[k+2]=='o'||text[k+2]=='O'){		 if(text[k+3]=='o'||text[k+3]=='O'){		 if(text[k+4]=='r'||text[k+4]=='R'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_FLOOR					);	k+=4;	continue;}	  }}}}
-										else if((text[k+1]=='r'||text[k+1]=='R')		&&(text[k+2]=='a'||text[k+2]=='A')			&&(text[k+2]=='c'||text[k+2]=='C')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_FRAC					);	k+=3;	continue;}		 }	break;
-						case 'g':case 'G':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='m'||text[k+2]=='M'){		 if(text[k+3]=='m'||text[k+3]=='M'){		 if(text[k+4]=='a'||text[k+4]=='A'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_GAMMA					);	k+=4;	continue;}	  }}}
-																					else if(text[k+2]=='u'||text[k+2]=='U'){		 if(text[k+3]=='s'||text[k+3]=='S'){		 if(text[k+4]=='s'||text[k+4]=='S'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_GAUSS					);	k+=4;	continue;}	  }}}}
-										else if((text[k+1]=='c'||text[k+1]=='C')		&&(text[k+2]=='d'||text[k+2]=='D')){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_GCD					);	k+=2;	continue;}		}	break;
-						case 'h':case 'H':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='k'||text[k+3]=='K'){		 if(text[k+4]=='e'||text[k+4]=='E'){		 if(text[k+5]=='l'||text[k+5]=='L'){																																																								if(exprBound||!isAlphanumeric[text[k+6]]){	it->insertMap		(k, 6, M_HANKEL1				);	k+=5;	continue;}	 }}}}}
-										else if(text[k+1]=='y'||text[k+1]=='Y'){		 if(text[k+2]=='p'||text[k+2]=='P'){		 if(text[k+3]=='o'||text[k+3]=='O'){		 if(text[k+4]=='t'||text[k+4]=='T'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 6, M_HYPOT					);	k+=4;	continue;}	  }}}}	break;
-						case 'l':case 'L':	 if(text[k+1]=='n'||text[k+1]=='N'){		 if((text[k+2]=='g'||text[k+2]=='G')		 &&(text[k+3]=='a'||text[k+3]=='A')			 &&(text[k+4]=='m'||text[k+4]=='M')			 &&(text[k+5]=='m'||text[k+5]=='M')			 &&(text[k+6]=='a'||text[k+6]=='A')){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_LNGAMMA				);	k+=6;	continue;}	}
-																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_LN						);	++k;	continue;}	    }}
-										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='g'||text[k+2]=='G'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_LOG					);	k+=2;	continue;}	    }}	break;
-						case 'm':case 'M':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='g'||text[k+2]=='G'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_ABS					);	k+=2;	continue;}	    }
-																					else if(text[k+2]=='n'||text[k+2]=='N'){		if((text[k+3]=='d'||text[k+3]=='D')			&&(text[k+4]=='e'||text[k+4]=='E')			&&(text[k+5]=='l'||text[k+5]=='L')			&&(text[k+6]=='b'||text[k+6]=='B')			&&(text[k+7]=='r'||text[k+7]=='R')			&&(text[k+8]=='o'||text[k+8]=='O')			&&(text[k+9]=='t'||text[k+9]=='T'))													if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 10, M_MANDELBROT			);	k+=9;	continue;}		}
-																					else if(text[k+2]=='x'||text[k+2]=='X'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_MAX					);	k+=2;	continue;}	    }}
-										else if((text[k+1]=='i'||text[k+1]=='I')		 &&(text[k+2]=='n'||text[k+2]=='N')){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_MIN					);	k+=2;	continue;}	     }	break;
-						case 'n':case 'N':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMapData	(k, 3, 'R', _qnan				);	k+=2;	continue;}	    }}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='u'||text[k+2]=='U'){		 if(text[k+3]=='m'||text[k+3]=='M'){		 if(text[k+4]=='a'||text[k+4]=='A'){		 if(text[k+5]=='n'||text[k+5]=='N'){		 if(text[k+6]=='n'||text[k+6]=='N'){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_BESSEL_Y				);	k+=6;	continue;}	}}}}}}
-										else if((text[k+1]=='o'||text[k+1]=='O')		 &&(text[k+2]=='r'||text[k+2]=='R')			 &&(text[k+3]=='m'||text[k+3]=='M')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_NORM					);	k+=3;	continue;}		 }	break;
-						case 'p':case 'P':	 if(text[k+1]=='e'||text[k+1]=='E'){		 if((text[k+2]=='r'||text[k+2]=='R')		 &&(text[k+3]=='m'||text[k+3]=='M')			 &&(text[k+4]=='u'||text[k+4]=='U')			 &&(text[k+5]=='t'||text[k+5]=='T')			 &&(text[k+6]=='a'||text[k+6]=='A')			 &&(text[k+7]=='t'||text[k+7]=='T')			 &&(text[k+8]=='i'||text[k+8]=='I')			 &&(text[k+9]=='o'||text[k+9]=='O')			 &&(text[k+10]=='n'||text[k+10]=='N')){	if(exprBound||!isAlphanumeric[text[k+11]]){	it->insertMap		(k, 11, M_PERMUTATION			);	k+=10;	continue;}		}}
-										else if(text[k+1]=='i'||text[k+1]=='I'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMapPi		(k, 2							);	++k;	continue;}		 }
-										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='l'||text[k+2]=='L'){		 if(text[k+3]=='a'||text[k+3]=='A'){		 if(text[k+4]=='r'||text[k+4]=='R'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_POLAR					);	k+=4;	continue;}	  }}}}	break;
-						case 'r':			 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='d'||text[k+3]=='D'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_RAND					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='e'				  ){		 if((text[k+2]=='c'||text[k+2]=='C')		 &&(text[k+3]=='t'||text[k+3]=='T')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_RECT					);	k+=3;	continue;}	    }
-																					else if(text[k+2]=='t'							 &&text[k+3]=='u'							  &&text[k+4]=='r'							 &&text[k+5]=='n'&&!exprBound	  ){																																																																			it->insertMap		(k, 6, M_RETURN					);	k+=5;	continue;	    }
-																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_REAL					);	++k;	continue;}	    }}
-										else if(				text[k+1]=='E'){		 if((text[k+2]=='c'||text[k+2]=='C')		 &&(text[k+3]=='t'||text[k+3]=='T')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_RECT					);	k+=3;	continue;}	    }
-																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_REAL					);	++k;	continue;}	    }}
-										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='u'||text[k+2]=='U'){		 if(text[k+3]=='n'||text[k+3]=='N'){		 if(text[k+4]=='d'||text[k+4]=='D'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ROUND					);	k+=4;	continue;}	  }}}}	break;
-								 case 'R':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='d'||text[k+3]=='D'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_RAND					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if((text[k+2]=='c'||text[k+2]=='C')		 &&(text[k+3]=='t'||text[k+3]=='T')){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_RECT					);	k+=3;	continue;}	    }
-																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_REAL					);	++k;	continue;}	    }}
-										else if(text[k+1]=='o'||text[k+1]=='O'){		 if(text[k+2]=='u'||text[k+2]=='U'){		 if(text[k+3]=='n'||text[k+3]=='N'){		 if(text[k+4]=='d'||text[k+4]=='D'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_ROUND					);	k+=4;	continue;}	  }}}}	break;
-						case 's':case 'S':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='w'||text[k+2]=='W'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_SAW					);	k+=2;	continue;}		}}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='c'||text[k+2]=='C'){		 if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_SECH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_SEC					);	k+=2;	continue;}	   }}}
-										else if(text[k+1]=='g'||text[k+1]=='G'){		 if(text[k+2]=='n'||text[k+2]=='N'){																																																																																									if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_SGN					);	k+=2;	continue;}		}}
-										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_SINH					);	++k;	continue;}	     }
-										else if(text[k+1]=='i'||text[k+1]=='I'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 3, M_SINC					);	k+=3;	continue;}	   }
-																																else if(text[k+3]=='h'||text[k+3]=='H'){		 if(text[k+4]=='c'||text[k+4]=='C'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_SINHC					);	k+=4;	continue;}	  }
-																																											else								   {																																																																			if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_SINH					);	k+=3;	continue;}	  }}
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_SIN					);	k+=2;	continue;}	   }}}
-										else if(text[k+1]=='q'||text[k+1]=='Q'){		 if(text[k+2]=='r'||text[k+2]=='R'){		 if(text[k+3]=='t'||text[k+3]=='T'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_SQRT					);	k+=3;	continue;}	   }}
-																					else if(text[k+2]=='w'||text[k+2]=='W'){		 if(text[k+3]=='v'||text[k+3]=='V'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_SQWV					);	k+=3;	continue;}	   }}
-																					else								   {																																																																																									if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 4, M_SQ						);	++k;	continue;}		}}
-										else if(text[k+1]=='t'||text[k+1]=='T'){		 if(text[k+2]=='e'||text[k+2]=='E'){		 if(text[k+3]=='p'||text[k+3]=='P'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_STEP					);	k+=3;	continue;}	   }}}	break;
-						case 't':			 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TANC					);	k+=3;	continue;}	   }
-																																else if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TANH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_TAN					);	k+=2;	continue;}	   }}}
-										else if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TANC					);	k+=3;	continue;}	   }
-																																else if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TANH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_TAN					);	k+=2;	continue;}	   }}}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='t'||text[k+3]=='T'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TENT					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_TANH					);	++k;	continue;}	     }
-										else if((text[k+1]=='o'||text[k+1]=='O')		 &&(text[k+2]=='t'||text[k+2]=='T')			 &&(text[k+3]=='i'||text[k+3]=='I')			 &&(text[k+4]=='e'||text[k+4]=='E')			 &&(text[k+5]=='n'||text[k+5]=='N')			 &&(text[k+6]=='t'||text[k+6]=='T')){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_TOTIENT				);	k+=6;	continue;}		}
-										else if(text[k+1]=='r'				  ){		 if(text[k+2]=='g'||text[k+2]=='G'){		 if(text[k+3]=='l'||text[k+3]=='L'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TENT					);	k+=3;	continue;}	   }}
-																					else if(text[k+2]=='u'&&!exprBound		){		 if(text[k+3]=='e'					)																																																																																									it->insertMapData	(k, 4, 'R', 1.					);	k+=3;	continue;	    }
-																					else if(text[k+2]=='w'||text[k+2]=='W'){		 if(text[k+3]=='v'||text[k+3]=='V'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TRWV					);	k+=3;	continue;}	   }}}
-										else if(				text[k+1]=='R'){		 if(text[k+2]=='g'||text[k+2]=='G'){		 if(text[k+3]=='l'||text[k+3]=='L'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TENT					);	k+=3;	continue;}	   }}
-																					else if(text[k+2]=='w'||text[k+2]=='W'){		 if(text[k+3]=='v'||text[k+3]=='V'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TRWV					);	k+=3;	continue;}	   }}}
-										else if(exprBound)					   {																																																																																																															it->insertRVar		(k, 1, &text[k], 't'			);			continue;		 }	break;
-								case 'T':	 if(text[k+1]=='a'||text[k+1]=='A'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='c'||text[k+3]=='C'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TANC					);	k+=3;	continue;}	   }
-																																else if(text[k+3]=='h'||text[k+3]=='H'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TANH					);	k+=3;	continue;}	   }
-																																else								   {																																																																														if(exprBound||!isAlphanumeric[text[k+3]]){	it->insertMap		(k, 3, M_TAN					);	k+=2;	continue;}	   }}}
-										else if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='n'||text[k+2]=='N'){		 if(text[k+3]=='t'||text[k+3]=='T'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TENT					);	k+=3;	continue;}	   }}}
-										else if(text[k+1]=='h'||text[k+1]=='H'){																																																																																																				if(exprBound||!isAlphanumeric[text[k+2]]){	it->insertMap		(k, 2, M_TANH					);	++k;	continue;}	     }
-										else if((text[k+1]=='o'||text[k+1]=='O')		 &&(text[k+2]=='t'||text[k+2]=='T')			 &&(text[k+3]=='i'||text[k+3]=='I')			 &&(text[k+4]=='e'||text[k+4]=='E')			 &&(text[k+5]=='n'||text[k+5]=='N')			 &&(text[k+6]=='t'||text[k+6]=='T')){																																													if(exprBound||!isAlphanumeric[text[k+7]]){	it->insertMap		(k, 7, M_TOTIENT				);	k+=6;	continue;}		}
-										else if(text[k+1]=='r'||text[k+1]=='R'){		 if(text[k+2]=='g'||text[k+2]=='G'){		 if(text[k+3]=='l'||text[k+3]=='L'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TENT					);	k+=3;	continue;}	   }}
-																					else if(text[k+2]=='w'||text[k+2]=='W'){		 if(text[k+3]=='v'||text[k+3]=='V'){																																																																														if(exprBound||!isAlphanumeric[text[k+4]]){	it->insertMap		(k, 4, M_TRWV					);	k+=3;	continue;}	   }}}
-										else if(exprBound)					   {																																																																																																															it->insertRVar		(k, 1, &text[k], 't'			);			continue;		 }	break;
-						case 'w':			 if(text[k+1]=='e'||text[k+1]=='E'){		 if(text[k+2]=='b'||text[k+2]=='B'){		 if(text[k+3]=='e'||text[k+3]=='E'){		 if(text[k+4]=='r'||text[k+4]=='R'){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_BESSEL_Y				);	k+=4;	continue;}	  }}}}
-										else if(text[k+1]=='h'				  ){		 if(text[k+2]=='i'				  ){		 if(text[k+3]=='l'				  ){		 if(text[k+4]=='e'&&!exprBound	  ){																																																																														it->insertMap		(k, 5, M_WHILE					);	k+=4;	continue;	  }}}}	break;
-								 case 'W':	 if((text[k+1]=='e'||text[k+1]=='E')		&&(text[k+2]=='b'||text[k+2]=='B')			&&(text[k+3]=='e'||text[k+3]=='E')			&&(text[k+4]=='r'||text[k+4]=='R')){																																																																			if(exprBound||!isAlphanumeric[text[k+5]]){	it->insertMap		(k, 5, M_BESSEL_Y				);	k+=4;	continue;}	     }
-										else if(exprBound)					   {																																																																																																															it->insertCVar		(k, 5, &text[k]					);			continue;		 }	break;
+						case 'c':
+								 MATCH_KW(M_CARTESIAN)
+							else MATCH_KW(M_CBRT)
+							else MATCH_KW(M_CEIL)
+							else MATCH_KW_ALT("ch", M_COSH)
+							else MATCH_KW(M_CLAMP)
+							else MATCH_KW(M_COMBINATION)
+							else MATCH_UF(M_CONTINUE)//uf
+							else MATCH_KW(M_CONJUGATE)
+							else MATCH_KW_ALT("cosc", M_CSC)
+							else MATCH_KW_ALT("cosech", M_CSCH)
+							else MATCH_KW_ALT("cosec", M_CSC)
+							else MATCH_KW(M_COSD)
+							else MATCH_KW(M_COSH)
+							else MATCH_KW(M_COS)
+							else MATCH_KW(M_COTD)
+							else MATCH_KW(M_COTH)
+							else MATCH_KW(M_COT)
+							else MATCH_KW(M_CSCD)
+							else MATCH_KW(M_CSCH)
+							else MATCH_KW(M_CSC)
+							break;
+						case 'C':
+								 MATCH_KW(M_CARTESIAN)
+							else MATCH_KW(M_CBRT)
+							else MATCH_KW(M_CEIL)
+							else MATCH_KW_ALT("ch", M_COSH)
+							else MATCH_KW(M_CLAMP)
+							else MATCH_KW(M_COMBINATION)
+							else MATCH_KW(M_CONJUGATE)
+							else MATCH_KW_ALT("cosc", M_CSC)
+							else MATCH_KW_ALT("cosech", M_CSCH)
+							else MATCH_KW_ALT("cosec", M_CSC)
+							else MATCH_KW(M_COSD)
+							else MATCH_KW(M_COSH)
+							else MATCH_KW(M_COS)
+							else MATCH_KW(M_COTD)
+							else MATCH_KW(M_COTH)
+							else MATCH_KW(M_COT)
+							else MATCH_KW(M_CSCD)
+							else MATCH_KW(M_CSCH)
+							else MATCH_KW(M_CSC)
+							break;
+						case 'd':
+							MATCH_UF(M_DO)
+							break;
+						case 'e':
+								 MATCH_UF(M_ELSE)
+							else MATCH_KW(M_ERF)
+							else MATCH_KW(M_EXP)
+							else if(exprBound||!isAlphanumeric[text[k+1]])
+							{
+								it->insertMapEuler(k, 1);
+								continue;
+							}
+							break;
+						case 'E':
+								 MATCH_KW(M_ERF)
+							else MATCH_KW(M_EXP)
+							else if(exprBound||!isAlphanumeric[text[k+1]])
+							{
+								it->insertMapEuler(k, 1);
+								continue;
+							}
+							break;
+						case 'f':
+								 MATCH_KW(M_FIB)
+							else MATCH_CONST(L_FALSE, 0)
+							else MATCH_KW(M_FLOOR)
+							else if(!exprBound&&match_uf(text+k+1, keywords[M_FOR]+1, &advance))//uf
+							{
+								auto &scope=scopeLevel.top();
+								if(scope=='{'||scope==')')
+									scopeLevel.push('f');
+								it->insertMap(k, 3, M_FOR);
+								k+=2;
+								continue;
+							}
+							else MATCH_KW(M_FRAC)
+							break;
+						case 'F':
+								 MATCH_KW(M_FIB)
+							else MATCH_KW(M_FLOOR)
+							else MATCH_KW(M_FRAC)
+							break;
+						case 'g':case 'G':
+								 MATCH_KW(M_GAMMA)
+							else MATCH_KW(M_GAUSS)
+							else MATCH_KW(M_GCD)
+							break;
+						case 'h':case 'H':
+								 MATCH_KW(M_HANKEL1)
+							else MATCH_KW(M_HYPOT)
+							break;
+						case 'l':case 'L':
+								 MATCH_KW(M_LNGAMMA)
+							else MATCH_KW(M_LN)
+							else MATCH_KW(M_LOG)
+							break;
+						case 'm':case 'M':
+								 MATCH_KW_ALT("mag", M_ABS)
+							else MATCH_KW(M_MANDELBROT)
+							else MATCH_KW(M_MIN)
+							break;
+						case 'n':case 'N':
+								 MATCH_CONST(L_NAN, _qnan)
+							else MATCH_KW(M_BESSEL_Y)
+							else MATCH_KW(M_NORM)
+							break;
+						case 'p':case 'P':
+								 MATCH_KW(M_PERMUTATION)
+							else if(match_kw(text+k+1, kw2[L_PI]+1,	exprBound, &advance))
+							{
+								it->insertMapPi(k, 2);
+								k+=advance;
+								continue;
+							}
+							else MATCH_KW(M_NORM)
+							break;
+						case 'r':
+								 MATCH_KW(M_RAND)
+							else MATCH_KW(M_RECT)
+							else MATCH_UF(M_RETURN)//uf
+							else MATCH_KW(M_REAL)
+							else MATCH_KW(M_ROUND)
+							break;
+						case 'R':
+								 MATCH_KW(M_RAND)
+							else MATCH_KW(M_RECT)
+							else MATCH_KW(M_REAL)
+							else MATCH_KW(M_ROUND)
+							break;
+						case 's':case 'S':
+								 MATCH_KW(M_SAW)
+							else MATCH_KW(M_SECD)
+							else MATCH_KW(M_SECH)
+							else MATCH_KW(M_SEC)
+							else MATCH_KW(M_SGN)
+							else MATCH_KW_ALT("sh", M_SINH)
+							else MATCH_KW(M_SINC)
+							else MATCH_KW(M_SIND)
+							else MATCH_KW(M_SINHC)
+							else MATCH_KW(M_SINH)
+							else MATCH_KW(M_SIN)
+							else MATCH_KW(M_SQRT)
+							else MATCH_KW(M_SQWV)
+							else MATCH_KW(M_SQ)
+							else MATCH_KW(M_STEP)
+							break;
+						case 't':case 'T':
+								 MATCH_KW(M_TANC)
+								 MATCH_KW(M_TAND)
+							else MATCH_KW(M_TANH)
+							else MATCH_KW(M_TAN)
+							else MATCH_KW(M_TENT)
+							else MATCH_KW_ALT("th", M_TANH)
+							else MATCH_KW(M_TOTIENT)
+							else MATCH_KW(M_TENT)
+							else MATCH_CONST(L_TRUE, 1)
+							else MATCH_KW(M_TRWV)
+							else if(exprBound)
+							{
+								it->insertRVar(k, 1, &text[k], 't');
+								continue;
+							}
+							break;
+						case 'w':
+								 MATCH_KW_ALT("weber", M_BESSEL_Y)
+							else MATCH_UF(M_WHILE)
+							break;
+						case 'W':
+								 MATCH_KW_ALT("weber", M_BESSEL_Y)
+							else if(exprBound)
+							{
+								it->insertCVar(k, 5, &text[k]);
+								continue;
+							}
+							break;
 						case '\r':
 							k+=text[k+1]=='\n';
 							++lineNo;
@@ -37155,62 +37644,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 							++lineNo;
 							continue;
 						}
-						if(!exprBound)//user function token variable names
-						{
-							if((k-1<0||!isAlphanumeric[text[k-1]])&&isAlphanumeric[text[k]])
-							{
-								for(int f=k+1;f<=kEnd;++f)//match name
-								{
-									if(!isAlphanumeric[text[f]])
-									{
-										bool noMatch=true;
-										int nameLen=f-k;
-										for(int n=0, nEnd=ufVarNames.size();n<nEnd;++n)
-										{
-											auto &name=ufVarNames[n].name;
-											if(name.size()==nameLen&&!name.compare(0, name.size(), text+k, nameLen))//match, add reference
-											{
-												it->insertMap(k, f-k, G2::M_N, ufVarNames[n].data_idx);
-											//	it->insertMap(G2::M_N, ufVarNames[n].data_idx);
-												noMatch=false;
-												break;
-											}
-										}
-										if(noMatch)//add new name and repositry
-										{
-											char mathSet='R';
-											if(nameLen==1&&(text[k]=='r'||text[k]=='R'||text[k]=='c'||text[k]=='C'||text[k]=='h'||text[k]=='H'||text[k]=='q'||text[k]=='Q'))
-											{
-												int f2=f;
-												switch(text[k])
-												{
-												case 'r':case 'R':mathSet='R';break;
-												case 'c':case 'C':mathSet='c';break;
-												case 'h':case 'H':
-												case 'q':case 'Q':mathSet='h';break;
-												}
-												for(;text[f2]==' '||text[f2]=='\t'||text[f2]=='\r'||text[f2]=='\n';++f2)//skip white space
-													lineNo+=text[k]=='\n';
-												if(isLetter[text[f2]])
-												{
-													k=f2;
-													for(;isAlphanumeric[text[f2]];++f2);
-													f=f2, nameLen=f-k;
-												}
-											}
-											ufVarNames.push_back(UFVariableName(text+k, nameLen, scopeLevel.size(), it->data.size()));
-											it->insertFVar(mathSet, ufVarNames.rbegin()->name);
-											it->insertMap(k, f-k, G2::M_N, ufVarNames.rbegin()->data_idx);
-										//	it->insertMap(G2::M_N, ufVarNames.rbegin()->data_idx);
-										//	it->insertFVar('R');
-										//	it->insertData('R', 0);//variables are initialized with 0, mathSet is updated by values assigned
-										}
-										k=f-1;
-										break;
-									}
-								}
-							}
-						}
+#endif
 					}//end lexer loop
 					it->endLineNo=lineNo-((bound==0?0:bounds[bound-1].first)<kEnd&&text[kEnd-1]=='\n');
 					if(exprBound)

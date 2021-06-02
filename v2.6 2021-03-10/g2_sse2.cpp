@@ -201,7 +201,7 @@ struct Vect2d
 	Vect2d& abs_this(){v=_mm_and_pd(v, sign_mask); return *this;}
 	Vect2d abs()const{return Vect2d(_mm_and_pd(v, sign_mask));}
 };
-const Vect2d m_zero=0., m_one=1, m_two=2, m_minus_one=_mm_castsi128_pd(_mm_set1_epi32(-1)), m_pi=G2::_pi, m_pi_2=G2::_pi_2, m_qnan=G2::_qnan,
+const Vect2d m_zero=0., m_one=1, m_two=2, m_minus_one=_mm_castsi128_pd(_mm_set1_epi32(-1)), m_pi=G2::_pi, m_pi_2=G2::_pi_2, m_todeg=1/G2::_pi_180, m_torad=G2::_pi_180, m_qnan=G2::_qnan,
 	m_sign_mask=sign_mask, m_sign_mask_complement=m_sign_mask.complement(),
 	m_half=0.5, m_third=1./3, m_ln2=G2::_ln2, m_ln10=G2::_ln10, m_1_ln10=1/G2::_ln10, m_inf=_HUGE,
 	m_one_percent=0.01, m_phi=G2::_phi, m_sqrt5=G2::_sqrt5;
@@ -2387,6 +2387,19 @@ namespace	G2
 		__forceinline Quat2d acos(Quat2d const &x){return -sgnu(x)*acosh(x);}
 		void  c_c_acos					(CompP &r, CompP const &x)					{assign(r, acos(Comp2d(x)));}
 		void  q_q_acos					(QuatP &r, QuatP const &x)					{assign(r, acos(Quat2d(x)));}
+		
+		__forceinline Vect2d todeg(Vect2d const &x){return x*m_todeg;}
+		__forceinline Comp2d todeg(Comp2d const &x){return Comp2d(x.r*m_todeg, x.i);}
+		__forceinline Quat2d todeg(Quat2d const &x){return Quat2d(x.r*m_todeg, x.i, x.j, x.k);}
+		__forceinline Vect2d torad(Vect2d const &x){return x*m_torad;}
+		__forceinline Comp2d torad(Comp2d const &x){return Comp2d(x.r*m_torad, x.i);}
+		__forceinline Quat2d torad(Quat2d const &x){return Quat2d(x.r*m_torad, x.i, x.j, x.k);}
+		void  r_r_cosd					(VectP &r, VectP const &x)					{assign(r, Vect2d(::cos(torad(Vect2d(x)).v)));}
+		void  c_c_cosd					(CompP &r, CompP const &x)					{assign(r, cos(torad(Comp2d(x))));}
+		void  q_q_cosd					(QuatP &r, QuatP const &x)					{assign(r, cos(torad(Quat2d(x))));}
+
+		void  c_c_acosd					(CompP &r, CompP const &x)					{assign(r, todeg(acos(Comp2d(x))));}
+		void  q_q_acosd					(QuatP &r, QuatP const &x)					{assign(r, todeg(acos(Quat2d(x))));}
 
 		__forceinline Comp2d cosh(Comp2d const &x)
 		{
@@ -2419,6 +2432,13 @@ namespace	G2
 		void  c_c_asec					(CompP &r, CompP const &x)					{assign(r, acos(m_one/Comp2d(x)));}
 		void  q_q_asec					(QuatP &r, QuatP const &x)					{assign(r, acos(m_one/Quat2d(x)));}
 
+		void  r_r_secd					(VectP &r, VectP const &x)					{assign(r, m_one/Vect2d(::cos(torad(Vect2d(x)).v)));}
+		void  c_c_secd					(CompP &r, CompP const &x)					{assign(r, m_one/cos(torad(Comp2d(x))));}
+		void  q_q_secd					(QuatP &r, QuatP const &x)					{assign(r, m_one/cos(torad(Quat2d(x))));}
+
+		void  c_c_asecd					(CompP &r, CompP const &x)					{assign(r, todeg(acos(m_one/Comp2d(x))));}
+		void  q_q_asecd					(QuatP &r, QuatP const &x)					{assign(r, todeg(acos(m_one/Quat2d(x))));}
+
 		void  r_r_sech					(VectP &r, VectP const &x)					{assign(r, m_one/Vect2d(::cosh(Vect2d(x).v)));}
 		void  c_c_sech					(CompP &r, CompP const &x)					{assign(r, m_one/cosh(Comp2d(x)));}
 		void  q_q_sech					(QuatP &r, QuatP const &x)					{assign(r, m_one/cosh(Quat2d(x)));}
@@ -2434,6 +2454,13 @@ namespace	G2
 		__forceinline Quat2d asin(Quat2d const &x){Quat2d t=sgnu(x); return -t*asinh(x*t);}
 		void  c_c_asin					(CompP &r, CompP const &x)					{assign(r, asin(Comp2d(x)));}
 		void  q_q_asin					(QuatP &r, QuatP const &x)					{assign(r, asin(Quat2d(x)));}
+
+		void  r_r_sind					(VectP &r, VectP const &x)					{assign(r, Vect2d(::sin(torad(Vect2d(x)).v)));}
+		void  c_c_sind					(CompP &r, CompP const &x)					{assign(r, sin(torad(Comp2d(x))));}
+		void  q_q_sind					(QuatP &r, QuatP const &x)					{assign(r, sin(torad(Quat2d(x))));}
+
+		void  c_c_asind					(CompP &r, CompP const &x)					{assign(r, todeg(asin(Comp2d(x))));}
+		void  q_q_asind					(QuatP &r, QuatP const &x)					{assign(r, todeg(asin(Quat2d(x))));}
 
 		__forceinline Comp2d sinh(Comp2d const &x)
 		{
@@ -2469,6 +2496,13 @@ namespace	G2
 
 		void  c_c_acsc					(CompP &r, CompP const &x)					{assign(r, asin(m_one/Comp2d(x)));}
 		void  q_q_acsc					(QuatP &r, QuatP const &x)					{assign(r, asin(m_one/Quat2d(x)));}
+
+		void  r_r_cscd					(VectP &r, VectP const &x)					{assign(r, m_one/Vect2d(::sin(torad(Vect2d(x)).v)));}
+		void  c_c_cscd					(CompP &r, CompP const &x)					{assign(r, m_one/sin(torad(Comp2d(x))));}
+		void  q_q_cscd					(QuatP &r, QuatP const &x)					{assign(r, m_one/sin(torad(Quat2d(x))));}
+
+		void  c_c_acscd					(CompP &r, CompP const &x)					{assign(r, todeg(asin(m_one/Comp2d(x))));}
+		void  q_q_acscd					(QuatP &r, QuatP const &x)					{assign(r, todeg(asin(m_one/Quat2d(x))));}
 
 		void  r_r_csch					(VectP &r, VectP const &x)					{assign(r, m_one/Vect2d(::sinh(Vect2d(x).v)));}
 		void  c_c_csch					(CompP &r, CompP const &x)					{assign(r, m_one/sinh(Comp2d(x)));}
@@ -2581,6 +2615,95 @@ namespace	G2
 			assign(r, tr+addition);
 		}
 
+		void  r_r_tand					(VectP &r, VectP const &x)					{assign(r, Vect2d(::tan(torad(Vect2d(x)).v)));}
+		void  c_c_tand					(CompP &r, CompP const &x)					{assign(r, tan(torad(Comp2d(x))));}
+		void  q_q_tand					(QuatP &r, QuatP const &x)					{assign(r, tan(torad(Quat2d(x))));}
+
+		void  r_r_atand					(VectP &r, VectP const &x)					{assign(r, todeg(Vect2d(::atan(Vect2d(x).v))));}
+		void  c_c_atand					(CompP &r, CompP const &x)					{assign(r, todeg(atan(Comp2d(x))));}
+		void  q_q_atand					(QuatP &r, QuatP const &x)					{assign(r, todeg(atan(Quat2d(x))));}
+		void r_rr_atand					(VectP &r, VectP const &y, VectP const &x)	{assign(r, todeg(Vect2d(::atan2(Vect2d(y).v, Vect2d(x).v))));}
+		void c_rc_atand					(CompP &r, VectP const &y, CompP const &x)
+		{
+			Comp2d cx=x;	Vect2d ry=y;
+			Comp2d tr=atan(ry/cx);
+			Vect2d mask_y=ry<m_zero, mask_x=cx.r<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+		void q_rq_atand					(QuatP &r, VectP const &y, QuatP const &x)
+		{
+			Quat2d qx=x;	Vect2d ry=y;
+			Quat2d tr=atan(ry/qx);
+			Vect2d mask_y=ry<m_zero, mask_x=qx.r<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+		void c_cr_atand					(CompP &r, CompP const &y, VectP const &x)
+		{
+			Vect2d rx=x;	Comp2d cy=y;
+			Comp2d tr=atan(cy/rx);
+			Vect2d mask_y=cy.r<m_zero, mask_x=rx<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+		void c_cc_atand					(CompP &r, CompP const &y, CompP const &x)
+		{
+			Comp2d cx=x;	Comp2d cy=y;
+			Comp2d tr=atan(cy/cx);
+			Vect2d mask_y=cy.r<m_zero, mask_x=cx.r<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+		void q_cq_atand					(QuatP &r, CompP const &y, QuatP const &x)
+		{
+			Quat2d qx=x;	Comp2d cy=y;
+			auto tr=atan(cy/qx);
+			Vect2d mask_y=cy.r<m_zero, mask_x=qx.r<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+		void q_qr_atand					(QuatP &r, QuatP const &y, VectP const &x)
+		{
+			Vect2d rx=x;	Quat2d qy=y;
+			auto tr=atan(qy/rx);
+			Vect2d mask_y=qy.r<m_zero, mask_x=rx<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+		void q_qc_atand					(QuatP &r, QuatP const &y, CompP const &x)
+		{
+			Comp2d cx=x;	Quat2d qy=y;
+			auto tr=atan(qy/cx);
+			Vect2d mask_y=qy.r<m_zero, mask_x=cx.r<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+		void q_qq_atand					(QuatP &r, QuatP const &y, QuatP const &x)
+		{
+			Quat2d qx=x;	Quat2d qy=y;
+			auto tr=atan(qy/qx);
+			Vect2d mask_y=qy.r<m_zero, mask_x=qx.r<m_zero;
+			Vect2d addition=m_pi&mask_y;
+			Vect2d add_sign=m_sign_mask_complement&mask_x;
+			addition^=add_sign;
+			assign(r, todeg(tr+addition));
+		}
+
 		__forceinline Comp2d tanh(Comp2d const &x){Comp2d e2x=exp(x+x); return (e2x-m_one)/(e2x+m_one);}
 		__forceinline Quat2d tanh(Quat2d const &x){Quat2d e2x=exp(x+x); return (e2x-m_one)/(e2x+m_one);}
 		void  r_r_tanh					(VectP &r, VectP const &x)					{assign(r, Vect2d(::tanh(Vect2d(x).v)));}
@@ -2616,6 +2739,28 @@ namespace	G2
 			Quat2d qx=x;
 			Vect2d mask=(qx.r==m_zero)&(qx.i==m_zero)&(qx.j==m_zero)&(qx.k==m_zero);
 			assign(r, AND(atan(m_one/qx), mask.complement())|m_pi_2&mask);
+		}
+
+		void  r_r_cotd					(VectP &r, VectP const &x)					{assign(r, m_one/Vect2d(::tan(torad(Vect2d(x)).v)));}
+		void  c_c_cotd					(CompP &r, CompP const &x)					{assign(r, m_one/tan(torad(Comp2d(x))));}
+		void  q_q_cotd					(QuatP &r, QuatP const &x)					{assign(r, m_one/tan(torad(Quat2d(x))));}
+
+		void  r_r_acotd					(VectP &r, VectP const &x)
+		{
+			Vect2d rx=x, mask=rx==m_zero;
+			assign(r, todeg(Vect2d(::atan((m_one/rx).v))&mask.complement()|m_pi_2&mask));
+		}
+		void  c_c_acotd					(CompP &r, CompP const &x)
+		{
+			Comp2d cx=x;
+			Vect2d mask=(cx.r==m_zero)&(cx.i==m_zero);
+			assign(r, todeg(AND(atan(m_one/cx), mask.complement())|m_pi_2&mask));
+		}
+		void  q_q_acotd					(QuatP &r, QuatP const &x)
+		{
+			Quat2d qx=x;
+			Vect2d mask=(qx.r==m_zero)&(qx.i==m_zero)&(qx.j==m_zero)&(qx.k==m_zero);
+			assign(r, todeg(AND(atan(m_one/qx), mask.complement())|m_pi_2&mask));
 		}
 
 		void  r_r_coth					(VectP &r, VectP const &x)					{assign(r, m_one/Vect2d(::tanh(Vect2d(x).v)));}

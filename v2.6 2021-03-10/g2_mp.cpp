@@ -1162,6 +1162,19 @@ namespace		MP
 	inline Quat acos(Quat const &x){return -m_i*log(x+sqrt(sq(x)-1.));}
 	void  c_c_acos					(Quat &r, Quat const &x)				{r=acos((Comp)x);}
 	void  q_q_acos					(Quat &r, Quat const &x)				{r=acos(x);}
+	
+	inline Real todeg(Real const &x){return x*180/m_pi;}
+	inline Comp todeg(Comp const &x){return Comp(x.r*180/m_pi, x.i);}
+	inline Quat todeg(Quat const &x){return Quat(x.r*180/m_pi, x.i, x.j, x.k);}
+	inline Real torad(Real const &x){return x*m_pi/180;}
+	inline Comp torad(Comp const &x){return Comp(x.r*m_pi/180, x.i);}
+	inline Quat torad(Quat const &x){return Quat(x.r*m_pi/180, x.i, x.j, x.k);}
+	void  r_r_cosd					(Quat &r, Quat const &x)				{r=cos(torad(x.r));}//m_pi is maintained with user-defined precision
+	void  c_c_cosd					(Quat &r, Quat const &x)				{r=cos(torad((Comp)x));}
+	void  q_q_cosd					(Quat &r, Quat const &x)				{r=cos(torad(x));}
+
+	void  c_c_acosd					(Quat &r, Quat const &x)				{r=todeg(acos((Comp)x));}
+	void  q_q_acosd					(Quat &r, Quat const &x)				{r=todeg(acos(x));}
 
 	inline Comp cosh(Comp const &x){return (exp(x)+exp(-x))*0.5;}
 	inline Quat cosh(Quat const &x){return (exp(x)+exp(-x))*0.5;}
@@ -1184,6 +1197,13 @@ namespace		MP
 	void  c_c_asec					(Quat &r, Quat const &x)				{r=acos(inv((Comp)x));}
 	void  q_q_asec					(Quat &r, Quat const &x)				{r=acos(inv(x));}
 
+	void  r_r_secd					(Quat &r, Quat const &x)				{r=1/cos(torad(x.r));}
+	void  c_c_secd					(Quat &r, Quat const &x)				{r=inv(cos(torad((Comp)x)));}
+	void  q_q_secd					(Quat &r, Quat const &x)				{r=inv(cos(torad(x)));}
+
+	void  c_c_asecd					(Quat &r, Quat const &x)				{r=todeg(acos(inv((Comp)x)));}
+	void  q_q_asecd					(Quat &r, Quat const &x)				{r=todeg(acos(inv(x)));}
+
 	void  r_r_sech					(Quat &r, Quat const &x)				{r=1/cosh(x.r);}
 	void  c_c_sech					(Quat &r, Quat const &x)				{r=inv(cosh((Comp)x));}
 	void  q_q_sech					(Quat &r, Quat const &x)				{r=inv(cosh(x));}
@@ -1199,6 +1219,13 @@ namespace		MP
 	inline Quat asin(Quat const &x){return -m_i*log(m_i*x+sqrt(1.-sq(x)));}
 	void  c_c_asin					(Quat &r, Quat const &x)				{r=asin((Comp)x);}
 	void  q_q_asin					(Quat &r, Quat const &x)				{r=asin(x);}
+
+	void  r_r_sind					(Quat &r, Quat const &x)				{r=sin(torad(x.r));}
+	void  c_c_sind					(Quat &r, Quat const &x)				{r=sin(torad((Comp)x));}
+	void  q_q_sind					(Quat &r, Quat const &x)				{r=sin(torad(x));}
+
+	void  c_c_asind					(Quat &r, Quat const &x)				{r=todeg(asin((Comp)x));}
+	void  q_q_asind					(Quat &r, Quat const &x)				{r=todeg(asin(x));}
 
 	inline Comp sinh(Comp const &x){return (exp(x)-exp(-x))*0.5;}
 	inline Quat sinh(Quat const &x){return (exp(x)-exp(-x))*0.5;}
@@ -1224,6 +1251,13 @@ namespace		MP
 
 	void  c_c_acsc					(Quat &r, Quat const &x)				{r=asin(inv((Comp)x));}
 	void  q_q_acsc					(Quat &r, Quat const &x)				{r=asin(inv(x));}
+
+	void  r_r_cscd					(Quat &r, Quat const &x)				{r=1/sin(torad(x.r));}
+	void  c_c_cscd					(Quat &r, Quat const &x)				{r=inv(sin(torad((Comp)x)));}
+	void  q_q_cscd					(Quat &r, Quat const &x)				{r=inv(sin(torad(x)));}
+
+	void  c_c_acscd					(Quat &r, Quat const &x)				{r=todeg(asin(inv((Comp)x)));}
+	void  q_q_acscd					(Quat &r, Quat const &x)				{r=todeg(asin(inv(x)));}
 
 	void  r_r_csch					(Quat &r, Quat const &x)				{r=1/sinh(x.r);}
 	void  c_c_csch					(Quat &r, Quat const &x)				{r=inv(sinh((Comp)x));}
@@ -1264,6 +1298,23 @@ namespace		MP
 	void q_qr_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x/y)			+atan_addition(x.r, y.r);}
 	void q_qc_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x/(Comp)y)		+atan_addition(x.r, y.r);}
 	void q_qq_atan					(Quat &r, Quat const &x, Quat const &y)	{r=atan(x/y)			+atan_addition(x.r, y.r);}
+
+	void  r_r_tand					(Quat &r, Quat const &x)				{r=tan(torad(x.r));}
+	void  c_c_tand					(Quat &r, Quat const &x)				{r=tan(torad((Comp)x));}
+	void  q_q_tand					(Quat &r, Quat const &x)				{r=tan(torad(x));}
+
+	void  r_r_atand					(Quat &r, Quat const &x)				{r=todeg(atan(x.r));}
+	void  c_c_atand					(Quat &r, Quat const &x)				{r=todeg(atan((Comp)x));}
+	void  q_q_atand					(Quat &r, Quat const &x)				{r=todeg(atan(x));}
+	void r_rr_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan2(x.r, y.r));}
+	void c_rc_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan(x.r/(Comp)y)		+atan_addition(x.r, y.r));}
+	void q_rq_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan(x.r/y)			+atan_addition(x.r, y.r));}
+	void c_cr_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan((Comp)x/y.r)		+atan_addition(x.r, y.r));}
+	void c_cc_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan((Comp)x/(Comp)y)	+atan_addition(x.r, y.r));}
+	void q_cq_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan((Comp)x/y)		+atan_addition(x.r, y.r));}
+	void q_qr_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan(x/y)				+atan_addition(x.r, y.r));}
+	void q_qc_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan(x/(Comp)y)		+atan_addition(x.r, y.r));}
+	void q_qq_atand					(Quat &r, Quat const &x, Quat const &y)	{r=todeg(atan(x/y)				+atan_addition(x.r, y.r));}
 	
 	inline Comp tanh(Comp const &x){Comp e2x=exp(x+x); return (e2x-1.)/(e2x+1.);}
 	inline Quat tanh(Quat const &x){Quat e2x=exp(x+x); return (e2x-1.)/(e2x+1.);}
@@ -1287,6 +1338,14 @@ namespace		MP
 	void  r_r_acot					(Quat &r, Quat const &x)				{r=x.r.toDouble()?atan(1/x.r):m_pi/2;}
 	void  c_c_acot					(Quat &r, Quat const &x)				{r=atan(inv((Comp)x));}
 	void  q_q_acot					(Quat &r, Quat const &x)				{r=atan(inv(x));}
+
+	void  r_r_cotd					(Quat &r, Quat const &x)				{r=1/tan(torad(x.r));}
+	void  c_c_cotd					(Quat &r, Quat const &x)				{r=inv(tan(torad((Comp)x)));}
+	void  q_q_cotd					(Quat &r, Quat const &x)				{r=inv(tan(torad(x)));}
+
+	void  r_r_acotd					(Quat &r, Quat const &x)				{r=x.r.toDouble()?todeg(atan(1/x.r)):90;}
+	void  c_c_acotd					(Quat &r, Quat const &x)				{r=todeg(atan(inv((Comp)x)));}
+	void  q_q_acotd					(Quat &r, Quat const &x)				{r=todeg(atan(inv(x)));}
 
 	void  r_r_coth					(Quat &r, Quat const &x)				{r=1/tanh(x.r);}
 	void  c_c_coth					(Quat &r, Quat const &x)				{r=inv(tanh((Comp)x));}

@@ -174,7 +174,7 @@ char 				returnMathSet_from_signature(int signature, char op1_ms, char op2_ms, c
 	case SIG_Q_QR:
 	case SIG_Q_QC:
 	case SIG_Q_QQ:
-		return 'q';
+		return 'h';
 	case SIG_INLINE_IF:
 		return maximum(op1_ms, op2_ms, op3_ms);
 	}

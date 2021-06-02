@@ -350,7 +350,7 @@ void			line_3D(Camera const &cam, dvec2 const &s1, dvec3 const &cp1, dvec2 const
 						gBitmap.rgb[m128i_i32(pos, 1)]=lineColor, wbuffer[m128i_i32(pos, 1)]=m128_f32(A, 1);
 					if(m128i_i32(c1, 2)&&m128_f32(A, 2)>wbuffer[m128i_i32(pos, 2)])
 						gBitmap.rgb[m128i_i32(pos, 2)]=lineColor, wbuffer[m128i_i32(pos, 2)]=m128_f32(A, 2);
-					if(m128i_i32(c1, 3)&&m128_f32(A, 3)>wbuffer[m128i_i32(pos, 30)])
+					if(m128i_i32(c1, 3)&&m128_f32(A, 3)>wbuffer[m128i_i32(pos, 3)])
 						gBitmap.rgb[m128i_i32(pos, 3)]=lineColor, wbuffer[m128i_i32(pos, 3)]=m128_f32(A, 3);
 				}
 			}

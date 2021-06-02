@@ -166,6 +166,10 @@ namespace			G2
 {
 	enum			Map
 	{
+#define	TOKEN(STRING, LABEL)	LABEL
+#include"g2_keywords.h"
+#undef	TOKEN
+#if 0
 		M_IGNORED,
 		
 		M_N,
@@ -213,12 +217,12 @@ namespace			G2
 
 			M_FSTART,//unary functions
 
-		M_COS, M_ACOS, M_COSH, M_ACOSH, M_COSC,
-		M_SEC, M_ASEC, M_SECH, M_ASECH,
-		M_SIN, M_ASIN, M_SINH, M_ASINH, M_SINC, M_SINHC,
-		M_CSC, M_ACSC, M_CSCH, M_ACSCH,
-		M_TAN,         M_TANH, M_ATANH, M_TANC,
-		M_COT, M_ACOT, M_COTH, M_ACOTH,
+		M_COS, M_ACOS, M_COSD, M_ACOSD, M_COSH, M_ACOSH, M_COSC,
+		M_SEC, M_ASEC, M_SECD, M_ASECD, M_SECH, M_ASECH,
+		M_SIN, M_ASIN, M_SIND, M_ASIND, M_SINH, M_ASINH, M_SINC, M_SINHC,
+		M_CSC, M_ACSC, M_CSCD, M_ACSCD, M_CSCH, M_ACSCH,
+		M_TAN,         M_TAND,          M_TANH, M_ATANH, M_TANC,
+		M_COT, M_ACOT, M_COTD, M_ACOTD, M_COTH, M_ACOTH,
 		M_EXP, M_LN, M_SQRT, M_CBRT, M_INVSQRT, M_SQ,
 		M_GAUSS, M_ERF, M_FIB, M_ZETA, M_LNGAMMA,
 		M_STEP, M_SGN, M_RECT, M_TENT,
@@ -229,7 +233,7 @@ namespace			G2
 			M_BFSTART,//binary functions
 
 		M_RAND,
-		M_ATAN,
+		M_ATAN, M_ATAND,
 		M_LOG,
 		M_BETA, M_GAMMA, M_PERMUTATION, M_COMBINATION,
 		M_BESSEL_J, M_BESSEL_Y, M_HANKEL1,
@@ -242,7 +246,8 @@ namespace			G2
 		M_MIN, M_MAX, M_AV, M_HYPOT, M_NORM,
 		M_GCD,
 
-		M_USER_FUNCTION
+		M_USER_FUNCTION,
+#endif
 	};
 }
 enum 				ResultMode

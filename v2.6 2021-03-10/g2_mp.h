@@ -1108,6 +1108,13 @@ namespace		MP
 
 	void  c_c_acos					(Quat &r, Quat const &x);
 	void  q_q_acos					(Quat &r, Quat const &x);
+	
+	void  r_r_cosd					(Quat &r, Quat const &x);
+	void  c_c_cosd					(Quat &r, Quat const &x);
+	void  q_q_cosd					(Quat &r, Quat const &x);
+
+	void  c_c_acosd					(Quat &r, Quat const &x);
+	void  q_q_acosd					(Quat &r, Quat const &x);
 
 	void  r_r_cosh					(Quat &r, Quat const &x);
 	void  c_c_cosh					(Quat &r, Quat const &x);
@@ -1127,6 +1134,13 @@ namespace		MP
 	void  c_c_asec					(Quat &r, Quat const &x);
 	void  q_q_asec					(Quat &r, Quat const &x);
 
+	void  r_r_secd					(Quat &r, Quat const &x);
+	void  c_c_secd					(Quat &r, Quat const &x);
+	void  q_q_secd					(Quat &r, Quat const &x);
+
+	void  c_c_asecd					(Quat &r, Quat const &x);
+	void  q_q_asecd					(Quat &r, Quat const &x);
+
 	void  r_r_sech					(Quat &r, Quat const &x);
 	void  c_c_sech					(Quat &r, Quat const &x);
 	void  q_q_sech					(Quat &r, Quat const &x);
@@ -1140,6 +1154,13 @@ namespace		MP
 
 	void  c_c_asin					(Quat &r, Quat const &x);
 	void  q_q_asin					(Quat &r, Quat const &x);
+
+	void  r_r_sind					(Quat &r, Quat const &x);
+	void  c_c_sind					(Quat &r, Quat const &x);
+	void  q_q_sind					(Quat &r, Quat const &x);
+
+	void  c_c_asind					(Quat &r, Quat const &x);
+	void  q_q_asind					(Quat &r, Quat const &x);
 
 	void  r_r_sinh					(Quat &r, Quat const &x);
 	void  c_c_sinh					(Quat &r, Quat const &x);
@@ -1163,6 +1184,13 @@ namespace		MP
 
 	void  c_c_acsc					(Quat &r, Quat const &x);
 	void  q_q_acsc					(Quat &r, Quat const &x);
+
+	void  r_r_cscd					(Quat &r, Quat const &x);
+	void  c_c_cscd					(Quat &r, Quat const &x);
+	void  q_q_cscd					(Quat &r, Quat const &x);
+
+	void  c_c_acscd					(Quat &r, Quat const &x);
+	void  q_q_acscd					(Quat &r, Quat const &x);
 
 	void  r_r_csch					(Quat &r, Quat const &x);
 	void  c_c_csch					(Quat &r, Quat const &x);
@@ -1188,6 +1216,23 @@ namespace		MP
 	void q_qr_atan					(Quat &r, Quat const &x, Quat const &y);
 	void q_qc_atan					(Quat &r, Quat const &x, Quat const &y);
 	void q_qq_atan					(Quat &r, Quat const &x, Quat const &y);
+
+	void  r_r_tand					(Quat &r, Quat const &x);
+	void  c_c_tand					(Quat &r, Quat const &x);
+	void  q_q_tand					(Quat &r, Quat const &x);
+
+	void  r_r_atand					(Quat &r, Quat const &x);
+	void  c_c_atand					(Quat &r, Quat const &x);
+	void  q_q_atand					(Quat &r, Quat const &x);
+	void r_rr_atand					(Quat &r, Quat const &x, Quat const &y);
+	void c_rc_atand					(Quat &r, Quat const &x, Quat const &y);
+	void q_rq_atand					(Quat &r, Quat const &x, Quat const &y);
+	void c_cr_atand					(Quat &r, Quat const &x, Quat const &y);
+	void c_cc_atand					(Quat &r, Quat const &x, Quat const &y);
+	void q_cq_atand					(Quat &r, Quat const &x, Quat const &y);
+	void q_qr_atand					(Quat &r, Quat const &x, Quat const &y);
+	void q_qc_atand					(Quat &r, Quat const &x, Quat const &y);
+	void q_qq_atand					(Quat &r, Quat const &x, Quat const &y);
 	
 	void  r_r_tanh					(Quat &r, Quat const &x);
 	void  c_c_tanh					(Quat &r, Quat const &x);
@@ -1207,6 +1252,14 @@ namespace		MP
 	void  r_r_acot					(Quat &r, Quat const &x);
 	void  c_c_acot					(Quat &r, Quat const &x);
 	void  q_q_acot					(Quat &r, Quat const &x);
+
+	void  r_r_cotd					(Quat &r, Quat const &x);
+	void  c_c_cotd					(Quat &r, Quat const &x);
+	void  q_q_cotd					(Quat &r, Quat const &x);
+
+	void  r_r_acotd					(Quat &r, Quat const &x);
+	void  c_c_acotd					(Quat &r, Quat const &x);
+	void  q_q_acotd					(Quat &r, Quat const &x);
 
 	void  r_r_coth					(Quat &r, Quat const &x);
 	void  c_c_coth					(Quat &r, Quat const &x);

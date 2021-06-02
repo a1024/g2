@@ -474,6 +474,13 @@ namespace	G2
 		void  c_c_acos					(CompP &r, CompP const &x);
 		void  q_q_acos					(QuatP &r, QuatP const &x);
 
+		void  r_r_cosd					(VectP &r, VectP const &x);
+		void  c_c_cosd					(CompP &r, CompP const &x);
+		void  q_q_cosd					(QuatP &r, QuatP const &x);
+
+		void  c_c_acosd					(CompP &r, CompP const &x);
+		void  q_q_acosd					(QuatP &r, QuatP const &x);
+
 		void  r_r_cosh					(VectP &r, VectP const &x);
 		void  c_c_cosh					(CompP &r, CompP const &x);
 		void  q_q_cosh					(QuatP &r, QuatP const &x);
@@ -492,6 +499,13 @@ namespace	G2
 		void  c_c_asec					(CompP &r, CompP const &x);
 		void  q_q_asec					(QuatP &r, QuatP const &x);
 
+		void  r_r_secd					(VectP &r, VectP const &x);
+		void  c_c_secd					(CompP &r, CompP const &x);
+		void  q_q_secd					(QuatP &r, QuatP const &x);
+
+		void  c_c_asecd					(CompP &r, CompP const &x);
+		void  q_q_asecd					(QuatP &r, QuatP const &x);
+
 		void  r_r_sech					(VectP &r, VectP const &x);
 		void  c_c_sech					(CompP &r, CompP const &x);
 		void  q_q_sech					(QuatP &r, QuatP const &x);
@@ -505,6 +519,13 @@ namespace	G2
 
 		void  c_c_asin					(CompP &r, CompP const &x);
 		void  q_q_asin					(QuatP &r, QuatP const &x);
+
+		void  r_r_sind					(VectP &r, VectP const &x);
+		void  c_c_sind					(CompP &r, CompP const &x);
+		void  q_q_sind					(QuatP &r, QuatP const &x);
+
+		void  c_c_asind					(CompP &r, CompP const &x);
+		void  q_q_asind					(QuatP &r, QuatP const &x);
 
 		void  r_r_sinh					(VectP &r, VectP const &x);
 		void  c_c_sinh					(CompP &r, CompP const &x);
@@ -528,6 +549,13 @@ namespace	G2
 
 		void  c_c_acsc					(CompP &r, CompP const &x);
 		void  q_q_acsc					(QuatP &r, QuatP const &x);
+
+		void  r_r_cscd					(VectP &r, VectP const &x);
+		void  c_c_cscd					(CompP &r, CompP const &x);
+		void  q_q_cscd					(QuatP &r, QuatP const &x);
+
+		void  c_c_acscd					(CompP &r, CompP const &x);
+		void  q_q_acscd					(QuatP &r, QuatP const &x);
 
 		void  r_r_csch					(VectP &r, VectP const &x);
 		void  c_c_csch					(CompP &r, CompP const &x);
@@ -554,6 +582,23 @@ namespace	G2
 		void q_qc_atan					(QuatP &r, QuatP const &y, CompP const &x);
 		void q_qq_atan					(QuatP &r, QuatP const &y, QuatP const &x);
 
+		void  r_r_tand					(VectP &r, VectP const &x);
+		void  c_c_tand					(CompP &r, CompP const &x);
+		void  q_q_tand					(QuatP &r, QuatP const &x);
+
+		void  r_r_atand					(VectP &r, VectP const &x);
+		void  c_c_atand					(CompP &r, CompP const &x);
+		void  q_q_atand					(QuatP &r, QuatP const &x);
+		void r_rr_atand					(VectP &r, VectP const &y, VectP const &x);
+		void c_rc_atand					(CompP &r, VectP const &y, CompP const &x);
+		void q_rq_atand					(QuatP &r, VectP const &y, QuatP const &x);
+		void c_cr_atand					(CompP &r, CompP const &y, VectP const &x);
+		void c_cc_atand					(CompP &r, CompP const &y, CompP const &x);
+		void q_cq_atand					(QuatP &r, CompP const &y, QuatP const &x);
+		void q_qr_atand					(QuatP &r, QuatP const &y, VectP const &x);
+		void q_qc_atand					(QuatP &r, QuatP const &y, CompP const &x);
+		void q_qq_atand					(QuatP &r, QuatP const &y, QuatP const &x);
+
 		void  r_r_tanh					(VectP &r, VectP const &x);
 		void  c_c_tanh					(CompP &r, CompP const &x);
 		void  q_q_tanh					(QuatP &r, QuatP const &x);
@@ -572,6 +617,14 @@ namespace	G2
 		void  r_r_acot					(VectP &r, VectP const &x);
 		void  c_c_acot					(CompP &r, CompP const &x);
 		void  q_q_acot					(QuatP &r, QuatP const &x);
+
+		void  r_r_cotd					(VectP &r, VectP const &x);
+		void  c_c_cotd					(CompP &r, CompP const &x);
+		void  q_q_cotd					(QuatP &r, QuatP const &x);
+
+		void  r_r_acotd					(VectP &r, VectP const &x);
+		void  c_c_acotd					(CompP &r, CompP const &x);
+		void  q_q_acotd					(QuatP &r, QuatP const &x);
 
 		void  r_r_coth					(VectP &r, VectP const &x);
 		void  c_c_coth					(CompP &r, CompP const &x);
