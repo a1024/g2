@@ -93,6 +93,7 @@ isprime(x)
 erfx
 tanhx
 atanx
+1/(1+exp-x)
 gaussx
 1/(1+xx)
 1/chx
