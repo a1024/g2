@@ -1423,7 +1423,7 @@ void			cl_compile()
 			double t_start=time_sec();
 			int success=0;
 			int common_size=0;
-			const char *rc_common=loadresource(IDR_CL_COMMON, TEXTFILE, common_size);
+			const char *rc_common=loadresource(G2_CL_COMMON, TEXTFILE, common_size);
 			std::string common(rc_common, common_size);
 			for(int kp=0;kp<nprograms;++kp)
 		//	for(int kp=19;kp<nprograms;++kp)//
@@ -1451,7 +1451,7 @@ void			cl_compile()
 					int nsources=0;
 
 					int srck_size=0;
-					auto rc_srck=loadresource(IDR_CL_SRC01+kp, TEXTFILE, srck_size);
+					auto rc_srck=loadresource(G2_CL_SRC01+kp, TEXTFILE, srck_size);
 					std::string srck(rc_srck, srck_size);
 					if(kp<n_g2programs)//add header for G2 main programs
 						sources[0]=common.c_str(),	srclen[0]=common.size(),		++nsources;

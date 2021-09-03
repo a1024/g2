@@ -67,6 +67,7 @@
 #ifdef AVX_H
 #pragma		comment(lib, "AVX.lib")
 #endif
+//#pragma	comment(linker, "/STACK:16777216")//doesn't fix MPIR crash
 #endif
 #ifdef		__GNUC__
 #include	<cpuid.h>
@@ -37569,7 +37570,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 							break;
 						case 'p':case 'P':
 								 MATCH_KW(M_PERMUTATION)
-							else if(match_kw(text+k+1, kw2[L_PI]+1,	exprBound, &advance))
+							else if(match_kw(text+k+1, kw2[L_PI]+2,	exprBound, &advance))
 							{
 								it->insertMapPi(k, 2);
 								k+=advance;
