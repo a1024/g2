@@ -15237,7 +15237,7 @@ namespace	modes
 	int setXplaces(int w)
 	{
 		//if(simd_method==2)//avx, multiple of 4
-			return (w&0xFFFFFFFC)+(((w&3)!=0)<<2);
+			return (w+3)&~3;
 		//if(simd_method==1)//sse2, multiple of 2
 		//	return w+(w&1);
 		//return w;//ia32
@@ -17424,7 +17424,7 @@ namespace	modes
 			if(ex.resultLogicType==1)
 				aXstart=&Xstart,	aYend=&Yend,	aXplaces=Xplaces,	aYplaces=Yplaces,		x1=a[0], x2=a[1], y1=a[2], y2=a[3];
 			else
-				aXstart=&Xstart_s,	aYend=&Yend_s,	aXplaces=Xplaces+2,	aYplaces=Yplaces+2,		x1=a[8], x2=a[9], y1=a[10], y2=a[11];//x1=a[16], x2=a[17], y1=a[18], y2=a[19];//x1=a[8], x2=a[9], y1=a[10], y2=a[11];
+				aXstart=&Xstart_s,	aYend=&Yend_s,	aXplaces=setXplaces(Xplaces+2),	aYplaces=Yplaces+2,		x1=a[8], x2=a[9], y1=a[10], y2=a[11];//x1=a[16], x2=a[17], y1=a[18], y2=a[19];//x1=a[8], x2=a[9], y1=a[10], y2=a[11];
 			modes::Xstart=*aXstart, modes::Xsample=Xsample, modes::Yend=*aYend, modes::Ysample=Ysample, modes::T=T;
 			modes::Xplaces=aXplaces, modes::Yplaces=aYplaces, modes::Zplaces=1, modes::ndrSize=aXplaces*aYplaces;
 			fill_range(ex, choose_fill_fn_2di, 0, x1, x2, y1, y2, 0, 1, aXplaces, aYplaces, 1, modes::ndrSize, false, false, false);
@@ -17432,8 +17432,10 @@ namespace	modes
 				solve_disc(ex, 0, x1, x2, y1, y2, 0, 1, Xplaces, Yplaces, 1,	0, 0, 0, 0, 0, 0);
 			else
 			{
-				int Xplaces1=Xplaces+1, Yplaces1=Yplaces+1,
-					Xplaces2=Xplaces+2, Yplaces2=Yplaces+2;
+				int Xplaces2=setXplaces(Xplaces+2), Yplaces2=Yplaces+2,
+					Xplaces1=Xplaces2-1, Yplaces1=Yplaces2-1;
+			//	int Xplaces1=Xplaces+1, Yplaces1=Yplaces+1,
+			//		Xplaces2=Xplaces+2, Yplaces2=Yplaces+2;
 
 				unsigned yDiscOffset=Xplaces1*Yplaces2;
 				for(int y=y1;y<y2;++y)
@@ -17448,10 +17450,12 @@ namespace	modes
 						ex.discontinuities[yDiscOffset+Xplaces2*y+x]=false;
 			//	ndr_to_clipboard_2d(ex, aXplaces, aYplaces);//
 			//	ndr_to_clipboard_2d((double*)ex.n[ex.resultTerm].r.p, aXplaces, aYplaces);//
-				::solve_disc(ex, 0, x1, x2, y1, y2, 0, 1, Xplaces2, Yplaces, 1, disc_i2d_in_u, disc_i2d_in_b, disc_i2d_in_t, disc_i2d_out, yDiscOffset, true);
+				::solve_disc(ex, 0, x1, x2, y1, y2, 0, 1, Xplaces2, Yplaces2, 1, disc_i2d_in_u, disc_i2d_in_b, disc_i2d_in_t, disc_i2d_out, yDiscOffset, true);
+			//	::solve_disc(ex, 0, x1, x2, y1, y2, 0, 1, Xplaces2, Yplaces, 1, disc_i2d_in_u, disc_i2d_in_b, disc_i2d_in_t, disc_i2d_out, yDiscOffset, true);
 			//	::solve_disc(ex, 0, x1, x2, y1, y2, 0, 1, aXplaces, aYplaces, 1,		0, 0, 0, 0, 0, true);//
 			//	ndr_to_clipboard_2d((double*)ex.n[ex.resultTerm].r.p, aXplaces, aYplaces);//
-				subtract_NDRs(ex, x1, x2, y1, y2, aXplaces, aYplaces);
+				subtract_NDRs(ex, x1, x2, y1, y2, Xplaces2, Yplaces2);
+			//	subtract_NDRs(ex, x1, x2, y1, y2, aXplaces, aYplaces);
 				//::solve_disc(ex, 0, x1, x2, y1, y2, 0, 1, Xplaces2, Yplaces, 1,		0, 0, 0, 0, 0, true);//
 				//subtract_NDRs(ex, x1, x2, y1, y2, Xplaces, Yplaces);
 			//	ndr_to_clipboard_2d(ex, aXplaces, aYplaces);//
@@ -17506,7 +17510,7 @@ namespace	modes
 			partial=&Solve_2D_Implicit::partial_;
 			int Xoffset2=setXplaces(std::abs(Xoffset)+2), Yoffset2=std::abs(Yoffset)+2;
 		//	int Xoffset2=std::abs(Xoffset)+2, Yoffset2=std::abs(Yoffset)+2;
-			int Xplaces2=Xplaces+2, Yplaces2=Yplaces+2;
+			int Xplaces2=setXplaces(Xplaces+2), Yplaces2=Yplaces+2;
 				 if(Xoffset>0){							 if(Yoffset>0)					shift=&Solve_2D_Implicit::shift_,	sa[0]=Xoffset,				sa[1]=Xplaces,	sa[2]=0,			sa[3]=Yplaces-1-Yoffset,	sa[4]=-1,			sa[5]=Yplaces-1,			partial=&Solve_2D_Implicit::partial_2,	ra[0]=0,					ra[1]=Xplaces,		ra[ 2]=0,					ra[ 3]=Yoffset,							ra[ 4]=Xplaces-Xoffset2,	ra[ 5]=Xplaces,		ra[ 6]=Yoffset,				ra[ 7]=Yplaces,
 																															sa[6]=Xoffset,				sa[7]=Xplaces2,	sa[8]=0,			sa[9]=Yplaces2-1-Yoffset,	sa[10]=-1,			sa[11]=Yplaces2-1,													ra[8]=0,					ra[9]=Xplaces2,		ra[10]=0,					ra[11]=Yoffset2,						ra[12]=Xplaces2-Xoffset2,	ra[13]=Xplaces2,	ra[14]=Yoffset,				ra[15]=Yplaces2;
 
@@ -23836,7 +23840,8 @@ namespace	modes
 						if(ex.rmode[0]==11&&!ex.nITD)
 						{
 							labels.fill(e);
-							solver.full(ex), solver.draw(ex);
+							solver.full(ex);
+							solver.draw(ex);
 						}
 					}
 					solver.bitmap.drop();
@@ -37228,10 +37233,8 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 							else MATCH_KW(M_LOGIC_GREATER)
 							break;
 						case '=':
-								 MATCH_KW(M_ASSIGN_RIGHT)
-							else MATCH_KW(M_BITWISE_SHIFT_RIGHT)
-							else MATCH_KW(M_LOGIC_GREATER_EQUAL)
-							else MATCH_KW(M_LOGIC_GREATER)
+								 MATCH_KW(M_LOGIC_EQUAL)
+							else MATCH_KW(M_ASSIGN)
 							break;
 						case '?':
 								 MATCH_KW(M_CONDITION_ZERO)
