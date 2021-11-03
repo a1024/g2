@@ -142,7 +142,7 @@ Functions - 2 arguments:
 	beta, gamma, permutation, combination,
 	bessel, neumann, hankel1
 	sqwv, trwv, saw,
-	mandelbrot(complex variable, number if iterations),
+	mandelbrot(complex variable, number of iterations),
 	clamp(x, hi)	between 0 and hi
 
 Functions - 3 arguments
