@@ -74,6 +74,7 @@
 	TOKEN("clamp", M_CLAMP),//up to 3 args
 	TOKEN("min", M_MIN), TOKEN("max", M_MAX), TOKEN("av", M_AV), TOKEN("hypot", M_HYPOT), TOKEN("norm", M_NORM),
 	TOKEN("gcd", M_GCD),
+	TOKEN("trap", M_TRAP),
 
 	TOKEN(0, M_USER_FUNCTION),
 #endif

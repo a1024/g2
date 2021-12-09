@@ -1413,6 +1413,7 @@ namespace		MP
 	void va_hypot					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
 	void va_norm					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
 	void va_gcd						(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
+	void va_trap					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args);
 #else
 	void  r_r_setzero				(Real &r, Real const&);
 	void  c_c_setzero				(Comp &r, Comp const&);

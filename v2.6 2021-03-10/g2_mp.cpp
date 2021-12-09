@@ -1938,6 +1938,43 @@ namespace		MP
 		else
 			data[result.idx].setnan();
 	}
+	void va_trap					(std::vector<Quat> &data, ArgIdx result, std::vector<ArgIdx> const &args)
+	{
+		switch(args.size())
+		{
+		case 4://tent
+			{
+				auto &a=data[args[0].idx].r, &b=data[args[1].idx].r, &c=data[args[2].idx].r, &x=data[args[3].idx].r;
+				if(x<a)
+					data[result.idx].set(0);
+				else if(x<b)
+					data[result.idx].set((x-a)/(b-a), Real(), Real(), Real());
+				else if(x<c)
+					data[result.idx].set((c-x)/(c-b), Real(), Real(), Real());
+				else
+					data[result.idx].set(0);
+			}
+			break;
+		case 5://trapezium
+			{
+				auto &a=data[args[0].idx].r, &b=data[args[1].idx].r, &c=data[args[2].idx].r, &d=data[args[3].idx].r, &x=data[args[4].idx].r;
+				if(x<a)
+					data[result.idx].set(0);
+				else if(x<b)
+					data[result.idx].set((x-a)/(b-a), Real(), Real(), Real());
+				else if(x<c)
+					data[result.idx].set(Real(1), Real(), Real(), Real());
+				else if(x<d)
+					data[result.idx].set((d-x)/(d-c), Real(), Real(), Real());
+				else
+					data[result.idx].set(0);
+			}
+			break;
+		default:
+			data[result.idx].setnan();
+			break;
+		}
+	}
 #else
 	void  r_r_setzero				(Real &r, Real const&)					{r.setZero();}
 	void  c_c_setzero				(Comp &r, Comp const&)					{r.r.setZero(), r.i.setZero();}

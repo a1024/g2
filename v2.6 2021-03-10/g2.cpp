@@ -1131,7 +1131,7 @@ void			TextBox::cursorAtMouse(int x, int y)
 		{
 			if(l==(tpy+y)/fontH)
 				break;
-			else if(text[k]=='\r')
+			if(text[k]=='\r')
 				cursor=++k+1, ++l;//skip '\n'
 		}
 	}
@@ -1207,7 +1207,7 @@ int				TextBox::inputLButtonDown(int lParam)
 {
 	short x=((short*)&lParam)[0]-bpx, y=((short*)&lParam)[1]-bpy;
 	if(x>=0&&x<bw&&y>=0&&y<bh)//
-		return private_clickRegion(((short*)&lParam)[0]-bpx, ((short*)&lParam)[1]-bpy);
+		return private_clickRegion(x-bpx, y-bpy);
 	else if(active)
 	{
 		active=false;
@@ -7050,6 +7050,86 @@ namespace	G2
 				store1(n[result.idx], idx, result.mathSet, Quat1d(G2::_qnan));
 		}
 	}
+	void va_trap					(void *pn, void *pdata, ArgIdx result, std::vector<ArgIdx> const &args, int idx)
+	{
+		int nargs=args.size();
+		if(pdata)
+		{
+			auto &data=*(std::vector<Value>*)pdata;
+			switch(nargs)
+			{
+			case 4:
+				{
+					auto &a=data[args[0].idx].r, &b=data[args[1].idx].r, &c=data[args[2].idx].r, &x=data[args[3].idx].r;
+					if(x<a)
+						data[result.idx].set(0);
+					else if(x<b)
+						data[result.idx].set((x-a)/(b-a));
+					else if(x<c)
+						data[result.idx].set((c-x)/(c-b));
+					else
+						data[result.idx].set(0);
+				}
+				break;
+			case 5:
+				{
+					auto &a=data[args[0].idx].r, &b=data[args[1].idx].r, &c=data[args[2].idx].r, &d=data[args[3].idx].r, &x=data[args[4].idx].r;
+					if(x<a)
+						data[result.idx].set(0);
+					else if(x<b)
+						data[result.idx].set((x-a)/(b-a));
+					else if(x<c)
+						data[result.idx].set(1);
+					else if(x<d)
+						data[result.idx].set((d-x)/(d-c));
+					else
+						data[result.idx].set(0);
+				}
+				break;
+			default:
+				data[result.idx].set(_qnan);
+				break;
+			}
+		}
+		else if(pn)
+		{
+			auto &n=*(std::vector<Term>*)pn;
+			switch(nargs)
+			{
+			case 4:
+				{
+					auto &a=n[args[0].idx].r[idx], &b=n[args[1].idx].r[idx], &c=n[args[2].idx].r[idx], &x=n[args[3].idx].r[idx];
+					if(x<a)
+						store1(n[result.idx], idx, result.mathSet, Quat1d());
+					else if(x<b)
+						store1(n[result.idx], idx, result.mathSet, Quat1d((x-a)/(b-a)));
+					else if(x<c)
+						store1(n[result.idx], idx, result.mathSet, Quat1d((c-x)/(c-b)));
+					else
+						store1(n[result.idx], idx, result.mathSet, Quat1d());
+				}
+				break;
+			case 5:
+				{
+					auto &a=n[args[0].idx].r[idx], &b=n[args[1].idx].r[idx], &c=n[args[2].idx].r[idx], &d=n[args[3].idx].r[idx], &x=n[args[4].idx].r[idx];
+					if(x<a)
+						store1(n[result.idx], idx, result.mathSet, Quat1d());
+					else if(x<b)
+						store1(n[result.idx], idx, result.mathSet, Quat1d((x-a)/(b-a)));
+					else if(x<c)
+						store1(n[result.idx], idx, result.mathSet, Quat1d(1));
+					else if(x<d)
+						store1(n[result.idx], idx, result.mathSet, Quat1d((d-x)/(d-c)));
+					else
+						store1(n[result.idx], idx, result.mathSet, Quat1d());
+				}
+				break;
+			default:
+				store1(n[result.idx], idx, result.mathSet, Quat1d(G2::_qnan));
+				break;
+			}
+		}
+	}
 }
 
 bool UserFunctionsDefaultReturnZero=false;
@@ -9307,6 +9387,11 @@ void			Compile::compile_instruction_select_v	(int f, FPSetter &function, Discont
 		break;
 	case M_GCD:
 		function.set(SCALAR(va_gcd));
+		d();
+		cl_idx=0, cl_disc_idx=0;//
+		break;
+	case M_TRAP:
+		function.set(SCALAR(va_trap));
 		d();
 		cl_idx=0, cl_disc_idx=0;//
 		break;
@@ -12226,7 +12311,9 @@ unsigned initialize_npmask(Expression const &ex, Instruction const &in, char arg
 				return -((&ex.n[in.op2].r)[component].p!=nullptr);
 			return 0;
 		}
-		return -((&ex.n[(&in.result)[argument]].r)[component].p!=nullptr);
+		size_t term=(&in.result)[argument];
+		if(term<ex.n.size())
+			return -((&ex.n[term].r)[component].p!=nullptr);
 	}
 	return 0;
 }
@@ -37619,7 +37706,8 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 							else MATCH_KW(M_TENT)
 							else MATCH_KW_ALT("th", M_TANH)
 							else MATCH_KW(M_TOTIENT)
-							else MATCH_KW(M_TENT)
+							else MATCH_KW(M_TRAP)
+							else MATCH_KW_ALT("trgl", M_TENT)
 							else MATCH_CONST(L_TRUE, 1)
 							else MATCH_KW(M_TRWV)
 							else if(exprBound)
