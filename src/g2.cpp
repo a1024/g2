@@ -37651,6 +37651,7 @@ long		__stdcall WndProc(HWND__ *hWnd, unsigned message, unsigned wParam, long lP
 						case 'm':case 'M':
 								 MATCH_KW_ALT("mag", M_ABS)
 							else MATCH_KW(M_MANDELBROT)
+							else MATCH_KW(M_MAX)
 							else MATCH_KW(M_MIN)
 							break;
 						case 'n':case 'N':
